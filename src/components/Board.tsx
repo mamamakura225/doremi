@@ -13,6 +13,8 @@ import { STAFF_LAYOUT } from '../lib/layout'
 import { type Pitch, pitchToY, snapYToPitch } from '../lib/pitch'
 import type { PlacedNote } from '../lib/notes'
 import { canAddNote } from '../lib/notes'
+import { colorOf } from '../lib/colors'
+import { ensureAudio, playNote } from '../audio/synth'
 import NoteHead from './NoteHead'
 import Staff from './Staff'
 
@@ -46,19 +48,28 @@ export default function Board({ notes, onPlace }: Props) {
     const p = clientToSvg(svgRef.current, e.clientX, e.clientY)
     if (!p) return
     e.currentTarget.setPointerCapture(e.pointerId)
-    setDrag({ pointerId: e.pointerId, x: p.x, pitch: snapYToPitch(p.y, STAFF_LAYOUT) })
+    const pitch = snapYToPitch(p.y, STAFF_LAYOUT)
+    setDrag({ pointerId: e.pointerId, x: p.x, pitch })
+    // 初回タップでAudioContext起動 → 掴んだ音を鳴らす
+    void ensureAudio().then(() => playNote(pitch.note))
   }
 
   function handlePointerMove(e: React.PointerEvent) {
     if (!drag || e.pointerId !== drag.pointerId || !svgRef.current) return
     const p = clientToSvg(svgRef.current, e.clientX, e.clientY)
     if (!p) return
-    setDrag({ ...drag, x: p.x, pitch: snapYToPitch(p.y, STAFF_LAYOUT) })
+    const pitch = snapYToPitch(p.y, STAFF_LAYOUT)
+    // ゾーン（音）を跨いだ瞬間のみ再トリガ（暴発防止）
+    if (pitch.note !== drag.pitch.note) playNote(pitch.note)
+    setDrag({ ...drag, x: p.x, pitch })
   }
 
   function handlePointerUp(e: React.PointerEvent) {
     if (!drag || e.pointerId !== drag.pointerId) return
-    if (isOverPlacement(drag.x)) onPlace(drag.pitch)
+    if (isOverPlacement(drag.x)) {
+      onPlace(drag.pitch)
+      playNote(drag.pitch.note)
+    }
     setDrag(null)
   }
 
@@ -80,6 +91,7 @@ export default function Board({ notes, onPlace }: Props) {
           key={n.id}
           x={columnX(i)}
           y={pitchToY(n.pitch, STAFF_LAYOUT)}
+          fill={colorOf(n.pitch)}
         />
       ))}
 
@@ -112,6 +124,7 @@ export default function Board({ notes, onPlace }: Props) {
         <NoteHead
           x={drag.x}
           y={pitchToY(drag.pitch, STAFF_LAYOUT)}
+          fill={colorOf(drag.pitch)}
           opacity={0.6}
         />
       )}
