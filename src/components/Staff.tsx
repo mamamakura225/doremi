@@ -1,30 +1,21 @@
-import { MIDDLE_C, pitchToY, type StaffLayout } from '../lib/pitch'
+import {
+  PLACE_LEFT,
+  PLACE_RIGHT,
+  STAFF_LAYOUT,
+  STAFF_LEFT,
+  STAFF_RIGHT,
+} from '../lib/layout'
+import { MIDDLE_C, pitchToY } from '../lib/pitch'
 
-// SVGビューボックス座標系（横向き前提）。
-const VIEW_W = 1000
-const VIEW_H = 500
-const LAYOUT: StaffLayout = { topLineY: 140, staffSpace: 50 }
-const STAFF_LEFT = 60
-const STAFF_RIGHT = VIEW_W - 40
-// 音符を置く領域（お道具箱は #2 で右側に追加するため、ここでは描画のみ）
-const PLACE_LEFT = 180
-const PLACE_RIGHT = STAFF_RIGHT - 40
-
-export const STAFF_LAYOUT = LAYOUT
-
-/** 五線・ト音記号・ド足場ガイドを描く五線譜（音符配置は #2 以降） */
+/** 五線・ト音記号・ド足場ガイドを描く（SVG内の <g>） */
 export default function Staff() {
-  const lineYs = [0, 1, 2, 3, 4].map((i) => LAYOUT.topLineY + i * LAYOUT.staffSpace)
-  const cY = pitchToY(MIDDLE_C, LAYOUT) // ド（下加線）のY
+  const lineYs = [0, 1, 2, 3, 4].map(
+    (i) => STAFF_LAYOUT.topLineY + i * STAFF_LAYOUT.staffSpace,
+  )
+  const cY = pitchToY(MIDDLE_C, STAFF_LAYOUT) // ド（下加線）のY
 
   return (
-    <svg
-      viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
-      preserveAspectRatio="xMidYMid meet"
-      className="h-full w-full"
-      role="img"
-      aria-label="五線譜"
-    >
+    <g>
       {/* 五線 */}
       {lineYs.map((y) => (
         <line
@@ -71,6 +62,6 @@ export default function Staff() {
           opacity={0.18}
         />
       </g>
-    </svg>
+    </g>
   )
 }
