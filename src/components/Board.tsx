@@ -21,6 +21,8 @@ import Staff from './Staff'
 interface Props {
   notes: PlacedNote[]
   onPlace: (pitch: Pitch) => void
+  playingIndex: number | null
+  celebrating: boolean
 }
 
 interface DragState {
@@ -38,10 +40,16 @@ function clientToSvg(svg: SVGSVGElement, clientX: number, clientY: number) {
   return pt.matrixTransform(ctm.inverse())
 }
 
-export default function Board({ notes, onPlace }: Props) {
+export default function Board({
+  notes,
+  onPlace,
+  playingIndex,
+  celebrating,
+}: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
   const [drag, setDrag] = useState<DragState | null>(null)
-  const enabled = canAddNote(notes)
+  const playing = playingIndex !== null
+  const enabled = canAddNote(notes) && !playing && !celebrating
 
   function handlePointerDown(e: React.PointerEvent) {
     if (!enabled || !svgRef.current) return
@@ -87,12 +95,18 @@ export default function Board({ notes, onPlace }: Props) {
 
       {/* 配置済み音符（置いた順に左→右へ等間隔） */}
       {notes.map((n, i) => (
-        <NoteHead
+        <g
           key={n.id}
-          x={columnX(i)}
-          y={pitchToY(n.pitch, STAFF_LAYOUT)}
-          fill={colorOf(n.pitch)}
-        />
+          className={celebrating ? 'note-bounce' : undefined}
+          style={celebrating ? { animationDelay: `${i * 80}ms` } : undefined}
+        >
+          <NoteHead
+            x={columnX(i)}
+            y={pitchToY(n.pitch, STAFF_LAYOUT)}
+            fill={colorOf(n.pitch)}
+            highlight={i === playingIndex}
+          />
+        </g>
       ))}
 
       {/* お道具箱（右側）: 四分音符が1つ常駐 */}
