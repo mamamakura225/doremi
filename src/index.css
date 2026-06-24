@@ -16,3 +16,17 @@ body {
   touch-action: none;
   font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
 }
+
+/* お祝い演出: 符頭がぴょこんと跳ねる */
+@keyframes note-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-28px);
+  }
+}
+.note-bounce {
+  animation: note-bounce 0.5s ease;
+}
