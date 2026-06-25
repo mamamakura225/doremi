@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import Board from './components/Board'
 import RotateOverlay from './components/RotateOverlay'
 import { usePortrait } from './hooks/usePortrait'
-import { type PlacedNote, addNote } from './lib/notes'
+import { type PlacedNote, addNote, removeLast } from './lib/notes'
 import type { Pitch } from './lib/pitch'
 import { CELEBRATE_MS, playbackSchedule } from './lib/playback'
 import { ensureAudio, playNote } from './audio/synth'
@@ -32,6 +32,11 @@ export default function App() {
     setPlayingIndex(null)
     setCelebrating(false)
     setNotes([])
+  }
+
+  function handleUndo() {
+    if (busy) return
+    setNotes((prev) => removeLast(prev))
   }
 
   async function handlePlay() {
@@ -68,6 +73,14 @@ export default function App() {
           className="rounded-2xl bg-[#22c55e] px-6 py-3 text-xl font-bold text-white shadow disabled:opacity-40"
         >
           ▶ さいせい
+        </button>
+        <button
+          type="button"
+          onClick={handleUndo}
+          disabled={busy || notes.length === 0}
+          className="rounded-2xl bg-white px-6 py-3 text-xl font-bold text-[#6b6375] shadow disabled:opacity-40"
+        >
+          ↩ ひとつもどる
         </button>
         <button
           type="button"

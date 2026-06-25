@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { NOTE_MAX, columnX, isOverPlacement, PLACE_LEFT, PLACE_RIGHT } from './layout'
-import { addNote, canAddNote, type PlacedNote } from './notes'
+import { addNote, canAddNote, removeLast, type PlacedNote } from './notes'
 import { MIDDLE_C } from './pitch'
 
 describe('addNote', () => {
@@ -21,6 +21,23 @@ describe('addNote', () => {
     const base: PlacedNote[] = []
     addNote(base, MIDDLE_C)
     expect(base).toHaveLength(0)
+  })
+})
+
+describe('removeLast', () => {
+  it('最後の音符を取り消す', () => {
+    const two = addNote(addNote([], MIDDLE_C), MIDDLE_C)
+    expect(removeLast(two)).toHaveLength(1)
+  })
+
+  it('空配列はそのまま', () => {
+    expect(removeLast([])).toHaveLength(0)
+  })
+
+  it('元配列を破壊しない', () => {
+    const two = addNote(addNote([], MIDDLE_C), MIDDLE_C)
+    removeLast(two)
+    expect(two).toHaveLength(2)
   })
 })
 
