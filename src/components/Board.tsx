@@ -50,13 +50,17 @@ export default function Board({
 }: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
   const [drag, setDrag] = useState<DragState | null>(null)
+  const [touched, setTouched] = useState(false)
   const playing = playingIndex !== null
   const enabled = canAddNote(notes) && !playing && !celebrating
+  // 起動直後（未操作）のみヒント表示。初回タップで消える＝それがAudioContext解除も兼ねる。
+  const showHint = enabled && !touched
 
   function handlePointerDown(e: React.PointerEvent) {
     if (!enabled || !svgRef.current) return
     const p = clientToSvg(svgRef.current, e.clientX, e.clientY)
     if (!p) return
+    setTouched(true)
     e.currentTarget.setPointerCapture(e.pointerId)
     const pitch = snapYToPitch(p.y, STAFF_LAYOUT)
     setDrag({ pointerId: e.pointerId, x: p.x, pitch })
@@ -153,12 +157,39 @@ export default function Board({
           stroke="#d8c9a6"
           strokeWidth={2}
         />
-        <NoteHead
-          x={TOOLBOX_CX}
-          y={TOOLBOX_CY}
-          opacity={enabled ? 1 : 0.3}
-        />
+        <g className={showHint ? 'note-hint' : undefined}>
+          <NoteHead
+            x={TOOLBOX_CX}
+            y={TOOLBOX_CY}
+            opacity={enabled ? 1 : 0.3}
+          />
+        </g>
       </g>
+
+      {/* 起動ヒント: 指アイコン＋「さわってね」（読めない子にも指で直感誘発） */}
+      {showHint && (
+        <g aria-hidden="true">
+          <text
+            className="finger-poke"
+            x={TOOLBOX_CX}
+            y={TOOLBOX_CY + 78}
+            textAnchor="middle"
+            fontSize={48}
+          >
+            👆
+          </text>
+          <text
+            x={TOOLBOX_CX}
+            y={TOOLBOX_CY + 132}
+            textAnchor="middle"
+            fontSize={26}
+            fontWeight="bold"
+            fill="#6b6375"
+          >
+            さわってね
+          </text>
+        </g>
+      )}
 
       {/* ドラッグ中のゴースト音符（拡大＋影で持ち上がり表現） */}
       {drag && (

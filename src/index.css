@@ -30,3 +30,31 @@ body {
 .note-bounce {
   animation: note-bounce 0.5s ease;
 }
+
+/* 起動ヒント: お道具箱の音符がゆっくり上下に揺れて「触ってね」を促す */
+@keyframes note-hint {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-14px);
+  }
+}
+.note-hint {
+  animation: note-hint 1.1s ease-in-out infinite;
+}
+
+/* 指アイコンがツンツンと音符をつつく */
+@keyframes finger-poke {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(10px);
+  }
+}
+.finger-poke {
+  animation: finger-poke 0.9s ease-in-out infinite;
+}
