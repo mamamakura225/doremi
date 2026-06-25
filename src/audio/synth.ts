@@ -25,3 +25,21 @@ export async function ensureAudio(): Promise<void> {
 export function playNote(note: string, duration: Tone.Unit.Time = '8n'): void {
   getSynth().triggerAttackRelease(note, duration)
 }
+
+// おてほん一致時の控えめキラキラ音（メロディ用synthを止めないよう別系統）。
+let sparkle: Tone.PolySynth | null = null
+function getSparkle(): Tone.PolySynth {
+  if (!sparkle) {
+    sparkle = new Tone.PolySynth(Tone.Synth, {
+      oscillator: { type: 'sine' },
+      envelope: { attack: 0.005, decay: 0.15, sustain: 0, release: 0.1 },
+      volume: -12,
+    }).toDestination()
+  }
+  return sparkle
+}
+
+/** お手本と一致した時の控えめなキラキラ音。 */
+export function playSparkle(): void {
+  getSparkle().triggerAttackRelease(['C6', 'E6', 'G6'], '16n')
+}

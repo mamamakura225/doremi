@@ -5,12 +5,14 @@ import { usePortrait } from './hooks/usePortrait'
 import { type PlacedNote, addNote, removeLast } from './lib/notes'
 import type { Pitch } from './lib/pitch'
 import { CELEBRATE_MS, playbackSchedule } from './lib/playback'
-import { ensureAudio, playNote } from './audio/synth'
+import { TWINKLE } from './lib/songs'
+import { ensureAudio, playNote, playSparkle } from './audio/synth'
 
 export default function App() {
   const [notes, setNotes] = useState<PlacedNote[]>([])
   const [playingIndex, setPlayingIndex] = useState<number | null>(null)
   const [celebrating, setCelebrating] = useState(false)
+  const [guide, setGuide] = useState(false)
   const timers = useRef<number[]>([])
   const portrait = usePortrait()
 
@@ -21,17 +23,30 @@ export default function App() {
   useEffect(() => clearTimers, [])
 
   const busy = playingIndex !== null || celebrating
+  const targets = guide ? TWINKLE.pitches : undefined
 
   function handlePlace(pitch: Pitch) {
     if (busy) return
+    const idx = notes.length
+    // お手本と一致したら控えめなキラキラ音（不一致でも普通に置ける・×なし）
+    if (targets?.[idx]?.note === pitch.note) playSparkle()
     setNotes((prev) => addNote(prev, pitch))
   }
 
-  function handleClear() {
+  function resetBoard() {
     clearTimers()
     setPlayingIndex(null)
     setCelebrating(false)
     setNotes([])
+  }
+
+  function handleClear() {
+    resetBoard()
+  }
+
+  function toggleGuide() {
+    resetBoard()
+    setGuide((g) => !g)
   }
 
   function handleUndo() {
@@ -90,6 +105,16 @@ export default function App() {
         >
           ↺ クリア
         </button>
+        <button
+          type="button"
+          onClick={toggleGuide}
+          disabled={busy}
+          className={`ml-auto rounded-2xl px-6 py-3 text-xl font-bold shadow disabled:opacity-40 ${
+            guide ? 'bg-[#f59e0b] text-white' : 'bg-white text-[#6b6375]'
+          }`}
+        >
+          {guide ? '🎵 おてほん' : '✏️ じゆう'}
+        </button>
       </header>
       <main className="min-h-0 flex-1">
         <Board
@@ -97,6 +122,7 @@ export default function App() {
           onPlace={handlePlace}
           playingIndex={playingIndex}
           celebrating={celebrating}
+          targets={targets}
         />
       </main>
     </div>
