@@ -58,3 +58,37 @@ body {
 .finger-poke {
   animation: finger-poke 0.9s ease-in-out infinite;
 }
+
+/* おてほん: 次に置く位置がふわっと脈打って光る */
+@keyframes target-glow {
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(1.15);
+  }
+}
+.target-glow {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: target-glow 1.2s ease-in-out infinite;
+}
+
+/* おてほん一致時: 符頭がポンッと跳ねる（置いた瞬間に1回） */
+@keyframes match-pop {
+  0% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-20px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+.match-pop {
+  animation: match-pop 0.45s ease;
+}

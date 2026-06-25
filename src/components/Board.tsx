@@ -25,6 +25,8 @@ interface Props {
   onPlace: (pitch: Pitch) => void
   playingIndex: number | null
   celebrating: boolean
+  /** おてほんモードのお手本音列（未指定＝自由制作） */
+  targets?: Pitch[]
 }
 
 interface DragState {
@@ -47,6 +49,7 @@ export default function Board({
   onPlace,
   playingIndex,
   celebrating,
+  targets,
 }: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
   const [drag, setDrag] = useState<DragState | null>(null)
@@ -124,21 +127,59 @@ export default function Board({
         />
       )}
 
+      {/* おてほんモード: お手本ゴースト（これから置く音）＋現在位置の発光 */}
+      {targets?.map((t, i) =>
+        i < notes.length ? null : (
+          <g key={`ghost-${i}`}>
+            {i === notes.length && (
+              <circle
+                className="target-glow"
+                cx={columnX(i)}
+                cy={pitchToY(t, STAFF_LAYOUT)}
+                r={30}
+                fill={colorOf(t)}
+              />
+            )}
+            <NoteHead
+              x={columnX(i)}
+              y={pitchToY(t, STAFF_LAYOUT)}
+              fill={colorOf(t)}
+              opacity={0.28}
+            />
+          </g>
+        ),
+      )}
+
       {/* 配置済み音符（置いた順に左→右へ等間隔） */}
-      {notes.map((n, i) => (
-        <g
-          key={n.id}
-          className={celebrating ? 'note-bounce' : undefined}
-          style={celebrating ? { animationDelay: `${i * 80}ms` } : undefined}
-        >
-          <NoteHead
-            x={columnX(i)}
-            y={pitchToY(n.pitch, STAFF_LAYOUT)}
-            fill={colorOf(n.pitch)}
-            highlight={i === playingIndex}
-          />
-        </g>
-      ))}
+      {notes.map((n, i) => {
+        const matched = targets?.[i]?.note === n.pitch.note
+        return (
+          <g
+            key={n.id}
+            className={
+              celebrating ? 'note-bounce' : matched ? 'match-pop' : undefined
+            }
+            style={celebrating ? { animationDelay: `${i * 80}ms` } : undefined}
+          >
+            <NoteHead
+              x={columnX(i)}
+              y={pitchToY(n.pitch, STAFF_LAYOUT)}
+              fill={colorOf(n.pitch)}
+              highlight={i === playingIndex}
+            />
+            {matched && (
+              <text
+                x={columnX(i) + 20}
+                y={pitchToY(n.pitch, STAFF_LAYOUT) - 28}
+                fontSize={26}
+                textAnchor="middle"
+              >
+                ✨
+              </text>
+            )}
+          </g>
+        )
+      })}
 
       {/* お道具箱（右側）: 四分音符が1つ常駐 */}
       <g
