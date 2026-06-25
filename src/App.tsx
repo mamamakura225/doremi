@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Board from './components/Board'
+import RotateOverlay from './components/RotateOverlay'
+import { usePortrait } from './hooks/usePortrait'
 import { type PlacedNote, addNote } from './lib/notes'
 import type { Pitch } from './lib/pitch'
 import { CELEBRATE_MS, playbackSchedule } from './lib/playback'
@@ -10,6 +12,7 @@ export default function App() {
   const [playingIndex, setPlayingIndex] = useState<number | null>(null)
   const [celebrating, setCelebrating] = useState(false)
   const timers = useRef<number[]>([])
+  const portrait = usePortrait()
 
   function clearTimers() {
     timers.current.forEach((t) => window.clearTimeout(t))
@@ -56,6 +59,7 @@ export default function App() {
 
   return (
     <div className="flex h-full w-full flex-col bg-[#fdf6e3]">
+      {portrait && <RotateOverlay />}
       <header className="flex shrink-0 gap-3 p-3">
         <button
           type="button"
