@@ -6,6 +6,7 @@ import {
   STAFF_RIGHT,
 } from '../lib/layout'
 import { MIDDLE_C, pitchToY } from '../lib/pitch'
+import TrebleClef from './TrebleClef'
 
 /** 五線・ト音記号・ド足場ガイドを描く（SVG内の <g>） */
 export default function Staff() {
@@ -30,16 +31,8 @@ export default function Staff() {
         />
       ))}
 
-      {/* ト音記号（5歳児にはシンボルとして提示） */}
-      <text
-        x={STAFF_LEFT + 8}
-        y={lineYs[4] + 18}
-        fontSize={300}
-        fill="#5b524b"
-        style={{ fontFamily: 'serif' }}
-      >
-        𝄞
-      </text>
+      {/* ト音記号（正確なSVGパス・渦巻き中心をG4線に整列） */}
+      <TrebleClef x={STAFF_LEFT + 8} />
 
       {/* ド足場ガイド: 下加線位置に半透明の足場（ここに置けるよ） */}
       <g aria-hidden="true">
