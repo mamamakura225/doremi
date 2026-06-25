@@ -23,3 +23,9 @@ export function addNote(notes: PlacedNote[], pitch: Pitch): PlacedNote[] {
 export function canAddNote(notes: PlacedNote[]): boolean {
   return notes.length < NOTE_MAX
 }
+
+/** 最後に置いた音符を1つ取り消す。空なら変更しない。 */
+export function removeLast(notes: PlacedNote[]): PlacedNote[] {
+  if (notes.length === 0) return notes
+  return notes.slice(0, -1)
+}
