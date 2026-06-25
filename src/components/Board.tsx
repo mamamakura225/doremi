@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react'
 import {
+  PLACE_LEFT,
+  PLACE_RIGHT,
   TOOLBOX_CX,
   TOOLBOX_CY,
   TOOLBOX_W,
@@ -91,7 +93,32 @@ export default function Board({
       role="application"
       aria-label="五線譜ボード"
     >
+      <defs>
+        <filter id="note-shadow" x="-50%" y="-50%" width="200%" height="200%">
+          <feDropShadow
+            dx="0"
+            dy="6"
+            stdDeviation="5"
+            floodColor="#000"
+            floodOpacity="0.3"
+          />
+        </filter>
+      </defs>
+
       <Staff />
+
+      {/* スナップ先の行ハイライト（指で隠れても着地点が分かる） */}
+      {drag && isOverPlacement(drag.x) && (
+        <rect
+          x={PLACE_LEFT}
+          y={pitchToY(drag.pitch, STAFF_LAYOUT) - 18}
+          width={PLACE_RIGHT - PLACE_LEFT}
+          height={36}
+          rx={18}
+          fill={colorOf(drag.pitch)}
+          opacity={0.22}
+        />
+      )}
 
       {/* 配置済み音符（置いた順に左→右へ等間隔） */}
       {notes.map((n, i) => (
@@ -133,13 +160,15 @@ export default function Board({
         />
       </g>
 
-      {/* ドラッグ中のゴースト音符 */}
+      {/* ドラッグ中のゴースト音符（拡大＋影で持ち上がり表現） */}
       {drag && (
         <NoteHead
           x={drag.x}
           y={pitchToY(drag.pitch, STAFF_LAYOUT)}
           fill={colorOf(drag.pitch)}
-          opacity={0.6}
+          opacity={0.9}
+          scale={1.4}
+          shadow
         />
       )}
     </svg>
