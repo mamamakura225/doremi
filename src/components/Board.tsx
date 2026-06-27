@@ -6,10 +6,13 @@ import {
   TOOLBOX_CY,
   TOOLBOX_W,
   TOOLBOX_X,
+  TRASH_CX,
+  TRASH_CY,
   VIEW_H,
   VIEW_W,
   columnX,
   isOverPlacement,
+  isOverTrash,
 } from '../lib/layout'
 import { STAFF_LAYOUT } from '../lib/layout'
 import { type Pitch, pitchToY, snapYToPitch } from '../lib/pitch'
@@ -23,6 +26,7 @@ import Staff from './Staff'
 interface Props {
   notes: PlacedNote[]
   onPlace: (pitch: Pitch) => void
+  onRemove: (id: string) => void
   playingIndex: number | null
   celebrating: boolean
   /** おてほんモードのお手本音列（未指定＝自由制作） */
@@ -33,6 +37,15 @@ interface DragState {
   pointerId: number
   x: number
   pitch: Pitch
+}
+
+/** 配置済み音符を掴んでゴミ箱へ捨てる操作 */
+interface DeleteDragState {
+  pointerId: number
+  id: string
+  pitch: Pitch
+  x: number
+  y: number
 }
 
 function clientToSvg(svg: SVGSVGElement, clientX: number, clientY: number) {
@@ -47,15 +60,19 @@ function clientToSvg(svg: SVGSVGElement, clientX: number, clientY: number) {
 export default function Board({
   notes,
   onPlace,
+  onRemove,
   playingIndex,
   celebrating,
   targets,
 }: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
   const [drag, setDrag] = useState<DragState | null>(null)
+  const [del, setDel] = useState<DeleteDragState | null>(null)
   const [touched, setTouched] = useState(false)
   const playing = playingIndex !== null
   const enabled = canAddNote(notes) && !playing && !celebrating
+  // 配置済み音符の編集（捨てる）は満杯でも可。再生・演出中のみ不可。
+  const editable = !playing && !celebrating
   // 起動直後（未操作）のみヒント表示。初回タップで消える＝それがAudioContext解除も兼ねる。
   const showHint = enabled && !touched
 
@@ -88,6 +105,29 @@ export default function Board({
       playNote(drag.pitch.note)
     }
     setDrag(null)
+  }
+
+  // 配置済み音符を掴む → ゴミ箱で離すと削除（タップ削除は採らない＝誤操作防止）
+  function handleNoteDown(e: React.PointerEvent, note: PlacedNote) {
+    if (!editable || !svgRef.current) return
+    e.stopPropagation()
+    const p = clientToSvg(svgRef.current, e.clientX, e.clientY)
+    if (!p) return
+    e.currentTarget.setPointerCapture(e.pointerId)
+    setDel({ pointerId: e.pointerId, id: note.id, pitch: note.pitch, x: p.x, y: p.y })
+  }
+
+  function handleNoteMove(e: React.PointerEvent) {
+    if (!del || e.pointerId !== del.pointerId || !svgRef.current) return
+    const p = clientToSvg(svgRef.current, e.clientX, e.clientY)
+    if (!p) return
+    setDel({ ...del, x: p.x, y: p.y })
+  }
+
+  function handleNoteUp(e: React.PointerEvent) {
+    if (!del || e.pointerId !== del.pointerId) return
+    if (isOverTrash(del.x, del.y)) onRemove(del.id)
+    setDel(null)
   }
 
   return (
@@ -150,22 +190,30 @@ export default function Board({
         ),
       )}
 
-      {/* 配置済み音符（置いた順に左→右へ等間隔） */}
+      {/* 配置済み音符（置いた順に左→右へ等間隔）。掴んでゴミ箱へ捨てられる。 */}
       {notes.map((n, i) => {
         const matched = targets?.[i]?.note === n.pitch.note
+        const dragging = del?.id === n.id
         return (
           <g
             key={n.id}
             className={
               celebrating ? 'note-bounce' : matched ? 'match-pop' : undefined
             }
-            style={celebrating ? { animationDelay: `${i * 80}ms` } : undefined}
+            style={{
+              ...(celebrating ? { animationDelay: `${i * 80}ms` } : {}),
+              cursor: editable ? 'grab' : 'default',
+            }}
+            onPointerDown={(e) => handleNoteDown(e, n)}
+            onPointerMove={handleNoteMove}
+            onPointerUp={handleNoteUp}
           >
             <NoteHead
               x={columnX(i)}
               y={pitchToY(n.pitch, STAFF_LAYOUT)}
               fill={colorOf(n.pitch)}
               highlight={i === playingIndex}
+              opacity={dragging ? 0.25 : 1}
             />
             {matched && (
               <text
@@ -240,6 +288,39 @@ export default function Board({
           fill={colorOf(drag.pitch)}
           opacity={0.9}
           scale={1.4}
+          shadow
+        />
+      )}
+
+      {/* 音符を掴んでいる間だけゴミ箱を表示（捨て先を明示）。重なると拡大して反応。 */}
+      {del && (
+        <g aria-hidden="true">
+          {(() => {
+            const over = isOverTrash(del.x, del.y)
+            return (
+              <text
+                x={TRASH_CX}
+                y={TRASH_CY}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fontSize={over ? 64 : 48}
+                opacity={over ? 1 : 0.7}
+              >
+                🗑️
+              </text>
+            )
+          })()}
+        </g>
+      )}
+
+      {/* 捨てるために掴んだ音符のゴースト（指に追従） */}
+      {del && (
+        <NoteHead
+          x={del.x}
+          y={del.y}
+          fill={colorOf(del.pitch)}
+          opacity={isOverTrash(del.x, del.y) ? 0.5 : 0.9}
+          scale={1.3}
           shadow
         />
       )}

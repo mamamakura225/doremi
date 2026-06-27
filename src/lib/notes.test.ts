@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { NOTE_MAX, columnX, isOverPlacement, PLACE_LEFT, PLACE_RIGHT } from './layout'
-import { addNote, canAddNote, removeLast, type PlacedNote } from './notes'
+import {
+  NOTE_MAX,
+  columnX,
+  isOverPlacement,
+  isOverTrash,
+  PLACE_LEFT,
+  PLACE_RIGHT,
+  TRASH_CX,
+  TRASH_CY,
+  TRASH_TOP,
+} from './layout'
+import { addNote, canAddNote, removeById, removeLast, type PlacedNote } from './notes'
 import { MIDDLE_C } from './pitch'
 
 describe('addNote', () => {
@@ -41,6 +51,26 @@ describe('removeLast', () => {
   })
 })
 
+describe('removeById', () => {
+  it('指定IDの音符だけ消し、順序を保つ', () => {
+    const notes = addNote(addNote(addNote([], MIDDLE_C), MIDDLE_C), MIDDLE_C)
+    const out = removeById(notes, notes[1].id)
+    expect(out).toHaveLength(2)
+    expect(out.map((n) => n.id)).toEqual([notes[0].id, notes[2].id])
+  })
+
+  it('該当IDが無ければ同一参照を返す', () => {
+    const notes = addNote([], MIDDLE_C)
+    expect(removeById(notes, 'missing')).toBe(notes)
+  })
+
+  it('元配列を破壊しない', () => {
+    const notes = addNote(addNote([], MIDDLE_C), MIDDLE_C)
+    removeById(notes, notes[0].id)
+    expect(notes).toHaveLength(2)
+  })
+})
+
 describe('canAddNote', () => {
   it('満杯で false', () => {
     let notes: PlacedNote[] = []
@@ -70,5 +100,14 @@ describe('isOverPlacement', () => {
     expect(isOverPlacement(columnX(0))).toBe(true)
     expect(isOverPlacement(0)).toBe(false)
     expect(isOverPlacement(9999)).toBe(false)
+  })
+})
+
+describe('isOverTrash', () => {
+  it('下部の帯（お道具箱の外）でのみ true', () => {
+    expect(isOverTrash(TRASH_CX, TRASH_CY)).toBe(true)
+    expect(isOverTrash(TRASH_CX, TRASH_TOP - 1)).toBe(false) // 帯より上
+    expect(isOverTrash(0, TRASH_CY)).toBe(false) // 五線譜の左外
+    expect(isOverTrash(9999, TRASH_CY)).toBe(false) // お道具箱側
   })
 })
