@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import Board from './components/Board'
+import Bookshelf from './components/Bookshelf'
 import RotateOverlay from './components/RotateOverlay'
 import { usePortrait } from './hooks/usePortrait'
 import { type PlacedNote, addNote, removeById, removeLast } from './lib/notes'
-import type { Pitch } from './lib/pitch'
+import { type Pitch, pitchByNote } from './lib/pitch'
 import { CELEBRATE_MS, playbackSchedule } from './lib/playback'
 import { TWINKLE } from './lib/songs'
+import { type SavedSong, loadSongs, saveSong } from './lib/storage'
 import { ensureAudio, playNote, playSparkle } from './audio/synth'
 
 export default function App() {
@@ -13,6 +15,9 @@ export default function App() {
   const [playingIndex, setPlayingIndex] = useState<number | null>(null)
   const [celebrating, setCelebrating] = useState(false)
   const [guide, setGuide] = useState(false)
+  const [savedSongs, setSavedSongs] = useState<SavedSong[]>(() => loadSongs())
+  const [shelfOpen, setShelfOpen] = useState(false)
+  const [justSaved, setJustSaved] = useState(false)
   const timers = useRef<number[]>([])
   const portrait = usePortrait()
 
@@ -59,14 +64,34 @@ export default function App() {
     setNotes((prev) => removeById(prev, id))
   }
 
-  async function handlePlay() {
+  function handleSave() {
     if (busy || notes.length === 0) return
+    setSavedSongs(saveSong(notes.map((n) => n.pitch.note)))
+    setJustSaved(true)
+    timers.current.push(window.setTimeout(() => setJustSaved(false), 1200))
+  }
+
+  // 本棚から選んだ曲を盤面に読み込み、そのまま再生（自由モード扱い）。
+  function handleSelectSong(song: SavedSong) {
+    const seq = song.notes
+      .map(pitchByNote)
+      .filter((p): p is Pitch => !!p)
+      .reduce<PlacedNote[]>((acc, pitch) => addNote(acc, pitch), [])
+    setShelfOpen(false)
+    setGuide(false)
+    setNotes(seq)
+    void playSequence(seq)
+  }
+
+  async function playSequence(seq: PlacedNote[]) {
+    if (seq.length === 0) return
+    clearTimers()
     await ensureAudio()
-    const { ticks, endAt } = playbackSchedule(notes.length)
+    const { ticks, endAt } = playbackSchedule(seq.length)
     for (const tick of ticks) {
       timers.current.push(
         window.setTimeout(() => {
-          playNote(notes[tick.index].pitch.note)
+          playNote(seq[tick.index].pitch.note)
           setPlayingIndex(tick.index)
         }, tick.at),
       )
@@ -80,6 +105,11 @@ export default function App() {
         )
       }, endAt),
     )
+  }
+
+  function handlePlay() {
+    if (busy || notes.length === 0) return
+    void playSequence(notes)
   }
 
   return (
@@ -112,6 +142,22 @@ export default function App() {
         </button>
         <button
           type="button"
+          onClick={handleSave}
+          disabled={busy || notes.length === 0}
+          className="rounded-2xl bg-white px-6 py-3 text-xl font-bold text-[#6b6375] shadow disabled:opacity-40"
+        >
+          {justSaved ? '✓ ほぞんした' : '💾 ほぞん'}
+        </button>
+        <button
+          type="button"
+          onClick={() => setShelfOpen(true)}
+          disabled={busy}
+          className="rounded-2xl bg-white px-6 py-3 text-xl font-bold text-[#6b6375] shadow disabled:opacity-40"
+        >
+          📚 ほんだな
+        </button>
+        <button
+          type="button"
           onClick={toggleGuide}
           disabled={busy}
           className={`ml-auto rounded-2xl px-6 py-3 text-xl font-bold shadow disabled:opacity-40 ${
@@ -121,7 +167,7 @@ export default function App() {
           {guide ? '🎵 おてほん' : '✏️ じゆう'}
         </button>
       </header>
-      <main className="min-h-0 flex-1">
+      <main className="relative min-h-0 flex-1">
         <Board
           notes={notes}
           onPlace={handlePlace}
@@ -130,6 +176,13 @@ export default function App() {
           celebrating={celebrating}
           targets={targets}
         />
+        {shelfOpen && (
+          <Bookshelf
+            songs={savedSongs}
+            onSelect={handleSelectSong}
+            onClose={() => setShelfOpen(false)}
+          />
+        )}
       </main>
     </div>
   )
