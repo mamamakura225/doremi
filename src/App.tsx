@@ -8,7 +8,14 @@ import { type Pitch, pitchByNote } from './lib/pitch'
 import { CELEBRATE_MS, playbackSchedule } from './lib/playback'
 import { TWINKLE } from './lib/songs'
 import { type SavedSong, loadSongs, saveSong } from './lib/storage'
-import { ensureAudio, playNote, playSparkle } from './audio/synth'
+import {
+  type Voice,
+  VOICES,
+  ensureAudio,
+  playMelodyNote,
+  playSparkle,
+  setPlaybackVoice,
+} from './audio/synth'
 
 export default function App() {
   const [notes, setNotes] = useState<PlacedNote[]>([])
@@ -18,6 +25,7 @@ export default function App() {
   const [savedSongs, setSavedSongs] = useState<SavedSong[]>(() => loadSongs())
   const [shelfOpen, setShelfOpen] = useState(false)
   const [justSaved, setJustSaved] = useState(false)
+  const [voice, setVoice] = useState<Voice>('piano')
   const timers = useRef<number[]>([])
   const portrait = usePortrait()
 
@@ -91,7 +99,7 @@ export default function App() {
     for (const tick of ticks) {
       timers.current.push(
         window.setTimeout(() => {
-          playNote(seq[tick.index].pitch.note)
+          playMelodyNote(seq[tick.index].pitch.note)
           setPlayingIndex(tick.index)
         }, tick.at),
       )
@@ -112,6 +120,13 @@ export default function App() {
     void playSequence(notes)
   }
 
+  // 再生音色を選ぶ。選んだ瞬間にその音色で試聴（タップ＝AudioContext起動も兼ねる）。
+  function handleSelectVoice(v: Voice) {
+    setVoice(v)
+    setPlaybackVoice(v)
+    void ensureAudio().then(() => playMelodyNote('C5'))
+  }
+
   return (
     <div className="flex h-full w-full flex-col bg-[#fdf6e3]">
       {portrait && <RotateOverlay />}
@@ -124,6 +139,25 @@ export default function App() {
         >
           ▶ さいせい
         </button>
+        <div
+          className="flex items-center gap-1 rounded-2xl bg-white px-2 py-1 shadow"
+          role="group"
+          aria-label="さいせいの おと"
+        >
+          {VOICES.map((v) => (
+            <button
+              key={v.id}
+              type="button"
+              onClick={() => handleSelectVoice(v.id)}
+              aria-pressed={voice === v.id}
+              className={`rounded-xl px-3 py-2 text-2xl ${
+                voice === v.id ? 'bg-[#f59e0b]' : 'bg-transparent'
+              }`}
+            >
+              {v.label}
+            </button>
+          ))}
+        </div>
         <button
           type="button"
           onClick={handleUndo}
