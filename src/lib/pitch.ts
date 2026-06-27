@@ -96,5 +96,12 @@ export function snapYToPitch(y: number, layout: StaffLayout): Pitch {
   return best
 }
 
+const PITCH_BY_NOTE = new Map(TREBLE_PITCHES.map((p) => [p.note, p]))
+
+/** 科学的音名 → 音（演奏範囲外は undefined） */
+export function pitchByNote(note: string): Pitch | undefined {
+  return PITCH_BY_NOTE.get(note)
+}
+
 /** ド(C4・下加線)の音 */
 export const MIDDLE_C: Pitch = TREBLE_PITCHES.find((p) => p.note === 'C4')!
