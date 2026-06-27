@@ -29,3 +29,9 @@ export function removeLast(notes: PlacedNote[]): PlacedNote[] {
   if (notes.length === 0) return notes
   return notes.slice(0, -1)
 }
+
+/** 指定IDの音符を削除。該当が無ければ変更しない。 */
+export function removeById(notes: PlacedNote[], id: string): PlacedNote[] {
+  const next = notes.filter((n) => n.id !== id)
+  return next.length === notes.length ? notes : next
+}

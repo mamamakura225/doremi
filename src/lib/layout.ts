@@ -34,3 +34,14 @@ export function columnX(index: number): number {
 export function isOverPlacement(x: number): boolean {
   return x >= STAFF_LEFT && x <= STAFF_RIGHT
 }
+
+// ゴミ箱ゾーン（配置済み音符をドラッグして捨てる：画面下部の帯）。
+// 最も低い音(C4 ≈ y390)より下なので配置音符と重ならない。
+export const TRASH_TOP = VIEW_H - 90 // 410
+export const TRASH_CX = (PLACE_LEFT + PLACE_RIGHT) / 2
+export const TRASH_CY = VIEW_H - 42
+
+/** ゴミ箱ゾーン（下部の帯・お道具箱を除く）に入っているか */
+export function isOverTrash(x: number, y: number): boolean {
+  return y >= TRASH_TOP && x >= STAFF_LEFT && x < TOOLBOX_X
+}

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import Board from './components/Board'
 import RotateOverlay from './components/RotateOverlay'
 import { usePortrait } from './hooks/usePortrait'
-import { type PlacedNote, addNote, removeLast } from './lib/notes'
+import { type PlacedNote, addNote, removeById, removeLast } from './lib/notes'
 import type { Pitch } from './lib/pitch'
 import { CELEBRATE_MS, playbackSchedule } from './lib/playback'
 import { TWINKLE } from './lib/songs'
@@ -52,6 +52,11 @@ export default function App() {
   function handleUndo() {
     if (busy) return
     setNotes((prev) => removeLast(prev))
+  }
+
+  function handleRemove(id: string) {
+    if (busy) return
+    setNotes((prev) => removeById(prev, id))
   }
 
   async function handlePlay() {
@@ -120,6 +125,7 @@ export default function App() {
         <Board
           notes={notes}
           onPlace={handlePlace}
+          onRemove={handleRemove}
           playingIndex={playingIndex}
           celebrating={celebrating}
           targets={targets}
