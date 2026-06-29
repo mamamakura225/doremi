@@ -1,32 +1,33 @@
-# React + TypeScript + Vite
+# どれみ 🎹🎵
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+耳で覚えた「ドレミ」を五線譜に音符として置いて視覚的に学ぶ、5歳児向けのスマホ／タブレット用Webアプリ（横向き）。バックエンド・認証・外部APIを持たない**純クライアント**のスタンドアロンPWA。
 
-Currently, two official plugins are available:
+**本番**: https://doremi.vercel.app
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 技術スタック
 
-## React Compiler
+- **Vite + React + TypeScript + Tailwind CSS v4** — 純クライアントPWA
+- **オーディオ**: Tone.js（初回タップで `Tone.start()`、iOS の AudioContext unlock）
+- **譜面描画**: SVG 自前実装（VexFlow 不使用）
+- **ドラッグ＆ドロップ**: Pointer Events 自前実装（HTML5 DnD API 不使用）
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 主な仕様
 
-## Expanding the Oxlint configuration
+- 8音1ページでフレーズを完成させる（デフォルト=ト音記号、真ん中のドは下加線1本＋足場ガイド）
+- 符頭をドレミの色相で塗り分け（ド=赤／レ=黄／ミ=緑…）
+- 横向き前提。縦向き時は「回してね」オーバーレイを表示
+- つくった曲は localStorage の「本棚」に保存
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+## 開発
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm run dev       # 開発サーバー（Vite）
+npm test          # Vitest（src/lib の純ロジック中心）
+npm run lint      # oxlint
+npm run build     # tsc -b ＋ 本番ビルド（vite build）
+npm run preview   # 本番ビルドのプレビュー
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## ドキュメント
+
+設計合意・プロジェクト固有の鉄則は [CLAUDE.md](./CLAUDE.md) を参照。
