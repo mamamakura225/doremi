@@ -8,21 +8,26 @@ interface Props {
   onClose: () => void
 }
 
-/** 各音を音高色の丸で並べたミニプレビュー（読めない子も色で見分けられる）。 */
-function Preview({ notes }: { notes: string[] }) {
+/** 各音を音高色の丸で並べたミニプレビュー（読めない子も色で見分けられる）。
+ *  ページ（フレーズ）ごとに区切って並べる。 */
+function Preview({ pages }: { pages: string[][] }) {
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      {notes.map((n, i) => {
-        const p = pitchByNote(n)
-        const color = p ? SOLFA_COLOR[p.solfa] : '#cbd5e1'
-        return (
-          <span
-            key={i}
-            className="inline-block h-5 w-5 rounded-full"
-            style={{ backgroundColor: color }}
-          />
-        )
-      })}
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+      {pages.map((notes, pi) => (
+        <div key={pi} className="flex items-center gap-1.5">
+          {notes.map((n, i) => {
+            const p = pitchByNote(n)
+            const color = p ? SOLFA_COLOR[p.solfa] : '#cbd5e1'
+            return (
+              <span
+                key={i}
+                className="inline-block h-5 w-5 rounded-full"
+                style={{ backgroundColor: color }}
+              />
+            )
+          })}
+        </div>
+      ))}
     </div>
   )
 }
@@ -57,7 +62,7 @@ export default function Bookshelf({ songs, onSelect, onClose }: Props) {
                 onClick={() => onSelect(song)}
                 className="flex flex-col gap-2 rounded-2xl bg-white p-3 text-left shadow active:scale-95"
               >
-                <Preview notes={song.notes} />
+                <Preview pages={song.pages} />
                 <span className="text-base font-bold text-[#22c55e]">▶ きく</span>
               </button>
             ))}

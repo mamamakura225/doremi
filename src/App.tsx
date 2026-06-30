@@ -4,6 +4,7 @@ import Bookshelf from './components/Bookshelf'
 import RotateOverlay from './components/RotateOverlay'
 import { usePortrait } from './hooks/usePortrait'
 import { type PlacedNote, addNote, removeById, removeLast } from './lib/notes'
+import { canAddPage, toNoteNames } from './lib/pages'
 import { type Pitch, pitchByNote } from './lib/pitch'
 import { CELEBRATE_MS, playbackSchedule } from './lib/playback'
 import { TWINKLE } from './lib/songs'
@@ -17,9 +18,15 @@ import {
   setPlaybackVoice,
 } from './audio/synth'
 
+interface Playing {
+  page: number
+  index: number
+}
+
 export default function App() {
-  const [notes, setNotes] = useState<PlacedNote[]>([])
-  const [playingIndex, setPlayingIndex] = useState<number | null>(null)
+  const [pages, setPages] = useState<PlacedNote[][]>([[]])
+  const [currentPage, setCurrentPage] = useState(0)
+  const [playing, setPlaying] = useState<Playing | null>(null)
   const [celebrating, setCelebrating] = useState(false)
   const [guide, setGuide] = useState(false)
   const [savedSongs, setSavedSongs] = useState<SavedSong[]>(() => loadSongs())
@@ -35,22 +42,29 @@ export default function App() {
   }
   useEffect(() => clearTimers, [])
 
-  const busy = playingIndex !== null || celebrating
-  const targets = guide ? TWINKLE.pitches : undefined
+  const notes = pages[currentPage]
+  const busy = playing !== null || celebrating
+  // おてほんは1フレーズ＝1ページめのみを対象にする。
+  const targets = guide && currentPage === 0 ? TWINKLE.pitches : undefined
+
+  function updateCurrentPage(fn: (page: PlacedNote[]) => PlacedNote[]) {
+    setPages((prev) => prev.map((pg, i) => (i === currentPage ? fn(pg) : pg)))
+  }
 
   function handlePlace(pitch: Pitch) {
     if (busy) return
     const idx = notes.length
     // お手本と一致したら控えめなキラキラ音（不一致でも普通に置ける・×なし）
     if (targets?.[idx]?.note === pitch.note) playSparkle()
-    setNotes((prev) => addNote(prev, pitch))
+    updateCurrentPage((pg) => addNote(pg, pitch))
   }
 
   function resetBoard() {
     clearTimers()
-    setPlayingIndex(null)
+    setPlaying(null)
     setCelebrating(false)
-    setNotes([])
+    setPages([[]])
+    setCurrentPage(0)
   }
 
   function handleClear() {
@@ -64,49 +78,77 @@ export default function App() {
 
   function handleUndo() {
     if (busy) return
-    setNotes((prev) => removeLast(prev))
+    updateCurrentPage((pg) => removeLast(pg))
   }
 
   function handleRemove(id: string) {
     if (busy) return
-    setNotes((prev) => removeById(prev, id))
+    updateCurrentPage((pg) => removeById(pg, id))
+  }
+
+  // ページ移動。つぎは「次ページへ」または末尾満杯時の「新ページ追加」を兼ねる。
+  const hasNextPage = currentPage < pages.length - 1
+  const canCreatePage = canAddPage(pages, currentPage)
+  const showPrev = currentPage > 0 && !busy
+  const showNext = (hasNextPage || canCreatePage) && !busy
+
+  function handlePrev() {
+    if (showPrev) setCurrentPage((c) => c - 1)
+  }
+
+  function handleNext() {
+    if (busy) return
+    if (hasNextPage) {
+      setCurrentPage((c) => c + 1)
+    } else if (canCreatePage) {
+      setPages((prev) => [...prev, []])
+      setCurrentPage((c) => c + 1)
+    }
   }
 
   function handleSave() {
-    if (busy || notes.length === 0) return
-    setSavedSongs(saveSong(notes.map((n) => n.pitch.note)))
+    if (busy) return
+    const songPages = toNoteNames(pages)
+    if (songPages.length === 0) return
+    setSavedSongs(saveSong(songPages))
     setJustSaved(true)
     timers.current.push(window.setTimeout(() => setJustSaved(false), 1200))
   }
 
   // 本棚から選んだ曲を盤面に読み込み、そのまま再生（自由モード扱い）。
   function handleSelectSong(song: SavedSong) {
-    const seq = song.notes
-      .map(pitchByNote)
-      .filter((p): p is Pitch => !!p)
-      .reduce<PlacedNote[]>((acc, pitch) => addNote(acc, pitch), [])
+    const pgs = song.pages.map((names) =>
+      names
+        .map(pitchByNote)
+        .filter((p): p is Pitch => !!p)
+        .reduce<PlacedNote[]>((acc, pitch) => addNote(acc, pitch), []),
+    )
+    const loaded = pgs.length > 0 ? pgs : [[]]
     setShelfOpen(false)
     setGuide(false)
-    setNotes(seq)
-    void playSequence(seq)
+    setPages(loaded)
+    setCurrentPage(0)
+    void playSequence(loaded)
   }
 
-  async function playSequence(seq: PlacedNote[]) {
-    if (seq.length === 0) return
+  async function playSequence(pgs: PlacedNote[][]) {
+    const counts = pgs.map((p) => p.length)
+    if (counts.every((c) => c === 0)) return
     clearTimers()
     await ensureAudio()
-    const { ticks, endAt } = playbackSchedule(seq.length)
+    const { ticks, endAt } = playbackSchedule(counts)
     for (const tick of ticks) {
       timers.current.push(
         window.setTimeout(() => {
-          playMelodyNote(seq[tick.index].pitch.note)
-          setPlayingIndex(tick.index)
+          playMelodyNote(pgs[tick.page][tick.index].pitch.note)
+          setCurrentPage(tick.page)
+          setPlaying({ page: tick.page, index: tick.index })
         }, tick.at),
       )
     }
     timers.current.push(
       window.setTimeout(() => {
-        setPlayingIndex(null)
+        setPlaying(null)
         setCelebrating(true)
         timers.current.push(
           window.setTimeout(() => setCelebrating(false), CELEBRATE_MS),
@@ -115,9 +157,11 @@ export default function App() {
     )
   }
 
+  const empty = toNoteNames(pages).length === 0
+
   function handlePlay() {
-    if (busy || notes.length === 0) return
-    void playSequence(notes)
+    if (busy || empty) return
+    void playSequence(pages)
   }
 
   // 再生音色を選ぶ。選んだ瞬間にその音色で試聴（タップ＝AudioContext起動も兼ねる）。
@@ -134,7 +178,7 @@ export default function App() {
         <button
           type="button"
           onClick={handlePlay}
-          disabled={busy || notes.length === 0}
+          disabled={busy || empty}
           className="rounded-2xl bg-[#22c55e] px-6 py-3 text-xl font-bold text-white shadow disabled:opacity-40"
         >
           ▶ さいせい
@@ -169,7 +213,7 @@ export default function App() {
         <button
           type="button"
           onClick={handleClear}
-          disabled={notes.length === 0}
+          disabled={empty}
           className="rounded-2xl bg-white px-6 py-3 text-xl font-bold text-[#6b6375] shadow disabled:opacity-40"
         >
           ↺ クリア
@@ -177,7 +221,7 @@ export default function App() {
         <button
           type="button"
           onClick={handleSave}
-          disabled={busy || notes.length === 0}
+          disabled={busy || empty}
           className="rounded-2xl bg-white px-6 py-3 text-xl font-bold text-[#6b6375] shadow disabled:opacity-40"
         >
           {justSaved ? '✓ ほぞんした' : '💾 ほぞん'}
@@ -206,10 +250,51 @@ export default function App() {
           notes={notes}
           onPlace={handlePlace}
           onRemove={handleRemove}
-          playingIndex={playingIndex}
+          playingIndex={playing?.page === currentPage ? playing.index : null}
           celebrating={celebrating}
           targets={targets}
         />
+        {!shelfOpen && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-3 flex items-center justify-between px-6">
+            {showPrev ? (
+              <button
+                type="button"
+                onClick={handlePrev}
+                className="pointer-events-auto rounded-2xl bg-white px-7 py-4 text-2xl font-bold text-[#6b6375] shadow-lg active:scale-95"
+              >
+                ⬅ まえ
+              </button>
+            ) : (
+              <span />
+            )}
+            {pages.length > 1 && (
+              <div
+                className="flex items-center gap-2 rounded-full bg-white/80 px-4 py-2 shadow"
+                aria-label={`${currentPage + 1}ページめ / ぜんぶで${pages.length}ページ`}
+              >
+                {pages.map((_, i) => (
+                  <span
+                    key={i}
+                    className={`h-3.5 w-3.5 rounded-full ${
+                      i === currentPage ? 'bg-[#f59e0b]' : 'bg-[#d8c9a6]'
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
+            {showNext ? (
+              <button
+                type="button"
+                onClick={handleNext}
+                className="pointer-events-auto rounded-2xl bg-[#38bdf8] px-7 py-4 text-2xl font-bold text-white shadow-lg active:scale-95"
+              >
+                {canCreatePage && !hasNextPage ? 'つぎのうた ➔' : 'つぎ ➔'}
+              </button>
+            ) : (
+              <span />
+            )}
+          </div>
+        )}
         {shelfOpen && (
           <Bookshelf
             songs={savedSongs}
