@@ -2,19 +2,7 @@
 
 耳で覚えた「ドレミ」を五線譜に音符として置いて視覚的に学ぶ、5歳児向けのスマホ／タブレット用Webアプリ（横向き）。Vite + TypeScript + React + Tailwind CSS v4 + Tone.js のスタンドアロンPWA。バックエンド・認証・外部APIを持たない**純クライアント**アプリ。
 本ファイルは AIエージェントのコンテキスト汚染・無限デバッグループ・破壊的変更を抑止するための不変の指示書である。
-
-## 応答ガイドライン
-- **前置き・結びの禁止／結論ファースト**：挨拶やクッション言葉は省き、回答・コードから始める。
-- **最小限の差分提示**：変更箇所のスニペット／Diffのみ。変更のないファイル全体を再掲しない。
-- **過剰な確認の省略**：意図が明確なら確認を挟まず即実行する。
-
-## 思考・コーディング規約（Karpathy規範 & 安全ガードレール）
-- **Think Before Coding**：実装前に要件と変更対象を整理。曖昧な点は推測せず前提を明示して質問。
-- **Simplicity First**：要求の最小構成のみ実装。不要な抽象化・過度なエラーハンドリング・先回り機能は厳禁。
-- **Surgical Changes**：変更はターゲットに限定。無関係なリファクタ・整形・コメント改変をしない。
-- **Goal-Driven Execution**：書き換え前に再現テスト／アサーションを作る・回す。
-- **Loop & Context Control**：実行/デバッグが5回連続失敗、または自律ループのツール呼び出しが10回超で停止し、状況を整理して人間に指示を仰ぐ。
-- **Privilege Boundaries**：`.git/`・`node_modules/` への直接書き込みは禁止。
+エージェント共通の応答ガイドライン・思考/コーディング規約（Karpathy規範）は端末のグローバル規約（`~/.claude/CLAUDE.md`）に一本化しており、本書は**プロジェクト固有規約のみ**を定める。
 
 ## プロジェクト構成
 - **他プロジェクトとの混同禁止**：dtask / piano-pet / pashari / nuibon 等の規約（`gen-sw`・`apps/*` 構造・Next.js前提など）は一切持ち込まない。完全に独立した Vite + React スタンドアロン構成。
@@ -53,7 +41,7 @@ npm run build     # tsc -b ＋ 本番ビルド（vite build）
   ```bash
   git -c user.email="284483932+mamamakura225@users.noreply.github.com" -c user.name="mamamakura225" commit -m "..."
   ```
-- メッセージ末尾に共同作成者情報：`Co-Authored-By: Claude Opus <現行版> <noreply@anthropic.com>`
+- メッセージ末尾に共同作成者情報（`<現行モデル名>` は現在稼働中のモデル名。例: `Claude Fable 5`）：`Co-Authored-By: Claude <現行モデル名> <noreply@anthropic.com>`
 
 ### ⑤ Issue・PR連動
 - バックログは GitHub Issues に一本化。PR本文に `Closes #N` を記述して Issue を連動クローズ（コミット件名の括弧表記は対象外）。1 issue = 1 PR。
