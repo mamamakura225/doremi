@@ -1,5 +1,7 @@
 // Tone.js の薄いラッパー。AudioContextのunlockと単音発音のみ。
 import * as Tone from 'tone'
+import { pitchByNote } from '../lib/pitch'
+import { primeSpeech, speakSolfa, stopSpeech } from './speech'
 
 let synth: Tone.Synth | null = null
 let started = false
@@ -27,11 +29,12 @@ export function playNote(note: string, duration: Tone.Unit.Time = '8n'): void {
 }
 
 // 再生時のみ切り替えられる音色（制作中の音は通常音のまま＝学習を妨げない）。
-export type Voice = 'piano' | 'bell' | 'pico'
-export const VOICES: { id: Voice; label: string }[] = [
-  { id: 'piano', label: '🎹' },
-  { id: 'bell', label: '🔔' },
-  { id: 'pico', label: '🎵' },
+export type Voice = 'piano' | 'bell' | 'pico' | 'sing'
+export const VOICES: { id: Voice; label: string; name: string }[] = [
+  { id: 'piano', label: '🎹', name: 'ぴあの' },
+  { id: 'bell', label: '🔔', name: 'べる' },
+  { id: 'pico', label: '🎵', name: 'ぴこぴこ' },
+  { id: 'sing', label: '🎤', name: 'うた（ドレミ）' },
 ]
 
 type AnySynth = Tone.Synth | Tone.FMSynth
@@ -65,14 +68,35 @@ function getVoice(v: Voice): AnySynth {
   return (voiceCache[v] ??= makeVoice(v))
 }
 
-/** 再生音色を切り替える（既定=piano）。 */
+/** 再生音色を切り替える（既定=piano）。タップハンドラから同期で呼ばれる前提。 */
 export function setPlaybackVoice(v: Voice): void {
+  if (playbackVoice === 'sing' && v !== 'sing') stopSpeech()
+  // 解錠はタップと同一tickでないと効かないため、ここで済ませる（primeSpeech参照）。
+  if (v === 'sing') primeSpeech()
   playbackVoice = v
 }
 
-/** 再生用に1音鳴らす（選択中の音色を使用）。 */
+/**
+ * 再生用に1音鳴らす（選択中の音色を使用）。
+ * うたモードは音名を読み上げるが、読み上げ自体には音の高さが無い。
+ * 高さの学習を損なわないよう、ピアノ音に重ねて歌わせる。
+ */
 export function playMelodyNote(note: string, duration: Tone.Unit.Time = '8n'): void {
+  if (playbackVoice === 'sing') {
+    getVoice('piano').triggerAttackRelease(note, duration)
+    const solfa = pitchByNote(note)?.solfa
+    if (solfa) speakSolfa(solfa)
+    return
+  }
   getVoice(playbackVoice).triggerAttackRelease(note, duration)
+}
+
+/**
+ * 再生中断時に読み上げだけを止める。
+ * 楽器音は 8n で自然減衰するため Tone 側は触らない（＝メロディ全体の停止ではない）。
+ */
+export function stopMelodySpeech(): void {
+  stopSpeech()
 }
 
 // おてほん一致時の控えめキラキラ音（メロディ用synthを止めないよう別系統）。
