@@ -16,6 +16,7 @@ import {
   playMelodyNote,
   playSparkle,
   setPlaybackVoice,
+  stopMelodySpeech,
 } from './audio/synth'
 
 interface Playing {
@@ -39,6 +40,7 @@ export default function App() {
   function clearTimers() {
     timers.current.forEach((t) => window.clearTimeout(t))
     timers.current = []
+    stopMelodySpeech()
   }
   useEffect(() => clearTimers, [])
 
@@ -193,6 +195,7 @@ export default function App() {
               key={v.id}
               type="button"
               onClick={() => handleSelectVoice(v.id)}
+              aria-label={v.name}
               aria-pressed={voice === v.id}
               className={`rounded-xl px-3 py-2 text-2xl ${
                 voice === v.id ? 'bg-[#f59e0b]' : 'bg-transparent'
