@@ -31,4 +31,6 @@ npm run preview   # 本番ビルドのプレビュー
 
 ## ドキュメント
 
-設計合意・プロジェクト固有の鉄則は [CLAUDE.md](./CLAUDE.md) を参照。
+- [docs/requirements.md](./docs/requirements.md) — 要件定義（MVPスコープ・スコープ外・制約）
+- [docs/architecture.md](./docs/architecture.md) — 設計判断と不採用にした案
+- [CLAUDE.md](./CLAUDE.md) — 開発規約・プロジェクト固有の鉄則
