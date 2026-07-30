@@ -52,7 +52,35 @@ export const TRASH_TOP = VIEW_H - 90 // 410
 export const TRASH_CX = (PLACE_LEFT + PLACE_RIGHT) / 2
 export const TRASH_CY = VIEW_H - 42
 
-/** ゴミ箱ゾーン（下部の帯・お道具箱を除く）に入っているか */
+/**
+ * ゴミ箱ゾーン（下部の帯・お道具箱を除く）に入っているか。
+ * 下端は VIEW_H で切る——鍵盤併記のときに鍵盤の上で離した音符が
+ * 捨てられてしまわないようにするため。
+ */
 export function isOverTrash(x: number, y: number): boolean {
-  return y >= TRASH_TOP && x >= STAFF_LEFT && x < TOOLBOX_X
+  return y >= TRASH_TOP && y < VIEW_H && x >= STAFF_LEFT && x < TOOLBOX_X
+}
+
+// 鍵盤併記（家庭学習との接続）。五線譜の下に足す帯で、VIEW_H より下に置く。
+export const KEYBOARD_H = 120
+export const VIEW_H_KEYS = VIEW_H + KEYBOARD_H // 620
+export const KEYBOARD_TOP = VIEW_H
+export const KEY_LEFT = STAFF_LEFT
+export const KEY_RIGHT = STAFF_RIGHT
+
+/**
+ * 鍵盤を出せる縦横比の下限（高さ÷幅）。
+ * これを下回る（＝横に細長い）と、鍵盤ぶん縦が伸びた viewBox が高さ基準になり、
+ * 五線譜そのものが縮む。スマホ横がここに該当する。
+ */
+export const KEYBOARD_MIN_RATIO = VIEW_H_KEYS / VIEW_W
+
+/** i番目（0始まり）の白鍵の左端X */
+export function whiteKeyX(index: number, count: number): number {
+  return KEY_LEFT + (index * (KEY_RIGHT - KEY_LEFT)) / count
+}
+
+/** 白鍵1つぶんの幅 */
+export function whiteKeyW(count: number): number {
+  return (KEY_RIGHT - KEY_LEFT) / count
 }
