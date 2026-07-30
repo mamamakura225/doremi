@@ -1,9 +1,12 @@
 import { useRef, useState } from 'react'
 import {
+  COLUMN_PITCH,
+  NOTE_MAX,
   PLACE_LEFT,
   PLACE_RIGHT,
   TOOLBOX_CX,
-  TOOLBOX_CY,
+  TOOLBOX_LONG_CY,
+  TOOLBOX_NORMAL_CY,
   TOOLBOX_W,
   TOOLBOX_X,
   TRASH_CX,
@@ -17,7 +20,8 @@ import {
 import { STAFF_LAYOUT } from '../lib/layout'
 import { type Pitch, pitchToY, snapYToPitch } from '../lib/pitch'
 import type { PlacedNote } from '../lib/notes'
-import { canAddNote } from '../lib/notes'
+import { canAddNote, columnStarts, usedColumns } from '../lib/notes'
+import { noteDuration } from '../lib/playback'
 import { colorOf } from '../lib/colors'
 import { ensureAudio, playNote } from '../audio/synth'
 import NoteHead from './NoteHead'
@@ -25,7 +29,7 @@ import Staff from './Staff'
 
 interface Props {
   notes: PlacedNote[]
-  onPlace: (pitch: Pitch) => void
+  onPlace: (pitch: Pitch, long: boolean) => void
   onRemove: (id: string) => void
   playingIndex: number | null
   celebrating: boolean
@@ -37,6 +41,8 @@ interface DragState {
   pointerId: number
   x: number
   pitch: Pitch
+  /** 掴んでいるのが「のばす音」か */
+  long: boolean
 }
 
 /** 配置済み音符を掴んでゴミ箱へ捨てる操作 */
@@ -44,6 +50,7 @@ interface DeleteDragState {
   pointerId: number
   id: string
   pitch: Pitch
+  long: boolean
   x: number
   y: number
 }
@@ -70,22 +77,31 @@ export default function Board({
   const [del, setDel] = useState<DeleteDragState | null>(null)
   const [touched, setTouched] = useState(false)
   const playing = playingIndex !== null
-  const enabled = canAddNote(notes) && !playing && !celebrating
+  const busy = playing || celebrating
+  const canNormal = canAddNote(notes, false) && !busy
+  const canLong = canAddNote(notes, true) && !busy
   // 配置済み音符の編集（捨てる）は満杯でも可。再生・演出中のみ不可。
-  const editable = !playing && !celebrating
+  const editable = !busy
   // 起動直後（未操作）のみヒント表示。初回タップで消える＝それがAudioContext解除も兼ねる。
-  const showHint = enabled && !touched
+  const showHint = canNormal && !touched
+  // 音符の開始列（のばす音は2列ぶん占めるので、後続の列がその分ずれる）
+  const starts = columnStarts(notes)
 
-  function handlePointerDown(e: React.PointerEvent) {
-    if (!enabled || !svgRef.current) return
+  /** 掴んだ音の長さに合わせた試聴音（のばす音は制作中も長く鳴る） */
+  function previewNote(note: string, long: boolean) {
+    playNote(note, noteDuration(long ? 2 : 1))
+  }
+
+  function handlePointerDown(e: React.PointerEvent, long: boolean) {
+    if (!(long ? canLong : canNormal) || !svgRef.current) return
     const p = clientToSvg(svgRef.current, e.clientX, e.clientY)
     if (!p) return
     setTouched(true)
     e.currentTarget.setPointerCapture(e.pointerId)
     const pitch = snapYToPitch(p.y, STAFF_LAYOUT)
-    setDrag({ pointerId: e.pointerId, x: p.x, pitch })
+    setDrag({ pointerId: e.pointerId, x: p.x, pitch, long })
     // 初回タップでAudioContext起動 → 掴んだ音を鳴らす
-    void ensureAudio().then(() => playNote(pitch.note))
+    void ensureAudio().then(() => previewNote(pitch.note, long))
   }
 
   function handlePointerMove(e: React.PointerEvent) {
@@ -94,15 +110,15 @@ export default function Board({
     if (!p) return
     const pitch = snapYToPitch(p.y, STAFF_LAYOUT)
     // ゾーン（音）を跨いだ瞬間のみ再トリガ（暴発防止）
-    if (pitch.note !== drag.pitch.note) playNote(pitch.note)
+    if (pitch.note !== drag.pitch.note) previewNote(pitch.note, drag.long)
     setDrag({ ...drag, x: p.x, pitch })
   }
 
   function handlePointerUp(e: React.PointerEvent) {
     if (!drag || e.pointerId !== drag.pointerId) return
     if (isOverPlacement(drag.x)) {
-      onPlace(drag.pitch)
-      playNote(drag.pitch.note)
+      onPlace(drag.pitch, drag.long)
+      previewNote(drag.pitch.note, drag.long)
     }
     setDrag(null)
   }
@@ -114,7 +130,14 @@ export default function Board({
     const p = clientToSvg(svgRef.current, e.clientX, e.clientY)
     if (!p) return
     e.currentTarget.setPointerCapture(e.pointerId)
-    setDel({ pointerId: e.pointerId, id: note.id, pitch: note.pitch, x: p.x, y: p.y })
+    setDel({
+      pointerId: e.pointerId,
+      id: note.id,
+      pitch: note.pitch,
+      long: !!note.long,
+      x: p.x,
+      y: p.y,
+    })
   }
 
   function handleNoteMove(e: React.PointerEvent) {
@@ -167,28 +190,32 @@ export default function Board({
         />
       )}
 
-      {/* おてほんモード: お手本ゴースト（これから置く音）＋現在位置の発光 */}
-      {targets?.map((t, i) =>
-        i < notes.length ? null : (
+      {/* おてほんモード: お手本ゴースト（これから置く音）＋現在位置の発光。
+          お手本はふつうの音だけなので、置いた音符が使った列の続きに並べる。 */}
+      {targets?.map((t, i) => {
+        if (i < notes.length) return null
+        const col = usedColumns(notes) + (i - notes.length)
+        if (col >= NOTE_MAX) return null
+        return (
           <g key={`ghost-${i}`}>
             {i === notes.length && (
               <circle
                 className="target-glow"
-                cx={columnX(i)}
+                cx={columnX(col)}
                 cy={pitchToY(t, STAFF_LAYOUT)}
                 r={30}
                 fill={colorOf(t)}
               />
             )}
             <NoteHead
-              x={columnX(i)}
+              x={columnX(col)}
               y={pitchToY(t, STAFF_LAYOUT)}
               fill={colorOf(t)}
               opacity={0.28}
             />
           </g>
-        ),
-      )}
+        )
+      })}
 
       {/* 配置済み音符（置いた順に左→右へ等間隔）。掴んでゴミ箱へ捨てられる。 */}
       {notes.map((n, i) => {
@@ -209,15 +236,16 @@ export default function Board({
             onPointerUp={handleNoteUp}
           >
             <NoteHead
-              x={columnX(i)}
+              x={columnX(starts[i])}
               y={pitchToY(n.pitch, STAFF_LAYOUT)}
               fill={colorOf(n.pitch)}
               highlight={i === playingIndex}
               opacity={dragging ? 0.25 : 1}
+              tail={n.long ? COLUMN_PITCH : 0}
             />
             {matched && (
               <text
-                x={columnX(i) + 20}
+                x={columnX(starts[i]) + 20}
                 y={pitchToY(n.pitch, STAFF_LAYOUT) - 28}
                 fontSize={26}
                 textAnchor="middle"
@@ -229,30 +257,58 @@ export default function Board({
         )
       })}
 
-      {/* お道具箱（右側）: 四分音符が1つ常駐 */}
+      {/* お道具箱（右側）: 「ふつうの音」と「のばす音」が常駐 */}
+      <rect
+        x={TOOLBOX_X}
+        y={40}
+        width={TOOLBOX_W}
+        height={VIEW_H - 80}
+        rx={16}
+        fill="#f0e6cf"
+        stroke="#d8c9a6"
+        strokeWidth={2}
+      />
+      {/* 掴む的は符頭だけでなく箱の上下半分ぜんぶ（指1本で外しにくくする） */}
       <g
-        onPointerDown={handlePointerDown}
+        onPointerDown={(e) => handlePointerDown(e, false)}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        style={{ cursor: enabled ? 'grab' : 'default' }}
+        style={{ cursor: canNormal ? 'grab' : 'default' }}
       >
         <rect
           x={TOOLBOX_X}
           y={40}
           width={TOOLBOX_W}
-          height={VIEW_H - 80}
-          rx={16}
-          fill="#f0e6cf"
-          stroke="#d8c9a6"
-          strokeWidth={2}
+          height={(VIEW_H - 80) / 2}
+          fill="transparent"
         />
         <g className={showHint ? 'note-hint' : undefined}>
           <NoteHead
             x={TOOLBOX_CX}
-            y={TOOLBOX_CY}
-            opacity={enabled ? 1 : 0.3}
+            y={TOOLBOX_NORMAL_CY}
+            opacity={canNormal ? 1 : 0.3}
           />
         </g>
+      </g>
+      <g
+        onPointerDown={(e) => handlePointerDown(e, true)}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        style={{ cursor: canLong ? 'grab' : 'default' }}
+      >
+        <rect
+          x={TOOLBOX_X}
+          y={40 + (VIEW_H - 80) / 2}
+          width={TOOLBOX_W}
+          height={(VIEW_H - 80) / 2}
+          fill="transparent"
+        />
+        <NoteHead
+          x={TOOLBOX_CX - 22}
+          y={TOOLBOX_LONG_CY}
+          opacity={canLong ? 1 : 0.3}
+          tail={44}
+        />
       </g>
 
       {/* 起動ヒント: 指アイコン＋「さわってね」（読めない子にも指で直感誘発） */}
@@ -261,7 +317,7 @@ export default function Board({
           <text
             className="finger-poke"
             x={TOOLBOX_CX}
-            y={TOOLBOX_CY + 78}
+            y={TOOLBOX_NORMAL_CY + 52}
             textAnchor="middle"
             fontSize={48}
           >
@@ -269,7 +325,7 @@ export default function Board({
           </text>
           <text
             x={TOOLBOX_CX}
-            y={TOOLBOX_CY + 132}
+            y={TOOLBOX_NORMAL_CY + 96}
             textAnchor="middle"
             fontSize={26}
             fontWeight="bold"
@@ -289,6 +345,7 @@ export default function Board({
           opacity={0.9}
           scale={1.4}
           shadow
+          tail={drag.long ? COLUMN_PITCH : 0}
         />
       )}
 
@@ -322,6 +379,7 @@ export default function Board({
           opacity={isOverTrash(del.x, del.y) ? 0.5 : 0.9}
           scale={1.3}
           shadow
+          tail={del.long ? COLUMN_PITCH : 0}
         />
       )}
     </svg>

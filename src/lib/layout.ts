@@ -15,6 +15,9 @@ export const TOOLBOX_W = 120
 export const TOOLBOX_X = VIEW_W - 40 - TOOLBOX_W // 940
 export const TOOLBOX_CX = TOOLBOX_X + TOOLBOX_W / 2
 export const TOOLBOX_CY = VIEW_H / 2
+// お道具箱には「ふつうの音」と「のばす音」の2つが常駐する（上下に離して掴み分ける）
+export const TOOLBOX_NORMAL_CY = TOOLBOX_CY - 85
+export const TOOLBOX_LONG_CY = TOOLBOX_CY + 85
 
 // 五線はお道具箱の手前まで伸ばす
 export const STAFF_RIGHT = TOOLBOX_X - 30 // 910
@@ -30,10 +33,12 @@ export const MIN_COLUMN_PITCH = 65
 
 export const NOTE_MAX = 10
 
-/** i番目（0始まり）の音符の中心X座標 */
+/** 列の間隔（1列＝ふつうの音1つぶん） */
+export const COLUMN_PITCH = (PLACE_RIGHT - PLACE_LEFT) / NOTE_MAX
+
+/** i列目（0始まり）の中心X座標 */
 export function columnX(index: number): number {
-  const span = PLACE_RIGHT - PLACE_LEFT
-  return PLACE_LEFT + ((index + 0.5) * span) / NOTE_MAX
+  return PLACE_LEFT + (index + 0.5) * COLUMN_PITCH
 }
 
 /** 配置領域（五線譜側）にX座標が入っているか */

@@ -11,7 +11,15 @@ import {
   TRASH_CY,
   TRASH_TOP,
 } from './layout'
-import { addNote, canAddNote, removeById, removeLast, type PlacedNote } from './notes'
+import {
+  addNote,
+  canAddNote,
+  columnStarts,
+  removeById,
+  removeLast,
+  usedColumns,
+  type PlacedNote,
+} from './notes'
 import { MIDDLE_C } from './pitch'
 
 describe('addNote', () => {
@@ -78,6 +86,34 @@ describe('canAddNote', () => {
     for (let i = 0; i < NOTE_MAX; i++) notes = addNote(notes, MIDDLE_C)
     expect(canAddNote(notes)).toBe(false)
     expect(canAddNote([])).toBe(true)
+  })
+
+  it('残り1列では のばす音だけ置けない', () => {
+    let notes: PlacedNote[] = []
+    for (let i = 0; i < NOTE_MAX - 1; i++) notes = addNote(notes, MIDDLE_C)
+    expect(canAddNote(notes, false)).toBe(true)
+    expect(canAddNote(notes, true)).toBe(false)
+    // 置けない長さを指定した addNote は何もしない
+    expect(addNote(notes, MIDDLE_C, true)).toBe(notes)
+  })
+})
+
+describe('のばす音の列', () => {
+  it('のばす音は2列ぶん使う', () => {
+    const notes = addNote(addNote([], MIDDLE_C, true), MIDDLE_C)
+    expect(usedColumns(notes)).toBe(3)
+  })
+
+  it('のばす音のうしろは1列ぶんずれて始まる', () => {
+    const notes = addNote(addNote(addNote([], MIDDLE_C), MIDDLE_C, true), MIDDLE_C)
+    expect(columnStarts(notes)).toEqual([0, 1, 3])
+  })
+
+  it('のばす音は列の上限も2列ぶんで数える', () => {
+    let notes: PlacedNote[] = []
+    for (let i = 0; i < NOTE_MAX; i++) notes = addNote(notes, MIDDLE_C, true)
+    expect(usedColumns(notes)).toBe(NOTE_MAX)
+    expect(notes).toHaveLength(NOTE_MAX / 2)
   })
 })
 
