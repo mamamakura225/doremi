@@ -5,7 +5,7 @@ import RotateOverlay from './components/RotateOverlay'
 import { usePortrait } from './hooks/usePortrait'
 import { type PlacedNote, addNote, noteWidth, removeById, removeLast } from './lib/notes'
 import { canAddPage, parseNoteName, toNoteNames } from './lib/pages'
-import { type Pitch, pitchByNote } from './lib/pitch'
+import { type Clef, type Pitch, pitchByNote } from './lib/pitch'
 import { CELEBRATE_MS, noteDuration, playbackSchedule } from './lib/playback'
 import { TWINKLE } from './lib/songs'
 import { type SavedSong, loadSongs, saveSong } from './lib/storage'
@@ -15,6 +15,7 @@ import {
   ensureAudio,
   playMelodyNote,
   playSparkle,
+  setClef,
   setPlaybackVoice,
   stopMelodySpeech,
 } from './audio/synth'
@@ -34,6 +35,7 @@ export default function App() {
   const [shelfOpen, setShelfOpen] = useState(false)
   const [justSaved, setJustSaved] = useState(false)
   const [voice, setVoice] = useState<Voice>('piano')
+  const [clef, setClefMode] = useState<Clef>('treble')
   const timers = useRef<number[]>([])
   const portrait = usePortrait()
 
@@ -47,7 +49,7 @@ export default function App() {
   const notes = pages[currentPage]
   const busy = playing !== null || celebrating
   // おてほんは1フレーズ＝1ページめのみを対象にする。
-  const targets = guide && currentPage === 0 ? TWINKLE.pitches : undefined
+  const targets = guide && currentPage === 0 ? TWINKLE[clef].pitches : undefined
 
   function updateCurrentPage(fn: (page: PlacedNote[]) => PlacedNote[]) {
     setPages((prev) => prev.map((pg, i) => (i === currentPage ? fn(pg) : pg)))
@@ -76,6 +78,20 @@ export default function App() {
   function toggleGuide() {
     resetBoard()
     setGuide((g) => !g)
+  }
+
+  /**
+   * 音部記号を切り替える。置いてある音符は今の音部記号の高さで解決されているので、
+   * 盤面ごとリセットする（切替のたびに音符が別の音に化けるのを避ける）。
+   */
+  function toggleClef() {
+    if (busy) return
+    const next: Clef = clef === 'treble' ? 'bass' : 'treble'
+    resetBoard()
+    setClefMode(next)
+    // 地の音色（ヘ音＝低くて温かい音）を切り替えて、そのまま試聴する。
+    setClef(next)
+    void ensureAudio().then(() => playMelodyNote(next === 'bass' ? 'C3' : 'C5'))
   }
 
   function handleUndo() {
@@ -112,23 +128,26 @@ export default function App() {
     if (busy) return
     const songPages = toNoteNames(pages)
     if (songPages.length === 0) return
-    setSavedSongs(saveSong(songPages))
+    setSavedSongs(saveSong(songPages, clef))
     setJustSaved(true)
     timers.current.push(window.setTimeout(() => setJustSaved(false), 1200))
   }
 
   // 本棚から選んだ曲を盤面に読み込み、そのまま再生（自由モード扱い）。
+  // 保存時の音部記号でしか音名を解決できないので、盤面もその音部記号へ切り替える。
   function handleSelectSong(song: SavedSong) {
     const pgs = song.pages.map((names) =>
       names
         .map(parseNoteName)
-        .map((n) => ({ pitch: pitchByNote(n.note), long: n.long }))
+        .map((n) => ({ pitch: pitchByNote(n.note, song.clef), long: n.long }))
         .filter((n): n is { pitch: Pitch; long: boolean } => !!n.pitch)
         .reduce<PlacedNote[]>((acc, n) => addNote(acc, n.pitch, n.long), []),
     )
     const loaded = pgs.length > 0 ? pgs : [[]]
     setShelfOpen(false)
     setGuide(false)
+    setClefMode(song.clef)
+    setClef(song.clef)
     setPages(loaded)
     setCurrentPage(0)
     void playSequence(loaded)
@@ -174,7 +193,7 @@ export default function App() {
   function handleSelectVoice(v: Voice) {
     setVoice(v)
     setPlaybackVoice(v)
-    void ensureAudio().then(() => playMelodyNote('C5'))
+    void ensureAudio().then(() => playMelodyNote(clef === 'bass' ? 'C3' : 'C5'))
   }
 
   return (
@@ -241,11 +260,24 @@ export default function App() {
         >
           📚 ほんだな
         </button>
+        {/* 音部記号の切替。「ト音／ヘ音」は5歳児に通じないので、
+            高さのイメージ（ことり＝高い／くま＝低い）で見せる。 */}
+        <button
+          type="button"
+          onClick={toggleClef}
+          disabled={busy}
+          aria-label="おとの たかさ"
+          className={`ml-auto rounded-2xl px-5 py-3 text-xl font-bold shadow disabled:opacity-40 ${
+            clef === 'bass' ? 'bg-[#8b5cf6] text-white' : 'bg-white text-[#6b6375]'
+          }`}
+        >
+          {clef === 'bass' ? '🐻 くま' : '🐤 ことり'}
+        </button>
         <button
           type="button"
           onClick={toggleGuide}
           disabled={busy}
-          className={`ml-auto rounded-2xl px-6 py-3 text-xl font-bold shadow disabled:opacity-40 ${
+          className={`rounded-2xl px-6 py-3 text-xl font-bold shadow disabled:opacity-40 ${
             guide ? 'bg-[#f59e0b] text-white' : 'bg-white text-[#6b6375]'
           }`}
         >
@@ -259,6 +291,7 @@ export default function App() {
           onRemove={handleRemove}
           playingIndex={playing?.page === currentPage ? playing.index : null}
           celebrating={celebrating}
+          clef={clef}
           targets={targets}
         />
         {!shelfOpen && (

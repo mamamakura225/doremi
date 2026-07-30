@@ -1,14 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { SONGS, TWINKLE } from './songs'
-import { TREBLE_PITCHES } from './pitch'
+import { TWINKLE } from './songs'
+import { pitchesOf, type Clef } from './pitch'
+
+const CLEFS: Clef[] = ['treble', 'bass']
 
 describe('songs', () => {
-  it('きらきら星は7音', () => {
-    expect(TWINKLE.pitches).toHaveLength(7)
+  it.each(CLEFS)('きらきら星は7音（%s）', (clef) => {
+    expect(TWINKLE[clef].pitches).toHaveLength(7)
   })
 
-  it('きらきら星のソルファ並びは ド ド ソ ソ ラ ラ ソ', () => {
-    expect(TWINKLE.pitches.map((p) => p.solfa)).toEqual([
+  it.each(CLEFS)('ソルファ並びは音部記号によらず ド ド ソ ソ ラ ラ ソ（%s）', (clef) => {
+    expect(TWINKLE[clef].pitches.map((p) => p.solfa)).toEqual([
       'ド',
       'ド',
       'ソ',
@@ -19,12 +21,10 @@ describe('songs', () => {
     ])
   })
 
-  it('全曲の全音が演奏範囲内', () => {
-    const range = new Set(TREBLE_PITCHES.map((p) => p.note))
-    for (const song of SONGS) {
-      for (const p of song.pitches) {
-        expect(range.has(p.note)).toBe(true)
-      }
+  it.each(CLEFS)('全音がその音部記号の演奏範囲内（%s）', (clef) => {
+    const range = new Set(pitchesOf(clef).map((p) => p.note))
+    for (const p of TWINKLE[clef].pitches) {
+      expect(range.has(p.note)).toBe(true)
     }
   })
 })

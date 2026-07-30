@@ -1,5 +1,6 @@
 // つくった曲の保存（端末内 localStorage のみ・外部送信なし）。
 // 純ロジック（parse/add）と薄い I/O を分け、純ロジックを Vitest 対象にする。
+import type { Clef } from './pitch'
 
 export interface SavedSong {
   id: string
@@ -7,6 +8,8 @@ export interface SavedSong {
   createdAt: number
   /** ページごとの科学的音名の並び（例 [['C4','G4'],['E4']]） */
   pages: string[][]
+  /** 保存したときの音部記号。音名だけでは譜面の高さが決まらないため一緒に持つ。 */
+  clef: Clef
 }
 
 const KEY = 'doremi.songs.v1'
@@ -18,14 +21,22 @@ function isStrings(a: unknown): a is string[] {
 }
 
 /** 1件を SavedSong に正規化。旧形式(notes:string[])は1ページの曲として読む。壊れていれば null。 */
-function normalize(s: { id?: unknown; createdAt?: unknown; pages?: unknown; notes?: unknown }): SavedSong | null {
+function normalize(s: {
+  id?: unknown
+  createdAt?: unknown
+  pages?: unknown
+  notes?: unknown
+  clef?: unknown
+}): SavedSong | null {
   if (!s || typeof s.id !== 'string' || typeof s.createdAt !== 'number') return null
+  // 音部記号を持たない旧データは ト音（当時の唯一のモード）として読む。
+  const clef: Clef = s.clef === 'bass' ? 'bass' : 'treble'
   if (Array.isArray(s.pages) && s.pages.every(isStrings)) {
-    return { id: s.id, createdAt: s.createdAt, pages: s.pages as string[][] }
+    return { id: s.id, createdAt: s.createdAt, pages: s.pages as string[][], clef }
   }
   if (isStrings(s.notes)) {
     // v1 後方互換: 旧 notes:string[] を [notes]（1ページ曲）として読む。
-    return { id: s.id, createdAt: s.createdAt, pages: [s.notes] }
+    return { id: s.id, createdAt: s.createdAt, pages: [s.notes], clef }
   }
   return null
 }
@@ -48,8 +59,9 @@ export function addSong(
   pages: string[][],
   id: string,
   now: number,
+  clef: Clef = 'treble',
 ): SavedSong[] {
-  const entry: SavedSong = { id, createdAt: now, pages }
+  const entry: SavedSong = { id, createdAt: now, pages, clef }
   return [entry, ...songs].slice(0, SHELF_MAX)
 }
 
@@ -63,8 +75,8 @@ export function loadSongs(): SavedSong[] {
 }
 
 /** 1曲（複数ページ）を保存して、更新後の一覧を返す。 */
-export function saveSong(pages: string[][]): SavedSong[] {
-  const next = addSong(loadSongs(), pages, newId(), Date.now())
+export function saveSong(pages: string[][], clef: Clef = 'treble'): SavedSong[] {
+  const next = addSong(loadSongs(), pages, newId(), Date.now(), clef)
   localStorage.setItem(KEY, JSON.stringify(next))
   return next
 }
