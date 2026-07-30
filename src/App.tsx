@@ -3,6 +3,7 @@ import Board from './components/Board'
 import Bookshelf from './components/Bookshelf'
 import RotateOverlay from './components/RotateOverlay'
 import { usePortrait } from './hooks/usePortrait'
+import { useShortScreen } from './hooks/useShortScreen'
 import { type PlacedNote, addNote, noteWidth, removeById, removeLast } from './lib/notes'
 import { canAddPage, parseNoteName, toNoteNames } from './lib/pages'
 import { type Clef, type Pitch, pitchByNote } from './lib/pitch'
@@ -38,6 +39,11 @@ export default function App() {
   const [clef, setClefMode] = useState<Clef>('treble')
   const timers = useRef<number[]>([])
   const portrait = usePortrait()
+  // 縦が短い画面（横向きスマホ）ではヘッダーを絵文字だけに畳む。
+  // 文字を並べるとボタンが潰れてラベルが縦に折り返し、ヘッダーが画面の6割を食う。
+  const compact = useShortScreen()
+  const pad = compact ? 'px-3 py-2' : 'px-6 py-3'
+  const label = (icon: string, text: string) => (compact ? icon : `${icon} ${text}`)
 
   function clearTimers() {
     timers.current.forEach((t) => window.clearTimeout(t))
@@ -199,17 +205,24 @@ export default function App() {
   return (
     <div className="flex h-full w-full flex-col bg-[#fdf6e3]">
       {portrait && <RotateOverlay />}
-      <header className="flex shrink-0 gap-3 p-3">
+      {/* ボタンは縮ませない（潰れるとラベルが縦に折り返してヘッダーが伸びる）。
+          幅が足りなければ行を折り返す＝はみ出して切れることはない。 */}
+      <header
+        className={`flex shrink-0 flex-wrap items-center ${compact ? 'gap-2 p-2' : 'gap-3 p-3'}`}
+      >
         <button
           type="button"
           onClick={handlePlay}
           disabled={busy || empty}
-          className="rounded-2xl bg-[#22c55e] px-6 py-3 text-xl font-bold text-white shadow disabled:opacity-40"
+          aria-label="さいせい"
+          className={`shrink-0 rounded-2xl bg-[#22c55e] ${pad} text-xl font-bold text-white shadow disabled:opacity-40`}
         >
-          ▶ さいせい
+          {label('▶', 'さいせい')}
         </button>
         <div
-          className="flex items-center gap-1 rounded-2xl bg-white px-2 py-1 shadow"
+          className={`flex shrink-0 items-center gap-1 rounded-2xl bg-white shadow ${
+            compact ? 'px-1' : 'px-2 py-1'
+          }`}
           role="group"
           aria-label="さいせいの おと"
         >
@@ -220,7 +233,7 @@ export default function App() {
               onClick={() => handleSelectVoice(v.id)}
               aria-label={v.name}
               aria-pressed={voice === v.id}
-              className={`rounded-xl px-3 py-2 text-2xl ${
+              className={`rounded-xl ${compact ? 'px-2 py-1.5 text-2xl' : 'px-3 py-2 text-2xl'} ${
                 voice === v.id ? 'bg-[#f59e0b]' : 'bg-transparent'
               }`}
             >
@@ -232,33 +245,37 @@ export default function App() {
           type="button"
           onClick={handleUndo}
           disabled={busy || notes.length === 0}
-          className="rounded-2xl bg-white px-6 py-3 text-xl font-bold text-[#6b6375] shadow disabled:opacity-40"
+          aria-label="ひとつもどる"
+          className={`shrink-0 rounded-2xl bg-white ${pad} text-xl font-bold text-[#6b6375] shadow disabled:opacity-40`}
         >
-          ↩ ひとつもどる
+          {label('↩', 'ひとつもどる')}
         </button>
         <button
           type="button"
           onClick={handleClear}
           disabled={empty}
-          className="rounded-2xl bg-white px-6 py-3 text-xl font-bold text-[#6b6375] shadow disabled:opacity-40"
+          aria-label="クリア"
+          className={`shrink-0 rounded-2xl bg-white ${pad} text-xl font-bold text-[#6b6375] shadow disabled:opacity-40`}
         >
-          ↺ クリア
+          {label('↺', 'クリア')}
         </button>
         <button
           type="button"
           onClick={handleSave}
           disabled={busy || empty}
-          className="rounded-2xl bg-white px-6 py-3 text-xl font-bold text-[#6b6375] shadow disabled:opacity-40"
+          aria-label="ほぞん"
+          className={`shrink-0 rounded-2xl bg-white ${pad} text-xl font-bold text-[#6b6375] shadow disabled:opacity-40`}
         >
-          {justSaved ? '✓ ほぞんした' : '💾 ほぞん'}
+          {justSaved ? label('✓', 'ほぞんした') : label('💾', 'ほぞん')}
         </button>
         <button
           type="button"
           onClick={() => setShelfOpen(true)}
           disabled={busy}
-          className="rounded-2xl bg-white px-6 py-3 text-xl font-bold text-[#6b6375] shadow disabled:opacity-40"
+          aria-label="ほんだな"
+          className={`shrink-0 rounded-2xl bg-white ${pad} text-xl font-bold text-[#6b6375] shadow disabled:opacity-40`}
         >
-          📚 ほんだな
+          {label('📚', 'ほんだな')}
         </button>
         {/* 音部記号の切替。「ト音／ヘ音」は5歳児に通じないので、
             高さのイメージ（ことり＝高い／くま＝低い）で見せる。 */}
@@ -267,21 +284,22 @@ export default function App() {
           onClick={toggleClef}
           disabled={busy}
           aria-label="おとの たかさ"
-          className={`ml-auto rounded-2xl px-5 py-3 text-xl font-bold shadow disabled:opacity-40 ${
+          className={`ml-auto shrink-0 rounded-2xl ${pad} text-xl font-bold shadow disabled:opacity-40 ${
             clef === 'bass' ? 'bg-[#8b5cf6] text-white' : 'bg-white text-[#6b6375]'
           }`}
         >
-          {clef === 'bass' ? '🐻 くま' : '🐤 ことり'}
+          {clef === 'bass' ? label('🐻', 'くま') : label('🐤', 'ことり')}
         </button>
         <button
           type="button"
           onClick={toggleGuide}
           disabled={busy}
-          className={`rounded-2xl px-6 py-3 text-xl font-bold shadow disabled:opacity-40 ${
+          aria-label={guide ? 'おてほん' : 'じゆう'}
+          className={`shrink-0 rounded-2xl ${pad} text-xl font-bold shadow disabled:opacity-40 ${
             guide ? 'bg-[#f59e0b] text-white' : 'bg-white text-[#6b6375]'
           }`}
         >
-          {guide ? '🎵 おてほん' : '✏️ じゆう'}
+          {guide ? label('🎵', 'おてほん') : label('✏️', 'じゆう')}
         </button>
       </header>
       <main className="relative min-h-0 flex-1">
