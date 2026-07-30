@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  MIN_COLUMN_PITCH,
   NOTE_MAX,
   columnX,
   isOverPlacement,
@@ -21,7 +22,7 @@ describe('addNote', () => {
     expect(a[0].id).toBeTruthy()
   })
 
-  it('上限(8音)に達したら追加しない', () => {
+  it('上限(NOTE_MAX音)に達したら追加しない', () => {
     let notes: PlacedNote[] = []
     for (let i = 0; i < NOTE_MAX + 3; i++) notes = addNote(notes, MIDDLE_C)
     expect(notes).toHaveLength(NOTE_MAX)
@@ -81,7 +82,7 @@ describe('canAddNote', () => {
 })
 
 describe('columnX', () => {
-  it('8列が左→右へ単調増加し配置領域内に収まる', () => {
+  it('NOTE_MAX列が左→右へ単調増加し配置領域内に収まる', () => {
     const xs = Array.from({ length: NOTE_MAX }, (_, i) => columnX(i))
     for (let i = 1; i < xs.length; i++) expect(xs[i]).toBeGreaterThan(xs[i - 1])
     expect(xs[0]).toBeGreaterThanOrEqual(PLACE_LEFT)
@@ -92,6 +93,10 @@ describe('columnX', () => {
     const d0 = columnX(1) - columnX(0)
     const d1 = columnX(2) - columnX(1)
     expect(d1).toBeCloseTo(d0)
+  })
+
+  it('列間隔が下限を下回らない（幼児が隣の音符を誤って掴まない幅）', () => {
+    expect(columnX(1) - columnX(0)).toBeGreaterThanOrEqual(MIN_COLUMN_PITCH)
   })
 })
 
