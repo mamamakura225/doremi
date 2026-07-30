@@ -1,7 +1,11 @@
-// 音高と五線譜上の縦位置のマッピング（ト音記号）。
+// 音高と五線譜上の縦位置のマッピング。
+// 音部記号の違いは「音名の並び」と「最上線からの step」の表だけで吸収する。
 // 純ロジックのみ。SVG/React/Tone.js に依存しない（Vitest対象）。
 
 export type Solfa = 'ド' | 'レ' | 'ミ' | 'ファ' | 'ソ' | 'ラ' | 'シ'
+
+/** 音部記号のモード（既定=ト音） */
+export type Clef = 'treble' | 'bass'
 
 export interface Pitch {
   /** Tone.js 等で使う科学的音名（例: 'C4'） */
@@ -25,37 +29,49 @@ const SOLFA_BY_LETTER: Record<string, Solfa> = {
   B: 'シ',
 }
 
-// ト音記号: 最上線=F5(step 0)。下方向に半スペースずつ step が増える。
-// 演奏範囲は ド(C4・下加線1本) 〜 高いミ(E5) の1オクターブ+α。
-const TREBLE_STEP_OF_C4 = 10 // C4 は最上線から半スペース10個下（下加線1本）
+const LETTERS = ['C', 'D', 'E', 'F', 'G', 'A', 'B']
 
-function buildTreblePitches(): Pitch[] {
-  const order: Array<{ letter: string; octave: number }> = [
-    { letter: 'C', octave: 4 },
-    { letter: 'D', octave: 4 },
-    { letter: 'E', octave: 4 },
-    { letter: 'F', octave: 4 },
-    { letter: 'G', octave: 4 },
-    { letter: 'A', octave: 4 },
-    { letter: 'B', octave: 4 },
-    { letter: 'C', octave: 5 },
-    { letter: 'D', octave: 5 },
-    { letter: 'E', octave: 5 },
-  ]
-  // 低い音ほど step が大きい。C4 を基準に1音ごとに step を1減らす。
-  return order.map((o, i) => ({
-    note: `${o.letter}${o.octave}`,
-    solfa: SOLFA_BY_LETTER[o.letter],
-    step: TREBLE_STEP_OF_C4 - i,
-  }))
+/**
+ * 最低音から1音ずつ上へ count 個ぶんの表を作る。
+ * 低い音ほど step が大きいので、1音上がるごとに step を1減らす。
+ */
+function buildPitches(
+  lowest: { letter: string; octave: number },
+  lowestStep: number,
+  count: number,
+): Pitch[] {
+  const start = LETTERS.indexOf(lowest.letter)
+  return Array.from({ length: count }, (_, i) => {
+    const letter = LETTERS[(start + i) % 7]
+    // C を跨ぐたびにオクターブが上がる
+    const octave = lowest.octave + Math.floor((start + i) / 7)
+    return {
+      note: `${letter}${octave}`,
+      solfa: SOLFA_BY_LETTER[letter],
+      step: lowestStep - i,
+    }
+  })
 }
 
-/** 演奏可能な音（低→高） */
-export const TREBLE_PITCHES: Pitch[] = buildTreblePitches()
+// ト音記号: 最上線=F5(step 0)。演奏範囲は ド(C4・下加線1本) 〜 高いミ(E5)。
+// C4 は最上線から半スペース10個下（下加線1本）。
+export const TREBLE_PITCHES: Pitch[] = buildPitches({ letter: 'C', octave: 4 }, 10, 10)
 
-const MIN_STEP = Math.min(...TREBLE_PITCHES.map((p) => p.step))
-const MAX_STEP = Math.max(...TREBLE_PITCHES.map((p) => p.step))
-const PITCH_BY_STEP = new Map(TREBLE_PITCHES.map((p) => [p.step, p]))
+// ヘ音記号: 最上線=A3(step 0)。演奏範囲は ファ(F2・五線の下の間) 〜 ラ(A3・最上線)。
+// ド(C3)は五線の中（上から2番目の間）にあり、加線が要らない。
+export const BASS_PITCHES: Pitch[] = buildPitches({ letter: 'F', octave: 2 }, 9, 10)
+
+const PITCHES: Record<Clef, Pitch[]> = { treble: TREBLE_PITCHES, bass: BASS_PITCHES }
+
+/** その音部記号で演奏可能な音（低→高） */
+export function pitchesOf(clef: Clef): Pitch[] {
+  return PITCHES[clef]
+}
+
+/** その音部記号の「ド」（足場ガイドの対象） */
+export function tonicOf(clef: Clef): Pitch {
+  return pitchesOf(clef).find((p) => p.solfa === 'ド')!
+}
 
 export interface StaffLayout {
   /** 最上線(F5)のY座標 */
@@ -78,15 +94,20 @@ export function pitchToY(pitch: Pitch, layout: StaffLayout): number {
  * Y座標を最も近い音（線上 or 間）にスナップする。
  * 演奏範囲外は端の音にクランプ。
  */
-export function snapYToPitch(y: number, layout: StaffLayout): Pitch {
+export function snapYToPitch(
+  y: number,
+  layout: StaffLayout,
+  clef: Clef = 'treble',
+): Pitch {
+  const pitches = pitchesOf(clef)
   const rawStep = (y - layout.topLineY) / (layout.staffSpace / 2)
-  const clamped = Math.min(MAX_STEP, Math.max(MIN_STEP, Math.round(rawStep)))
+  const minStep = Math.min(...pitches.map((p) => p.step))
+  const maxStep = Math.max(...pitches.map((p) => p.step))
+  const clamped = Math.min(maxStep, Math.max(minStep, Math.round(rawStep)))
   // 全 step に音があるとは限らないため、最近傍の演奏可能 step を選ぶ。
-  const exact = PITCH_BY_STEP.get(clamped)
-  if (exact) return exact
-  let best = TREBLE_PITCHES[0]
+  let best = pitches[0]
   let bestDist = Infinity
-  for (const p of TREBLE_PITCHES) {
+  for (const p of pitches) {
     const d = Math.abs(p.step - clamped)
     if (d < bestDist) {
       bestDist = d
@@ -96,11 +117,14 @@ export function snapYToPitch(y: number, layout: StaffLayout): Pitch {
   return best
 }
 
-const PITCH_BY_NOTE = new Map(TREBLE_PITCHES.map((p) => [p.note, p]))
+const PITCH_BY_NOTE: Record<Clef, Map<string, Pitch>> = {
+  treble: new Map(TREBLE_PITCHES.map((p) => [p.note, p])),
+  bass: new Map(BASS_PITCHES.map((p) => [p.note, p])),
+}
 
-/** 科学的音名 → 音（演奏範囲外は undefined） */
-export function pitchByNote(note: string): Pitch | undefined {
-  return PITCH_BY_NOTE.get(note)
+/** 科学的音名 → 音（その音部記号の演奏範囲外は undefined） */
+export function pitchByNote(note: string, clef: Clef = 'treble'): Pitch | undefined {
+  return PITCH_BY_NOTE[clef].get(note)
 }
 
 /** ド(C4・下加線)の音 */

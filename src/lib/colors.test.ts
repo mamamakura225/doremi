@@ -1,14 +1,20 @@
 import { describe, expect, it } from 'vitest'
 import { SOLFA_COLOR, colorOf } from './colors'
-import { MIDDLE_C, TREBLE_PITCHES } from './pitch'
+import { MIDDLE_C, pitchesOf, tonicOf, type Clef } from './pitch'
+
+const CLEFS: Clef[] = ['treble', 'bass']
 
 describe('colorOf', () => {
   it('ドは赤', () => {
     expect(colorOf(MIDDLE_C)).toBe('#e23b3b')
   })
 
-  it('演奏可能な全音に色が定義されている', () => {
-    for (const p of TREBLE_PITCHES) {
+  it.each(CLEFS)('ドはどの音部記号でも赤（%s）', (clef) => {
+    expect(colorOf(tonicOf(clef))).toBe('#e23b3b')
+  })
+
+  it.each(CLEFS)('演奏可能な全音に色が定義されている（%s）', (clef) => {
+    for (const p of pitchesOf(clef)) {
       expect(SOLFA_COLOR[p.solfa]).toMatch(/^#[0-9a-f]{6}$/i)
     }
   })

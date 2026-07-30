@@ -18,7 +18,7 @@ import {
   isOverTrash,
 } from '../lib/layout'
 import { STAFF_LAYOUT } from '../lib/layout'
-import { type Pitch, pitchToY, snapYToPitch } from '../lib/pitch'
+import { type Clef, type Pitch, pitchToY, snapYToPitch } from '../lib/pitch'
 import type { PlacedNote } from '../lib/notes'
 import { canAddNote, columnStarts, usedColumns } from '../lib/notes'
 import { noteDuration } from '../lib/playback'
@@ -33,6 +33,8 @@ interface Props {
   onRemove: (id: string) => void
   playingIndex: number | null
   celebrating: boolean
+  /** 音部記号（譜面・スナップ先の音がまるごと変わる） */
+  clef: Clef
   /** おてほんモードのお手本音列（未指定＝自由制作） */
   targets?: Pitch[]
 }
@@ -70,6 +72,7 @@ export default function Board({
   onRemove,
   playingIndex,
   celebrating,
+  clef,
   targets,
 }: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
@@ -98,7 +101,7 @@ export default function Board({
     if (!p) return
     setTouched(true)
     e.currentTarget.setPointerCapture(e.pointerId)
-    const pitch = snapYToPitch(p.y, STAFF_LAYOUT)
+    const pitch = snapYToPitch(p.y, STAFF_LAYOUT, clef)
     setDrag({ pointerId: e.pointerId, x: p.x, pitch, long })
     // 初回タップでAudioContext起動 → 掴んだ音を鳴らす
     void ensureAudio().then(() => previewNote(pitch.note, long))
@@ -108,7 +111,7 @@ export default function Board({
     if (!drag || e.pointerId !== drag.pointerId || !svgRef.current) return
     const p = clientToSvg(svgRef.current, e.clientX, e.clientY)
     if (!p) return
-    const pitch = snapYToPitch(p.y, STAFF_LAYOUT)
+    const pitch = snapYToPitch(p.y, STAFF_LAYOUT, clef)
     // ゾーン（音）を跨いだ瞬間のみ再トリガ（暴発防止）
     if (pitch.note !== drag.pitch.note) previewNote(pitch.note, drag.long)
     setDrag({ ...drag, x: p.x, pitch })
@@ -175,7 +178,7 @@ export default function Board({
         </filter>
       </defs>
 
-      <Staff />
+      <Staff clef={clef} />
 
       {/* スナップ先の行ハイライト（指で隠れても着地点が分かる） */}
       {drag && isOverPlacement(drag.x) && (

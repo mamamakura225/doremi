@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
+  BASS_PITCHES,
   MIDDLE_C,
   TREBLE_PITCHES,
+  pitchByNote,
   pitchToY,
+  pitchesOf,
   snapYToPitch,
   stepToY,
+  tonicOf,
   type StaffLayout,
 } from './pitch'
 
@@ -54,5 +58,57 @@ describe('snapYToPitch', () => {
   it('範囲外（高すぎ/低すぎ）は端の音にクランプ', () => {
     expect(snapYToPitch(-9999, layout).note).toBe('E5')
     expect(snapYToPitch(9999, layout).note).toBe('C4')
+  })
+})
+
+describe('BASS_PITCHES', () => {
+  it('ファ(F2)〜ラ(A3)の10音を低→高で持つ', () => {
+    expect(BASS_PITCHES).toHaveLength(10)
+    expect(BASS_PITCHES[0]).toMatchObject({ note: 'F2', solfa: 'ファ' })
+    expect(BASS_PITCHES.at(-1)).toMatchObject({ note: 'A3', solfa: 'ラ' })
+  })
+
+  it('最上線(step 0)はラ(A3)・最下線(step 8)はソ(G2)', () => {
+    expect(pitchByNote('A3', 'bass')!.step).toBe(0)
+    expect(pitchByNote('G2', 'bass')!.step).toBe(8)
+  })
+
+  it('ド(C3)は五線の中（加線が要らない）', () => {
+    const doo = tonicOf('bass')
+    expect(doo.note).toBe('C3')
+    // 五線は step 0〜8。その内側にある。
+    expect(doo.step).toBeGreaterThan(0)
+    expect(doo.step).toBeLessThan(8)
+  })
+
+  it('オクターブがCを跨ぐところで繰り上がる', () => {
+    expect(BASS_PITCHES.map((p) => p.note)).toEqual([
+      'F2', 'G2', 'A2', 'B2', 'C3', 'D3', 'E3', 'F3', 'G3', 'A3',
+    ])
+  })
+})
+
+describe('音部記号ごとの解決', () => {
+  it('同じYでも音部記号で違う音になる', () => {
+    const y = stepToY(2, layout)
+    expect(snapYToPitch(y, layout, 'treble').note).toBe('D5')
+    expect(snapYToPitch(y, layout, 'bass').note).toBe('F3')
+  })
+
+  it('範囲外は各音部記号の端にクランプする', () => {
+    expect(snapYToPitch(-9999, layout, 'bass').note).toBe('A3')
+    expect(snapYToPitch(9999, layout, 'bass').note).toBe('F2')
+  })
+
+  it('音名は自分の音部記号でしか引けない', () => {
+    expect(pitchByNote('C4', 'treble')).toBeDefined()
+    expect(pitchByNote('C4', 'bass')).toBeUndefined()
+    expect(pitchByNote('C3', 'bass')).toBeDefined()
+    expect(pitchByNote('C3', 'treble')).toBeUndefined()
+  })
+
+  it('pitchesOf は音部記号ごとの表を返す', () => {
+    expect(pitchesOf('treble')).toBe(TREBLE_PITCHES)
+    expect(pitchesOf('bass')).toBe(BASS_PITCHES)
   })
 })

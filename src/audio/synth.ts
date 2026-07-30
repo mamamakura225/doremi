@@ -1,19 +1,34 @@
 // Tone.js の薄いラッパー。AudioContextのunlockと単音発音のみ。
 import * as Tone from 'tone'
-import { pitchByNote } from '../lib/pitch'
+import { pitchByNote, type Clef } from '../lib/pitch'
 import { primeSpeech, speakSolfa, stopSpeech } from './speech'
 
-let synth: Tone.Synth | null = null
 let started = false
+// 音部記号で地の音色が変わる（ヘ音＝低くて温かい音＝クマ・ゾウ）。
+let clefMode: Clef = 'treble'
+
+const makingSynths: Partial<Record<Clef, Tone.Synth>> = {}
+
+function makeMakingSynth(clef: Clef): Tone.Synth {
+  return clef === 'bass'
+    ? new Tone.Synth({
+        // サイン波＋ゆっくりした立ち上がりで丸く柔らかい低音に
+        oscillator: { type: 'sine' },
+        envelope: { attack: 0.04, decay: 0.4, sustain: 0.4, release: 0.8 },
+      }).toDestination()
+    : new Tone.Synth({
+        oscillator: { type: 'triangle' },
+        envelope: { attack: 0.01, decay: 0.2, sustain: 0.2, release: 0.4 },
+      }).toDestination()
+}
 
 function getSynth(): Tone.Synth {
-  if (!synth) {
-    synth = new Tone.Synth({
-      oscillator: { type: 'triangle' },
-      envelope: { attack: 0.01, decay: 0.2, sustain: 0.2, release: 0.4 },
-    }).toDestination()
-  }
-  return synth
+  return (makingSynths[clefMode] ??= makeMakingSynth(clefMode))
+}
+
+/** 音部記号を切り替える（地の音色が変わる）。 */
+export function setClef(clef: Clef): void {
+  clefMode = clef
 }
 
 /** iOS等のためAudioContextをユーザー操作で起動（初回のみ実効）。 */
@@ -38,11 +53,19 @@ export const VOICES: { id: Voice; label: string; name: string }[] = [
 ]
 
 type AnySynth = Tone.Synth | Tone.FMSynth
-const voiceCache: Partial<Record<Voice, AnySynth>> = {}
+// ヘ音の「ぴあの」は温かい低音に差し替えるため、鍵に音部記号を含める。
+type VoiceKey = Voice | 'piano-bass'
+const voiceCache: Partial<Record<VoiceKey, AnySynth>> = {}
 let playbackVoice: Voice = 'piano'
 
-function makeVoice(v: Voice): AnySynth {
+function makeVoice(v: VoiceKey): AnySynth {
   switch (v) {
+    case 'piano-bass':
+      // 制作中と同じ丸い低音。ヘ音の地の音（クマ・ゾウ）。
+      return new Tone.Synth({
+        oscillator: { type: 'sine' },
+        envelope: { attack: 0.04, decay: 0.4, sustain: 0.4, release: 0.8 },
+      }).toDestination()
     case 'bell':
       return new Tone.FMSynth({
         harmonicity: 3.01,
@@ -65,7 +88,9 @@ function makeVoice(v: Voice): AnySynth {
 }
 
 function getVoice(v: Voice): AnySynth {
-  return (voiceCache[v] ??= makeVoice(v))
+  // べる・ぴこぴこは子どもが自分で選んだ音なので音部記号では変えない。
+  const key: VoiceKey = v === 'piano' && clefMode === 'bass' ? 'piano-bass' : v
+  return (voiceCache[key] ??= makeVoice(key))
 }
 
 /** 再生音色を切り替える（既定=piano）。タップハンドラから同期で呼ばれる前提。 */
