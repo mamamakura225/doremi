@@ -1,4 +1,5 @@
 import { SOLFA_COLOR } from '../lib/colors'
+import { parseNoteName } from '../lib/pages'
 import { pitchByNote } from '../lib/pitch'
 import type { SavedSong } from '../lib/storage'
 
@@ -9,6 +10,7 @@ interface Props {
 }
 
 /** 各音を音高色の丸で並べたミニプレビュー（読めない子も色で見分けられる）。
+ *  のばす音は横長にして、譜面と同じく「長さ＝幅」で見せる。
  *  ページ（フレーズ）ごとに区切って並べる。 */
 function Preview({ pages }: { pages: string[][] }) {
   return (
@@ -16,12 +18,13 @@ function Preview({ pages }: { pages: string[][] }) {
       {pages.map((notes, pi) => (
         <div key={pi} className="flex items-center gap-1.5">
           {notes.map((n, i) => {
-            const p = pitchByNote(n)
+            const { note, long } = parseNoteName(n)
+            const p = pitchByNote(note)
             const color = p ? SOLFA_COLOR[p.solfa] : '#cbd5e1'
             return (
               <span
                 key={i}
-                className="inline-block h-5 w-5 rounded-full"
+                className={`inline-block h-5 rounded-full ${long ? 'w-10' : 'w-5'}`}
                 style={{ backgroundColor: color }}
               />
             )

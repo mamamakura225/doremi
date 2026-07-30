@@ -3,10 +3,10 @@ import Board from './components/Board'
 import Bookshelf from './components/Bookshelf'
 import RotateOverlay from './components/RotateOverlay'
 import { usePortrait } from './hooks/usePortrait'
-import { type PlacedNote, addNote, removeById, removeLast } from './lib/notes'
-import { canAddPage, toNoteNames } from './lib/pages'
+import { type PlacedNote, addNote, noteWidth, removeById, removeLast } from './lib/notes'
+import { canAddPage, parseNoteName, toNoteNames } from './lib/pages'
 import { type Pitch, pitchByNote } from './lib/pitch'
-import { CELEBRATE_MS, playbackSchedule } from './lib/playback'
+import { CELEBRATE_MS, noteDuration, playbackSchedule } from './lib/playback'
 import { TWINKLE } from './lib/songs'
 import { type SavedSong, loadSongs, saveSong } from './lib/storage'
 import {
@@ -53,12 +53,12 @@ export default function App() {
     setPages((prev) => prev.map((pg, i) => (i === currentPage ? fn(pg) : pg)))
   }
 
-  function handlePlace(pitch: Pitch) {
+  function handlePlace(pitch: Pitch, long: boolean) {
     if (busy) return
     const idx = notes.length
     // お手本と一致したら控えめなキラキラ音（不一致でも普通に置ける・×なし）
     if (targets?.[idx]?.note === pitch.note) playSparkle()
-    updateCurrentPage((pg) => addNote(pg, pitch))
+    updateCurrentPage((pg) => addNote(pg, pitch, long))
   }
 
   function resetBoard() {
@@ -121,9 +121,10 @@ export default function App() {
   function handleSelectSong(song: SavedSong) {
     const pgs = song.pages.map((names) =>
       names
-        .map(pitchByNote)
-        .filter((p): p is Pitch => !!p)
-        .reduce<PlacedNote[]>((acc, pitch) => addNote(acc, pitch), []),
+        .map(parseNoteName)
+        .map((n) => ({ pitch: pitchByNote(n.note), long: n.long }))
+        .filter((n): n is { pitch: Pitch; long: boolean } => !!n.pitch)
+        .reduce<PlacedNote[]>((acc, n) => addNote(acc, n.pitch, n.long), []),
     )
     const loaded = pgs.length > 0 ? pgs : [[]]
     setShelfOpen(false)
@@ -134,15 +135,18 @@ export default function App() {
   }
 
   async function playSequence(pgs: PlacedNote[][]) {
-    const counts = pgs.map((p) => p.length)
-    if (counts.every((c) => c === 0)) return
+    const pageSteps = pgs.map((p) => p.map(noteWidth))
+    if (pageSteps.every((s) => s.length === 0)) return
     clearTimers()
     await ensureAudio()
-    const { ticks, endAt } = playbackSchedule(counts)
+    const { ticks, endAt } = playbackSchedule(pageSteps)
     for (const tick of ticks) {
       timers.current.push(
         window.setTimeout(() => {
-          playMelodyNote(pgs[tick.page][tick.index].pitch.note)
+          playMelodyNote(
+            pgs[tick.page][tick.index].pitch.note,
+            noteDuration(tick.steps),
+          )
           setCurrentPage(tick.page)
           setPlaying({ page: tick.page, index: tick.index })
         }, tick.at),
