@@ -12,6 +12,7 @@ import {
   TRASH_CX,
   TRASH_CY,
   VIEW_H,
+  VIEW_H_KEYS,
   VIEW_W,
   columnX,
   isOverPlacement,
@@ -24,6 +25,8 @@ import { canAddNote, columnStarts, usedColumns } from '../lib/notes'
 import { noteDuration } from '../lib/playback'
 import { colorOf } from '../lib/colors'
 import { ensureAudio, playNote } from '../audio/synth'
+import { useFitsKeyboard } from '../hooks/useFitsKeyboard'
+import Keyboard from './Keyboard'
 import NoteHead from './NoteHead'
 import Staff from './Staff'
 
@@ -79,6 +82,9 @@ export default function Board({
   const [drag, setDrag] = useState<DragState | null>(null)
   const [del, setDel] = useState<DeleteDragState | null>(null)
   const [touched, setTouched] = useState(false)
+  const [pressedKey, setPressedKey] = useState<string | null>(null)
+  // 縦に余裕のある端末（タブレット横など）でだけ鍵盤を併記する
+  const showKeyboard = useFitsKeyboard(svgRef)
   const playing = playingIndex !== null
   const busy = playing || celebrating
   const canNormal = canAddNote(notes, false) && !busy
@@ -89,6 +95,18 @@ export default function Board({
   const showHint = canNormal && !touched
   // 音符の開始列（のばす音は2列ぶん占めるので、後続の列がその分ずれる）
   const starts = columnStarts(notes)
+
+  /** 鍵盤を押したら、その音を通常音で鳴らす（譜面には置かない） */
+  function handleKeyPress(pitch: Pitch) {
+    if (busy) return
+    setTouched(true)
+    setPressedKey(pitch.note)
+    window.setTimeout(
+      () => setPressedKey((k) => (k === pitch.note ? null : k)),
+      260,
+    )
+    void ensureAudio().then(() => playNote(pitch.note))
+  }
 
   /** 掴んだ音の長さに合わせた試聴音（のばす音は制作中も長く鳴る） */
   function previewNote(note: string, long: boolean) {
@@ -159,7 +177,7 @@ export default function Board({
   return (
     <svg
       ref={svgRef}
-      viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
+      viewBox={`0 0 ${VIEW_W} ${showKeyboard ? VIEW_H_KEYS : VIEW_H}`}
       preserveAspectRatio="xMidYMid meet"
       className="h-full w-full select-none"
       style={{ touchAction: 'none' }}
@@ -179,6 +197,10 @@ export default function Board({
       </defs>
 
       <Staff clef={clef} />
+
+      {showKeyboard && (
+        <Keyboard clef={clef} onPress={handleKeyPress} pressed={pressedKey} />
+      )}
 
       {/* スナップ先の行ハイライト（指で隠れても着地点が分かる） */}
       {drag && isOverPlacement(drag.x) && (

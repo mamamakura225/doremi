@@ -3,6 +3,7 @@ import {
   BASS_PITCHES,
   MIDDLE_C,
   TREBLE_PITCHES,
+  hasSharpAbove,
   pitchByNote,
   pitchToY,
   pitchesOf,
@@ -85,6 +86,30 @@ describe('BASS_PITCHES', () => {
     expect(BASS_PITCHES.map((p) => p.note)).toEqual([
       'F2', 'G2', 'A2', 'B2', 'C3', 'D3', 'E3', 'F3', 'G3', 'A3',
     ])
+  })
+})
+
+describe('hasSharpAbove（鍵盤の黒鍵位置）', () => {
+  it('ミ→ファ と シ→ド の間にだけ黒鍵が無い', () => {
+    const marks = TREBLE_PITCHES.map((p) => [p.note, hasSharpAbove(p)] as const)
+    expect(marks).toEqual([
+      ['C4', true],
+      ['D4', true],
+      ['E4', false],
+      ['F4', true],
+      ['G4', true],
+      ['A4', true],
+      ['B4', false],
+      ['C5', true],
+      ['D5', true],
+      ['E5', false],
+    ])
+  })
+
+  it('ヘ音でも同じ規則（音名で決まる）', () => {
+    expect(hasSharpAbove(pitchByNote('E3', 'bass')!)).toBe(false)
+    expect(hasSharpAbove(pitchByNote('B2', 'bass')!)).toBe(false)
+    expect(hasSharpAbove(pitchByNote('F2', 'bass')!)).toBe(true)
   })
 })
 

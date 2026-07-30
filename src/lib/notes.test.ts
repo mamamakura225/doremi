@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
+  KEYBOARD_H,
+  KEYBOARD_TOP,
+  KEY_LEFT,
+  KEY_RIGHT,
   MIN_COLUMN_PITCH,
   NOTE_MAX,
+  VIEW_H,
+  VIEW_H_KEYS,
   columnX,
   isOverPlacement,
   isOverTrash,
@@ -10,6 +16,8 @@ import {
   TRASH_CX,
   TRASH_CY,
   TRASH_TOP,
+  whiteKeyW,
+  whiteKeyX,
 } from './layout'
 import {
   addNote,
@@ -150,5 +158,27 @@ describe('isOverTrash', () => {
     expect(isOverTrash(TRASH_CX, TRASH_TOP - 1)).toBe(false) // 帯より上
     expect(isOverTrash(0, TRASH_CY)).toBe(false) // 五線譜の左外
     expect(isOverTrash(9999, TRASH_CY)).toBe(false) // お道具箱側
+  })
+
+  it('鍵盤の上（VIEW_H より下）では捨てない', () => {
+    expect(isOverTrash(TRASH_CX, VIEW_H)).toBe(false)
+    expect(isOverTrash(TRASH_CX, KEYBOARD_TOP + KEYBOARD_H / 2)).toBe(false)
+    expect(isOverTrash(TRASH_CX, VIEW_H - 1)).toBe(true) // 帯の下端はそのまま
+  })
+})
+
+describe('鍵盤の列', () => {
+  it('白鍵は左→右へ隙間なく並び、五線の幅に収まる', () => {
+    const count = 10
+    const w = whiteKeyW(count)
+    const xs = Array.from({ length: count }, (_, i) => whiteKeyX(i, count))
+    expect(xs[0]).toBe(KEY_LEFT)
+    for (let i = 1; i < count; i++) expect(xs[i] - xs[i - 1]).toBeCloseTo(w)
+    expect(xs.at(-1)! + w).toBeCloseTo(KEY_RIGHT)
+  })
+
+  it('鍵盤ぶんの viewBox は五線譜のぶんより高い', () => {
+    expect(VIEW_H_KEYS).toBe(VIEW_H + KEYBOARD_H)
+    expect(KEYBOARD_TOP).toBe(VIEW_H)
   })
 })

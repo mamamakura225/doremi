@@ -129,3 +129,14 @@ export function pitchByNote(note: string, clef: Clef = 'treble'): Pitch | undefi
 
 /** ド(C4・下加線)の音 */
 export const MIDDLE_C: Pitch = TREBLE_PITCHES.find((p) => p.note === 'C4')!
+
+// ミ→ファ と シ→ド の間には黒鍵が無い（半音で隣り合っている）。
+const NO_SHARP_ABOVE = new Set(['E', 'B'])
+
+/**
+ * その音の「すぐ上」に黒鍵があるか（鍵盤併記で黒鍵を置く位置の判定）。
+ * ♯♭ は演奏対象ではないので、描くだけの飾りとして使う。
+ */
+export function hasSharpAbove(pitch: Pitch): boolean {
+  return !NO_SHARP_ABOVE.has(pitch.note[0])
+}
