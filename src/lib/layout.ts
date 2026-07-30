@@ -22,7 +22,13 @@ export const STAFF_RIGHT = TOOLBOX_X - 30 // 910
 // 音符を置く領域（ト音記号の右〜五線右端の手前）
 export const PLACE_LEFT = 210
 export const PLACE_RIGHT = STAFF_RIGHT - 30 // 880
-export const NOTE_MAX = 8
+
+// 列間隔の下限（ビューボックス単位）。符頭幅34に対して同じくらいの余白を残す値。
+// 横向きスマホでは倍率が0.375まで落ちるため、これを割ると隣の符頭と接して
+// 掴み間違いが起きる（実測値は docs/architecture.md）。NOTE_MAX はここから決まる。
+export const MIN_COLUMN_PITCH = 65
+
+export const NOTE_MAX = 10
 
 /** i番目（0始まり）の音符の中心X座標 */
 export function columnX(index: number): number {
