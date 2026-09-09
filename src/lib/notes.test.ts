@@ -5,6 +5,7 @@ import {
   KEY_LEFT,
   KEY_RIGHT,
   MIN_COLUMN_PITCH,
+  NOTE_HEAD_RX,
   NOTE_HEAD_RY_ROTATED,
   NOTE_HEAD_W,
   NOTE_HIT_H,
@@ -12,11 +13,15 @@ import {
   NOTE_MAX,
   STAFF_LAYOUT,
   STAFF_RIGHT,
+  TOOLBOX_CY,
+  TOOLBOX_LONG_CY,
+  TOOLBOX_NORMAL_CY,
   TOOLBOX_X,
   VIEW_H,
   VIEW_H_KEYS,
   canPlace,
   columnX,
+  fitsKeyboard,
   isOverPlacement,
   isOverTrash,
   PLACE_LEFT,
@@ -150,8 +155,40 @@ describe('columnX', () => {
 
   it('列間隔が下限を下回らない（幼児が隣の音符を誤って掴まない幅）', () => {
     expect(columnX(1) - columnX(0)).toBeGreaterThanOrEqual(MIN_COLUMN_PITCH)
-    // 下限そのものが符頭1つぶんより広い（隣との間に余白が残る）
-    expect(MIN_COLUMN_PITCH).toBeGreaterThan(NOTE_HEAD_W)
+    // 下限は符頭幅(34)の 1.8 倍以上＝隣との間に符頭 0.8 個ぶんの余白が残る。
+    // 実装定数の写しでなくリテラル基準にする（MIN_COLUMN_PITCH 65→40 で落ちる・#69）
+    expect(MIN_COLUMN_PITCH).toBeGreaterThanOrEqual(NOTE_HEAD_W * 1.8)
+    expect(MIN_COLUMN_PITCH).toBeGreaterThanOrEqual(60)
+  })
+})
+
+describe('お道具箱の2つの掴み的（#69）', () => {
+  it('「ふつう」と「のばす」は箱の中心から符頭直径ぶん以上ずれて上下に分かれる', () => {
+    // どちらか一方の 85→5 変異でも「中心に寄って的が重なる」→ ここで落ちる
+    expect(Math.abs(TOOLBOX_NORMAL_CY - TOOLBOX_CY)).toBeGreaterThanOrEqual(
+      NOTE_HEAD_RX * 2,
+    )
+    expect(Math.abs(TOOLBOX_LONG_CY - TOOLBOX_CY)).toBeGreaterThanOrEqual(
+      NOTE_HEAD_RX * 2,
+    )
+    // 一方が上・他方が下（同じ側に寄らない）
+    expect(Math.sign(TOOLBOX_NORMAL_CY - TOOLBOX_CY)).not.toBe(
+      Math.sign(TOOLBOX_LONG_CY - TOOLBOX_CY),
+    )
+  })
+})
+
+describe('fitsKeyboard（鍵盤を出せる画面か・#69）', () => {
+  it('iPhone 横（844×390）では出さない', () => {
+    expect(fitsKeyboard(844, 390)).toBe(false)
+  })
+
+  it('iPad 横（1180×820）では出す', () => {
+    expect(fitsKeyboard(1180, 820)).toBe(true)
+  })
+
+  it('幅0（未計測）では出さない', () => {
+    expect(fitsKeyboard(0, 500)).toBe(false)
   })
 })
 
@@ -242,8 +279,11 @@ describe('鍵盤の列', () => {
     expect(xs.at(-1)! + w).toBeCloseTo(KEY_RIGHT)
   })
 
-  it('鍵盤ぶんの viewBox は五線譜のぶんより高い', () => {
-    expect(VIEW_H_KEYS).toBe(VIEW_H + KEYBOARD_H)
+  it('鍵盤ぶんの viewBox は五線譜のぶん＋120 高い', () => {
+    // 定義（VIEW_H_KEYS = VIEW_H + KEYBOARD_H）の写しでなくリテラルで釘付け。
+    // KEYBOARD_H→0 の変異で落ちる（#69）
+    expect(VIEW_H_KEYS - VIEW_H).toBe(120)
+    expect(KEYBOARD_H).toBe(120)
     expect(KEYBOARD_TOP).toBe(VIEW_H)
   })
 })

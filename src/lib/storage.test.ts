@@ -102,6 +102,16 @@ describe('loadSongs / saveSong の I/O', () => {
     expect(loaded[0].pages).toEqual([['C3', 'D3']])
   })
 
+  it('既存データは "doremi.songs.v1" キーから読む（KEY 変更で全曲消える・#69）', () => {
+    // 往復テストは KEY を書き読みとも同じ定数で使うため、キー名の変更を検知できない。
+    // リテラルのキーに直接書いて、loadSongs がそこを見ていることを固定する。
+    localStorage.setItem(
+      'doremi.songs.v1',
+      JSON.stringify([{ id: 'x', createdAt: 1, pages: [['C4']], clef: 'treble' }]),
+    )
+    expect(loadSongs().map((s) => s.id)).toEqual(['x'])
+  })
+
   it('crypto.randomUUID が無くても id は非空の文字列になる', () => {
     vi.stubGlobal('crypto', {})
     try {

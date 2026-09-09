@@ -36,6 +36,12 @@ describe('isSpeechSupported', () => {
     installStub()
     expect(isSpeechSupported()).toBe(true)
   })
+
+  it('片方だけ存在する環境は false（&&→|| の変異で落ちる・#69）', () => {
+    vi.stubGlobal('speechSynthesis', { cancel() {}, speak() {} })
+    // SpeechSynthesisUtterance は無いまま
+    expect(isSpeechSupported()).toBe(false)
+  })
 })
 
 describe('speakSolfa', () => {
@@ -56,6 +62,22 @@ describe('speakSolfa', () => {
     expect(() => speakSolfa('ド')).not.toThrow()
     expect(() => stopSpeech()).not.toThrow()
     expect(() => primeSpeech()).not.toThrow()
+  })
+})
+
+describe('stopSpeech', () => {
+  it('対応環境では speechSynthesis.cancel を呼ぶ（no-op 変異で落ちる・#69）', () => {
+    const { calls } = installStub()
+    stopSpeech()
+    expect(calls).toEqual(['cancel'])
+  })
+
+  it('積まれた発話を止める唯一の経路——再生停止でキューが残らない', () => {
+    const { calls } = installStub()
+    speakSolfa('ド')
+    speakSolfa('レ')
+    stopSpeech()
+    expect(calls).toEqual(['cancel', 'speak', 'cancel', 'speak', 'cancel'])
   })
 })
 

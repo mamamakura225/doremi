@@ -1,5 +1,5 @@
 import { useEffect, useState, type RefObject } from 'react'
-import { KEYBOARD_MIN_RATIO } from '../lib/layout'
+import { fitsKeyboard } from '../lib/layout'
 
 /**
  * 鍵盤を併記できる形の画面か（要素の 高さ÷幅 で判定）。
@@ -17,7 +17,7 @@ export function useFitsKeyboard(ref: RefObject<Element | null>): boolean {
       const el = ref.current
       if (!el) return
       const { width, height } = el.getBoundingClientRect()
-      setFits(width > 0 && height / width >= KEYBOARD_MIN_RATIO)
+      setFits(fitsKeyboard(width, height))
     }
     measure()
     window.addEventListener('resize', measure)

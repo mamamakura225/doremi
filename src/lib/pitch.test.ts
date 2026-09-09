@@ -56,9 +56,12 @@ describe('snapYToPitch', () => {
     expect(snapYToPitch(y, layout, 'treble')).toEqual(MIDDLE_C)
   })
 
-  it('範囲外（高すぎ/低すぎ）は端の音にクランプ', () => {
+  it('範囲より上下にはみ出したYは端の音になる（最近傍・#69）', () => {
     expect(snapYToPitch(-9999, layout, 'treble').note).toBe('E5')
     expect(snapYToPitch(9999, layout, 'treble').note).toBe('C4')
+    // 端を1歩超えただけでも端のまま（round→floor 変異で落ちる既存テストと別方向）
+    const topY = pitchToY(TREBLE_PITCHES[TREBLE_PITCHES.length - 1], layout)
+    expect(snapYToPitch(topY - layout.staffSpace, layout, 'treble').note).toBe('E5')
   })
 })
 
@@ -120,7 +123,7 @@ describe('音部記号ごとの解決', () => {
     expect(snapYToPitch(y, layout, 'bass').note).toBe('F3')
   })
 
-  it('範囲外は各音部記号の端にクランプする', () => {
+  it('範囲外は各音部記号の端の音になる', () => {
     expect(snapYToPitch(-9999, layout, 'bass').note).toBe('A3')
     expect(snapYToPitch(9999, layout, 'bass').note).toBe('F2')
   })

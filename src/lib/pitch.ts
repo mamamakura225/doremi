@@ -99,19 +99,17 @@ export function pitchToY(pitch: Pitch, layout: StaffLayout): number {
 
 /**
  * Y座標を最も近い音（線上 or 間）にスナップする。
- * 演奏範囲外は端の音にクランプ。
+ * 演奏範囲より上下にはみ出した分は、最近傍探索が自動的に端の音を返す
+ * （`buildPitches` が step を1ずつ詰めて作るので音列に歯抜けが無く、
+ *  範囲内クランプと最近傍が一致する。範囲チェックは不要・#69）。
  */
 export function snapYToPitch(y: number, layout: StaffLayout, clef: Clef): Pitch {
   const pitches = pitchesOf(clef)
-  const rawStep = (y - layout.topLineY) / (layout.staffSpace / 2)
-  const minStep = Math.min(...pitches.map((p) => p.step))
-  const maxStep = Math.max(...pitches.map((p) => p.step))
-  const clamped = Math.min(maxStep, Math.max(minStep, Math.round(rawStep)))
-  // 全 step に音があるとは限らないため、最近傍の演奏可能 step を選ぶ。
+  const rawStep = Math.round((y - layout.topLineY) / (layout.staffSpace / 2))
   let best = pitches[0]
   let bestDist = Infinity
   for (const p of pitches) {
-    const d = Math.abs(p.step - clamped)
+    const d = Math.abs(p.step - rawStep)
     if (d < bestDist) {
       bestDist = d
       best = p
