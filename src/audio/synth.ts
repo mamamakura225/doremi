@@ -5,6 +5,8 @@ import { primeSpeech, speakSolfa, stopSpeech } from './speech'
 
 let started = false
 // 音部記号で地の音色が変わる（ヘ音＝低くて温かい音＝クマ・ゾウ）。
+// うたモードの音名解決（pitchByNote）もこの値を見る。切替は必ず
+// 盤面リセット＋タイマー破棄とセットで（App.toggleClef / handleSelectSong）。
 let clefMode: Clef = 'treble'
 
 const makingSynths: Partial<Record<Clef, Tone.Synth>> = {}
@@ -109,7 +111,7 @@ export function setPlaybackVoice(v: Voice): void {
 export function playMelodyNote(note: string, duration: Tone.Unit.Time = '8n'): void {
   if (playbackVoice === 'sing') {
     getVoice('piano').triggerAttackRelease(note, duration)
-    const solfa = pitchByNote(note)?.solfa
+    const solfa = pitchByNote(note, clefMode)?.solfa
     if (solfa) speakSolfa(solfa)
     return
   }

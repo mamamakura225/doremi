@@ -59,7 +59,7 @@ export function addSong(
   pages: string[][],
   id: string,
   now: number,
-  clef: Clef = 'treble',
+  clef: Clef,
 ): SavedSong[] {
   const entry: SavedSong = { id, createdAt: now, pages, clef }
   return [entry, ...songs].slice(0, SHELF_MAX)
@@ -85,7 +85,7 @@ export function loadSongs(): SavedSong[] {
  * 永続化に失敗（quota 超過・書き込み不可）しても例外は投げず、一覧はそのまま返す
  * ＝このセッション中は本棚に反映される。読めない年齢なので失敗は伝えない。
  */
-export function saveSong(pages: string[][], clef: Clef = 'treble'): SavedSong[] {
+export function saveSong(pages: string[][], clef: Clef): SavedSong[] {
   const next = addSong(loadSongs(), pages, newId(), Date.now(), clef)
   try {
     localStorage.setItem(KEY, JSON.stringify(next))
