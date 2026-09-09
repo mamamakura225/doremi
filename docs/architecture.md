@@ -44,6 +44,12 @@ src/App.tsx  状態と操作の結線
 
 **切り替えたら盤面はリセットする。** 置いてある音符は今の音部記号で解決された `Pitch` を持っているので、表だけ差し替えると同じ位置の音符が別の音に化ける。おてほんの切替（`toggleGuide`）と同じ扱いにした。
 
+**リセットは `pages` を空にするだけでは足りない**（[#56](https://github.com/mamamakura225/doremi/issues/56)）。ドラッグ中に2本目の指で音部を切り替えると、`Board` 内部の `drag` / `del`（掴んでいる最中の `Pitch`）は旧音部のまま残り、離した瞬間に新しい盤面へ1音流入する。そのまま保存すると読み込み時に音域外でサイレントに消える。対策は2つ入れる:
+- `Board` は `clef` prop の変化を**レンダー中に検知**して `drag` / `del` を捨てる（`prevClef` state を持つ React 公式パターン）。`useEffect` だとペイント後になり旧音部のゴーストが新しい五線に1フレーム残る。`<Board key={clef}>` で丸ごと作り直す案は、`touched` 初期化で起動ヒント（👆 さわってね）が再表示され、鍵盤が出る端末では `useFitsKeyboard` が再計測されて `viewBox` が一瞬跳ねるので採らない
+- `Pitch` に `readonly clef` を持たせ、`canPlace(drag.pitch.clef, clef, x)`（`layout.ts` の純関数）で音部一致も確認してから置く。上のリセットがブラウザで1フレーム遅れる窓を、値オブジェクト自身が持つ音部で塞ぐ
+
+**残件**: `clef` 以外のリセット経路（↺ クリア・おてほん切替も `resetBoard()` を呼ぶ）でも、掴み中に指2で押せば同じ1音流入は起きる。ただしその音は**現音部で解決された正しい `Pitch`** なのでデータは壊れない（保存しても読み込みで消えない）＝「余計な音符が1つ」の不快事象に留まる。汎用の resetKey で束ねる案は別issue（[#84](https://github.com/mamamakura225/doremi/issues/84)）。
+
 **「ト音／ヘ音」とは表示しない。** 5歳児には通じない語なので、高さのイメージで **🐤 ことり／🐻 くま** と出す。ヘ音では地の音色も低くて温かい音（サイン波・ゆっくりした立ち上がり）に変え、見た目と音の両方で「低い方の世界」に入ったことが分かるようにしている。子どもが自分で選ぶ音色（べる・ぴこぴこ）は音部記号では変えない——選んだものが勝手に変わる方が混乱する。
 
 保存した曲は**音部記号も一緒に持つ**（`SavedSong.clef`）。音名だけでは譜面の高さが決まらないため、本棚から読み込むときはその音部記号へ盤面ごと切り替える。音部記号を持たない旧データはト音（当時の唯一のモード）として読む。本棚のミニプレビュー（`previewCells`）も同じく `song.clef` で色を引く——渡し忘れるとヘ音の曲が全部グレーになる。
@@ -170,6 +176,7 @@ CI（`.github/workflows/ci.yml`）は `lint` → `typecheck` → `test`（カバ
 - **lint**: `oxlint --deny-warnings`。warning も EXIT=1 にする（`--deny-warnings` が無いと `react/rules-of-hooks` 以外は実質ノーゲートで、effect の依存漏れ等が素通りしていた）。`.oxlintrc.json` に足したルールは実際に発火するか壊したファイルで確認する — oxlint は存在しないルール名を黙認する。
 - **typecheck**: `tsc -b --noEmit`。`build` の第1段とは別に独立ゲートとして走らせる。`tsconfig.app.json` は `strict: true`・`include: ["src"]` なのでテストファイルも型検査対象。`noUncheckedIndexedAccess` は既存コードに約28件出るため別issue（配列アクセスの `undefined` 経路＝白画面クラッシュの本丸）で段階導入する。
 - **test**: `vitest run`（`--passWithNoTests` は付けない。テストが消えたら CI を落とす）。カバレッジ閾値は `src/lib/**` に限定（lines 90%）。UI層（`src/components`・`src/App.tsx`）と `src/audio` はテストが揃った時点で対象へ加える。
+- `src/components/*.test.tsx` は jsdom に無い SVG 座標変換（`createSVGPoint` / `getScreenCTM` / `setPointerCapture`）を**恒等スタブ**で差し込む。したがってこれらのテストは座標→音高の変換そのもののバグは検出できない（そこは `pitch.ts` / `layout.ts` の純ロジックテストの担当）。検証しているのは state 遷移とハンドラの分岐。`clientToSvg` の行列を引数化して本物のテストにするのは [#58](https://github.com/mamamakura225/doremi/issues/58)。
 - Node は `.nvmrc`（22）で固定し、CI（`node-version-file`）と Vercel のビルド設定を揃える。
 
 CI を無料枠で回すためリポジトリは public にしている（他リポは private のまま。個人 Actions の無料枠が尽きて CI が起動できなくなった際の対処）。公開前提なので、秘密情報・個人情報をコードにもテストにも置かない。

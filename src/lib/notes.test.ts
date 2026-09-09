@@ -8,6 +8,7 @@ import {
   NOTE_MAX,
   VIEW_H,
   VIEW_H_KEYS,
+  canPlace,
   columnX,
   isOverPlacement,
   isOverTrash,
@@ -149,6 +150,18 @@ describe('isOverPlacement', () => {
     expect(isOverPlacement(columnX(0))).toBe(true)
     expect(isOverPlacement(0)).toBe(false)
     expect(isOverPlacement(9999)).toBe(false)
+  })
+})
+
+describe('canPlace（#56 音部一致ガード）', () => {
+  it('配置エリア内でも、掴んだ音部と盤面の音部が違えば置かない', () => {
+    expect(canPlace('treble', 'treble', columnX(0))).toBe(true)
+    expect(canPlace('treble', 'bass', columnX(0))).toBe(false)
+    expect(canPlace('bass', 'treble', columnX(0))).toBe(false)
+  })
+
+  it('音部が一致していても配置エリア外なら置かない', () => {
+    expect(canPlace('treble', 'treble', 9999)).toBe(false)
   })
 })
 

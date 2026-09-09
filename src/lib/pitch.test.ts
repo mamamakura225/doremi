@@ -136,4 +136,11 @@ describe('音部記号ごとの解決', () => {
     expect(pitchesOf('treble')).toBe(TREBLE_PITCHES)
     expect(pitchesOf('bass')).toBe(BASS_PITCHES)
   })
+
+  it('Pitch は自分がどの音部記号で解決されたかを持つ（#56）', () => {
+    expect(TREBLE_PITCHES.every((p) => p.clef === 'treble')).toBe(true)
+    expect(BASS_PITCHES.every((p) => p.clef === 'bass')).toBe(true)
+    expect(snapYToPitch(stepToY(2, layout), layout, 'bass').clef).toBe('bass')
+    expect(pitchByNote('C3', 'bass')!.clef).toBe('bass')
+  })
 })
