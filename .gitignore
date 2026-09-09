@@ -26,3 +26,6 @@ coverage
 *.sw?
 
 .vercel
+
+# Claude Code のローカル専用設定（dev サーバー起動定義など）
+.claude/

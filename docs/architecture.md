@@ -125,6 +125,17 @@ Web Speech の解錠はさらに厳しく、**初回 `speak()` をユーザー�
 
 キラキラ音（おてほん一致）は別系統の `PolySynth` に分ける。メロディ用 synth を共有すると再生中の音を切ってしまう。
 
+### 再生の中断はタイマー削除だけでは表現できない
+`playSequence` は `clearTimers()`（既に積んだ `setTimeout` を消す）と `await ensureAudio()`（初回だけ `Tone.start()` を待つ）の間に隙間がある。この隙間に ↺ クリア・音部切替・曲選択が入っても、**まだ push されていないタイマーは消せない**——await が解決したあと古いスケジュールがまるごと積まれ、存在しないページの tick が盤面を壊して白画面になる（[#55](https://github.com/mamamakura225/doremi/issues/55)）。
+
+対策は**世代トークン**（`gen` ref）。`clearTimers()` で繰り上げ、`playSequence` は clearTimers 直後の世代を控えて `await` 後に一致を確認し、ずれていたら何も積まずに戻る。`clearTimers()` は空スケジュールでの early return より前に呼ぶ（中断は常に成立させる）。再生を状態機械にする構造的な直しは [#73](https://github.com/mamamakura225/doremi/issues/73)。
+
+窓の中で ↩・💾・📚 は今も通る（クラッシュはしないが、消したはずの音が鳴る等の stale 再生は起きうる）。塞ぐには初回解錠中だけ立つ `preparing` state が要るので #73 に回し、ここでは**古い継続を世代で捨てる**方式に留める。
+
+保険として `pages[currentPage] ?? []`（配列外アクセスの `undefined` を吸う）と、`main.tsx` の `ErrorBoundary`（render 中の例外だけ拾う。子ども向けなので「もういちど」＝リロード1つだけ）も置く。`setTimeout` コールバック内の例外はここでは拾えない（白画面にはならないが無反応になる）。配列外アクセスを型で見せる `noUncheckedIndexedAccess` は[品質ゲート](#品質ゲート)の節のとおり別issueで段階導入する。
+
+↺ クリアは再生中も押せる唯一のボタン——await 窓の中の割り込みと、曲を最後まで聞かずに止める非常停止を兼ねる。他ボタン（再生中は全 disabled）との非対称は意図的。
+
 ## 横向き前提の扱い
 ランドスケープは**技術的に強制できない**（iOS Safari 等で `screen.orientation.lock` が使えない）。取れる手は次の2つだけ:
 - PWA manifest で `orientation: landscape` を宣言する（保証ではない・ブラウザのヒント）
