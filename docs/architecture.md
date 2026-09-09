@@ -187,6 +187,15 @@ Web Speech の解錠はさらに厳しく、**初回 `speak()` をユーザー�
 
 ↺ クリアは再生中も押せる唯一のボタン——await 窓の中の割り込みと、曲を最後まで聞かずに止める非常停止を兼ねる。他ボタン（再生中は全 disabled）との非対称は意図的。
 
+## PWA アイコン
+ホーム画面追加が**価値の中心**（`display: fullscreen` / `orientation: landscape` で起動される前提）なのに、当初 manifest にアイコンが1つも無く Android Chrome のインストール要件を満たしていなかった（[#67](https://github.com/mamamakura225/doremi/issues/67)）。
+
+- **`pwa-192x192.png` / `pwa-512x512.png`**（`purpose: any`）… 192 は Android のインストール要件、512 はスプラッシュ用
+- **`maskable-icon-512x512.png`**（`purpose: maskable`）… 全面をクリーム地で塗り、ロゴは中央 ~64%（セーフゾーン）に収める
+- **`apple-touch-icon-180x180.png`**（`index.html` の `<link>`）… **不透明背景必須**（透過だと iOS が角丸にしたとき角が黒くなる）。角丸は焼き込まない
+- 元データは `art/icon.svg` / `art/icon-maskable.svg`（`public/` の外＝配信されない）。書き出し方は `art/README.md`。sharp 依存の `@vite-pwa/assets-generator` は使わず canvas でラスタライズする
+- **`workbox.globPatterns` に `svg,png` を足さないとアイコンと favicon がオフラインで 404 する**（既定は js/css/html のみ）。追加後の precache 合計は **約 522 KiB**（`maximumFileSizeToCacheInBytes` 既定 2 MB に対して十分・最大ファイルは 453 KiB の JS）
+
 ## 横向き前提の扱い
 ランドスケープは**技術的に強制できない**（iOS Safari 等で `screen.orientation.lock` が使えない）。取れる手は次の2つだけ:
 - PWA manifest で `orientation: landscape` を宣言する（保証ではない・ブラウザのヒント）

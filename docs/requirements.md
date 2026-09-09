@@ -48,7 +48,7 @@
 - つくった曲を localStorage の「ほんだな」に保存（最大12曲・古いものから落ちる）。音の長さと音部記号も保存され、読み込むとその音部記号に切り替わって復元される
 
 ### 画面
-- PWA（ホーム画面追加・オフライン動作・`orientation: landscape` / `display: fullscreen` 宣言）
+- PWA（ホーム画面追加・オフライン動作・`orientation: landscape` / `display: fullscreen` 宣言）。Android Chrome のインストール要件を満たすアイコン（192/512 PNG＋maskable）と iOS 用 `apple-touch-icon` を持つ
 - 縦向き検知で「回してね」オーバーレイ
 - 縦が短い画面（横向きスマホ）ではヘッダーのボタンを絵文字だけに畳み、五線譜に高さを譲る
 - 予期しない不具合でも白画面にはせず、🌀 と「もういちど」（リロード）だけの画面を出す

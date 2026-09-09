@@ -11,6 +11,7 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
+      includeAssets: ['favicon.svg', 'apple-touch-icon-180x180.png'],
       manifest: {
         name: 'どれみ',
         short_name: 'どれみ',
@@ -20,6 +21,21 @@ export default defineConfig({
         display: 'fullscreen',
         background_color: '#fdf6e3',
         theme_color: '#fdf6e3',
+        icons: [
+          { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
+          {
+            src: 'maskable-icon-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
+        ],
+      },
+      // 既定の globPatterns は js/css/html だけ。svg/png を足さないとアイコンと
+      // favicon がオフライン時に 404 する（#67）。
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,svg,png,webmanifest}'],
       },
     }),
   ],

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#fdf6e3"/>
+  <!-- ロゴは中央 ~64%（セーフゾーン内）に収める -->
+  <g transform="translate(256 256) scale(0.62) translate(-256 -226)">
+    <circle cx="150" cy="196" r="24" fill="#e23b3b" stroke="#5b524b" stroke-width="10"/>
+    <circle cx="216" cy="150" r="24" fill="#facc15" stroke="#5b524b" stroke-width="10"/>
+    <circle cx="282" cy="120" r="24" fill="#38bdf8" stroke="#5b524b" stroke-width="10"/>
+    <g transform="rotate(-16 300 330)">
+      <rect x="356" y="150" width="24" height="212" rx="12" fill="#5b524b"/>
+      <ellipse cx="312" cy="356" rx="86" ry="66" fill="#a78bfa" stroke="#5b524b" stroke-width="16"/>
+    </g>
+  </g>
+</svg>
