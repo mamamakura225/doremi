@@ -227,7 +227,15 @@ CI（`.github/workflows/ci.yml`）は `lint` → `typecheck` → `test`（カバ
 - **typecheck**: `tsc -b --noEmit`。`build` の第1段とは別に独立ゲートとして走らせる。`tsconfig.app.json` は `strict: true`・`include: ["src"]` なのでテストファイルも型検査対象。`noUncheckedIndexedAccess` は既存コードに約28件出るため別issue（配列アクセスの `undefined` 経路＝白画面クラッシュの本丸）で段階導入する。
 - **test**: `vitest run`（`--passWithNoTests` は付けない。テストが消えたら CI を落とす）。カバレッジ閾値は `src/lib/**` に限定（lines 90%）。UI層（`src/components`・`src/App.tsx`）と `src/audio` はテストが揃った時点で対象へ加える。
   - **期待値に実装の定数をそのまま使わない**。`expect(VIEW_H_KEYS).toBe(VIEW_H + KEYBOARD_H)` は `layout.ts` の定義の写しなので、定数をどう壊しても永久に緑になる（ミューテーションで実測: kill率 59%・[#69](https://github.com/mamamakura225/doremi/issues/69)）。体験を決める値（帯の位置・列間隔の下限・鍵盤の表示条件）はリテラルと要件式で固定し、各アサーションに「どの変異で落ちるか」を対応させる。
-- `src/components/*.test.tsx` は jsdom に無い SVG 座標変換（`createSVGPoint` / `getScreenCTM` / `setPointerCapture`）を**恒等スタブ**で差し込む。したがってこれらのテストは座標→音高の変換そのもののバグは検出できない（そこは `pitch.ts` / `layout.ts` の純ロジックテストの担当）。検証しているのは state 遷移とハンドラの分岐。`clientToSvg` の行列を引数化して本物のテストにするのは [#58](https://github.com/mamamakura225/doremi/issues/58)。
+- `src/components/*.test.tsx` は jsdom に無い SVG 座標変換（`getScreenCTM` / `setPointerCapture`）をスタブで差し込む。`getScreenCTM` には**恒等行列**を返させて client 座標 = viewBox 座標にする。これらのテストが検証しているのは state 遷移とハンドラの分岐で、座標→音高の変換そのものは `pitch.ts` / `layout.ts` / `svgPoint.ts` の純ロジックテストの担当。
+
+### テストのシーム（jsdom で書けるようにする最小の切り出し）
+UI 層のバグを純ロジックのテストで捕まえるため、変換を lib の純関数に出す（[#70](https://github.com/mamamakura225/doremi/issues/70)）:
+
+- **`svgPoint.ts`**: `clientToSvg` を `applyMatrix(m, x, y)`（`SVGPoint.matrixTransform` と同じ式）と `clientToSvgPoint(svg, cx, cy)` に分ける。jsdom は `createSVGPoint` を持たず `matrixTransform` を検査できないので、行列の式だけを純関数にして `svgPoint.test.ts` で剪断成分まで固定する。
+- **`preview.ts`**: 本棚プレビューの色決定を `previewCells(pages, clef)` に出す。clef を渡し忘れると全灰色になる回帰（[#54](https://github.com/mamamakura225/doremi/issues/54)）を `preview.test.ts` が数値で止める。
+
+実ビューポート・`preserveAspectRatio` の実測・`setPointerCapture` の実挙動が要る3経路（RotateOverlay の向き連動／横スマホのヘッダー絵文字化＋鍵盤非表示／pointerdown→move→up の配置）は jsdom では原理的に検証できないため Playwright（別issue）に回す。
 - Node は `.nvmrc`（22）で固定し、CI（`node-version-file`）と Vercel のビルド設定を揃える。
 
 CI を無料枠で回すためリポジトリは public にしている（他リポは private のまま。個人 Actions の無料枠が尽きて CI が起動できなくなった際の対処）。公開前提なので、秘密情報・個人情報をコードにもテストにも置かない。

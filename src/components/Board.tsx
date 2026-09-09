@@ -27,6 +27,7 @@ import type { PlacedNote } from '../lib/notes'
 import { canAddNote, columnStarts, usedColumns } from '../lib/notes'
 import { noteDuration } from '../lib/playback'
 import { colorOf } from '../lib/colors'
+import { clientToSvgPoint } from '../lib/svgPoint'
 import { ensureAudio, playNote } from '../audio/synth'
 import { useFitsKeyboard } from '../hooks/useFitsKeyboard'
 import Keyboard from './Keyboard'
@@ -63,15 +64,6 @@ interface DeleteDragState {
   long: boolean
   x: number
   y: number
-}
-
-function clientToSvg(svg: SVGSVGElement, clientX: number, clientY: number) {
-  const pt = svg.createSVGPoint()
-  pt.x = clientX
-  pt.y = clientY
-  const ctm = svg.getScreenCTM()
-  if (!ctm) return null
-  return pt.matrixTransform(ctm.inverse())
 }
 
 export default function Board({
@@ -145,7 +137,7 @@ export default function Board({
 
   function handlePointerDown(e: React.PointerEvent, long: boolean) {
     if (tracking || !(long ? canLong : canNormal) || !svgRef.current) return
-    const p = clientToSvg(svgRef.current, e.clientX, e.clientY)
+    const p = clientToSvgPoint(svgRef.current, e.clientX, e.clientY)
     if (!p) return
     setTouched(true)
     e.currentTarget.setPointerCapture(e.pointerId)
@@ -157,7 +149,7 @@ export default function Board({
 
   function handlePointerMove(e: React.PointerEvent) {
     if (!drag || e.pointerId !== drag.pointerId || !svgRef.current) return
-    const p = clientToSvg(svgRef.current, e.clientX, e.clientY)
+    const p = clientToSvgPoint(svgRef.current, e.clientX, e.clientY)
     if (!p) return
     const pitch = snapYToPitch(p.y, STAFF_LAYOUT, clef)
     // ゾーン（音）を跨いだ瞬間のみ再トリガ（暴発防止）
@@ -192,7 +184,7 @@ export default function Board({
   function handleNoteDown(e: React.PointerEvent, note: PlacedNote) {
     if (tracking || !editable || !svgRef.current) return
     e.stopPropagation()
-    const p = clientToSvg(svgRef.current, e.clientX, e.clientY)
+    const p = clientToSvgPoint(svgRef.current, e.clientX, e.clientY)
     if (!p) return
     e.currentTarget.setPointerCapture(e.pointerId)
     setDel({
@@ -207,7 +199,7 @@ export default function Board({
 
   function handleNoteMove(e: React.PointerEvent) {
     if (!del || e.pointerId !== del.pointerId || !svgRef.current) return
-    const p = clientToSvg(svgRef.current, e.clientX, e.clientY)
+    const p = clientToSvgPoint(svgRef.current, e.clientX, e.clientY)
     if (!p) return
     setDel({ ...del, x: p.x, y: p.y })
   }
