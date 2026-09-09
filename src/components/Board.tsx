@@ -46,6 +46,8 @@ interface Props {
 interface DragState {
   pointerId: number
   x: number
+  /** 離した位置の Y（配置判定に使う・#59）。スナップ先ではなく生のポインタ座標。 */
+  y: number
   pitch: Pitch
   /** 掴んでいるのが「のばす音」か */
   long: boolean
@@ -144,7 +146,7 @@ export default function Board({
     setTouched(true)
     e.currentTarget.setPointerCapture(e.pointerId)
     const pitch = snapYToPitch(p.y, STAFF_LAYOUT, clef)
-    setDrag({ pointerId: e.pointerId, x: p.x, pitch, long })
+    setDrag({ pointerId: e.pointerId, x: p.x, y: p.y, pitch, long })
     // 初回タップでAudioContext起動 → 掴んだ音を鳴らす
     void ensureAudio().then(() => previewNote(pitch.note, long))
   }
@@ -156,14 +158,14 @@ export default function Board({
     const pitch = snapYToPitch(p.y, STAFF_LAYOUT, clef)
     // ゾーン（音）を跨いだ瞬間のみ再トリガ（暴発防止）
     if (pitch.note !== drag.pitch.note) previewNote(pitch.note, drag.long)
-    setDrag({ ...drag, x: p.x, pitch })
+    setDrag({ ...drag, x: p.x, y: p.y, pitch })
   }
 
   function handlePointerUp(e: React.PointerEvent) {
     if (!drag || e.pointerId !== drag.pointerId) return
     // canPlace が音部一致も見る。prevClef のリセットが未反映のフレームで
     // pointerup が来ても、旧音部の音を新しい盤面に流し込まない（#56）。
-    if (canPlace(drag.pitch.clef, clef, drag.x)) {
+    if (canPlace(drag.pitch.clef, clef, drag.x, drag.y)) {
       onPlace(drag.pitch, drag.long)
       previewNote(drag.pitch.note, drag.long)
     }
@@ -244,7 +246,7 @@ export default function Board({
       )}
 
       {/* スナップ先の行ハイライト（指で隠れても着地点が分かる） */}
-      {drag && isOverPlacement(drag.x) && (
+      {drag && isOverPlacement(drag.x, drag.y) && (
         <rect
           x={PLACE_LEFT}
           y={pitchToY(drag.pitch, STAFF_LAYOUT) - 18}
@@ -405,18 +407,24 @@ export default function Board({
         </g>
       )}
 
-      {/* ドラッグ中のゴースト音符（拡大＋影で持ち上がり表現） */}
-      {drag && (
-        <NoteHead
-          x={drag.x}
-          y={pitchToY(drag.pitch, STAFF_LAYOUT)}
-          fill={colorOf(drag.pitch)}
-          opacity={0.9}
-          scale={1.4}
-          shadow
-          tail={drag.long ? COLUMN_PITCH : 0}
-        />
-      )}
+      {/* ドラッグ中のゴースト音符（拡大＋影で持ち上がり表現）。
+          置けない場所（帯・鍵盤・ヘッダーの上）では指の位置に薄く追従させ、
+          「ここでは音符にならない」を見せる（#59・行ハイライトも同時に消える）。 */}
+      {drag &&
+        (() => {
+          const placeable = isOverPlacement(drag.x, drag.y)
+          return (
+            <NoteHead
+              x={drag.x}
+              y={placeable ? pitchToY(drag.pitch, STAFF_LAYOUT) : drag.y}
+              fill={colorOf(drag.pitch)}
+              opacity={placeable ? 0.9 : 0.35}
+              scale={1.4}
+              shadow
+              tail={drag.long ? COLUMN_PITCH : 0}
+            />
+          )
+        })()}
 
       {/* 音符を掴んでいる間だけゴミ箱を表示（捨て先を明示）。重なると拡大して反応。 */}
       {del && (

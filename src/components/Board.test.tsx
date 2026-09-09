@@ -86,6 +86,31 @@ describe('音部切替とドラッグ', () => {
   })
 })
 
+describe('配置領域を Y でも切る（#59）', () => {
+  it('ゴミ箱帯・鍵盤の上で離したら音符を置かない', () => {
+    const { onPlace, view } = renderBoard('treble')
+    const toolbox = view.getByTestId('toolbox-normal')
+
+    fireEvent.pointerDown(toolbox, { pointerId: 1, clientX: 950, clientY: 200 })
+    // 配置エリアの X だが、Y は帯の中（恒等スタブなので clientY = viewBox y）
+    fireEvent.pointerMove(toolbox, { pointerId: 1, clientX: 400, clientY: 460 })
+    fireEvent.pointerUp(toolbox, { pointerId: 1, clientX: 400, clientY: 460 })
+
+    expect(onPlace).not.toHaveBeenCalled()
+  })
+
+  it('五線の上（帯の直前）で離せば置ける（対照）', () => {
+    const { onPlace, view } = renderBoard('treble')
+    const toolbox = view.getByTestId('toolbox-normal')
+
+    fireEvent.pointerDown(toolbox, { pointerId: 1, clientX: 950, clientY: 200 })
+    fireEvent.pointerMove(toolbox, { pointerId: 1, clientX: 400, clientY: 300 })
+    fireEvent.pointerUp(toolbox, { pointerId: 1, clientX: 400, clientY: 300 })
+
+    expect(onPlace).toHaveBeenCalledTimes(1)
+  })
+})
+
 describe('単一ポインタ追跡（#58）', () => {
   it('2本目の pointerdown はドラッグを横取りしない', () => {
     const { onPlace, view } = renderBoard('treble')

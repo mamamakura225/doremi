@@ -5,7 +5,12 @@ import {
   KEY_LEFT,
   KEY_RIGHT,
   MIN_COLUMN_PITCH,
+  NOTE_HEAD_RY_ROTATED,
+  NOTE_HEAD_W,
   NOTE_MAX,
+  STAFF_LAYOUT,
+  STAFF_RIGHT,
+  TOOLBOX_X,
   VIEW_H,
   VIEW_H_KEYS,
   canPlace,
@@ -16,6 +21,7 @@ import {
   PLACE_RIGHT,
   TRASH_CX,
   TRASH_CY,
+  TRASH_GAP,
   TRASH_TOP,
   whiteKeyW,
   whiteKeyX,
@@ -29,7 +35,7 @@ import {
   usedColumns,
   type PlacedNote,
 } from './notes'
-import { MIDDLE_C } from './pitch'
+import { MIDDLE_C, pitchToY, pitchesOf } from './pitch'
 
 describe('addNote', () => {
   it('音符を末尾に追加する', () => {
@@ -142,26 +148,37 @@ describe('columnX', () => {
 
   it('列間隔が下限を下回らない（幼児が隣の音符を誤って掴まない幅）', () => {
     expect(columnX(1) - columnX(0)).toBeGreaterThanOrEqual(MIN_COLUMN_PITCH)
+    // 下限そのものが符頭1つぶんより広い（隣との間に余白が残る）
+    expect(MIN_COLUMN_PITCH).toBeGreaterThan(NOTE_HEAD_W)
   })
 })
 
 describe('isOverPlacement', () => {
-  it('五線譜領域の内外を判定する', () => {
-    expect(isOverPlacement(columnX(0))).toBe(true)
-    expect(isOverPlacement(0)).toBe(false)
-    expect(isOverPlacement(9999)).toBe(false)
+  it('五線譜領域の内側でのみ true（X）', () => {
+    expect(isOverPlacement(columnX(0), 300)).toBe(true)
+    expect(isOverPlacement(0, 300)).toBe(false)
+    expect(isOverPlacement(STAFF_RIGHT + 1, 300)).toBe(false)
+    expect(isOverPlacement(TOOLBOX_X, 300)).toBe(false) // お道具箱側
+  })
+
+  it('Y も見る（#59）——ヘッダーの上・ゴミ箱帯の上・鍵盤の上では false', () => {
+    expect(isOverPlacement(columnX(0), -10)).toBe(false) // ヘッダー域
+    expect(isOverPlacement(columnX(0), TRASH_TOP)).toBe(false) // ゴミ箱帯
+    expect(isOverPlacement(columnX(0), VIEW_H + 60)).toBe(false) // 鍵盤域
+    expect(isOverPlacement(columnX(0), TRASH_TOP - 1)).toBe(true) // 帯の直前まではOK
   })
 })
 
-describe('canPlace（#56 音部一致ガード）', () => {
+describe('canPlace（音部一致ガード #56 ＋ 領域ガード #59）', () => {
   it('配置エリア内でも、掴んだ音部と盤面の音部が違えば置かない', () => {
-    expect(canPlace('treble', 'treble', columnX(0))).toBe(true)
-    expect(canPlace('treble', 'bass', columnX(0))).toBe(false)
-    expect(canPlace('bass', 'treble', columnX(0))).toBe(false)
+    expect(canPlace('treble', 'treble', columnX(0), 300)).toBe(true)
+    expect(canPlace('treble', 'bass', columnX(0), 300)).toBe(false)
+    expect(canPlace('bass', 'treble', columnX(0), 300)).toBe(false)
   })
 
   it('音部が一致していても配置エリア外なら置かない', () => {
-    expect(canPlace('treble', 'treble', 9999)).toBe(false)
+    expect(canPlace('treble', 'treble', 9999, 300)).toBe(false)
+    expect(canPlace('treble', 'treble', columnX(0), VIEW_H + 60)).toBe(false)
   })
 })
 
@@ -177,6 +194,16 @@ describe('isOverTrash', () => {
     expect(isOverTrash(TRASH_CX, VIEW_H)).toBe(false)
     expect(isOverTrash(TRASH_CX, KEYBOARD_TOP + KEYBOARD_H / 2)).toBe(false)
     expect(isOverTrash(TRASH_CX, VIEW_H - 1)).toBe(true) // 帯の下端はそのまま
+  })
+
+  it('帯の上端と最も低い音の符頭の下端の間に TRASH_GAP 以上の余裕がある（#59）', () => {
+    for (const clef of ['treble', 'bass'] as const) {
+      const headBottom =
+        pitchToY(pitchesOf(clef)[0], STAFF_LAYOUT) + NOTE_HEAD_RY_ROTATED
+      // バグ値 TRASH_TOP=410 だと隙間 6.5 < TRASH_GAP(13.5) で落ちる
+      expect(TRASH_TOP - headBottom).toBeGreaterThanOrEqual(TRASH_GAP)
+    }
+    expect(TRASH_TOP).toBe(430) // リテラルでも釘付け（自己参照をやめる）
   })
 })
 
