@@ -47,7 +47,7 @@ describe('parseSongs', () => {
 describe('addSong', () => {
   it('新しい曲を先頭に積む', () => {
     const base: SavedSong[] = [song({ id: 'old' })]
-    const out = addSong(base, [['G4']], 'new', 2)
+    const out = addSong(base, [['G4']], 'new', 2, 'treble')
     expect(out[0]).toEqual({ id: 'new', createdAt: 2, pages: [['G4']], clef: 'treble' })
     expect(out).toHaveLength(2)
   })
@@ -59,7 +59,7 @@ describe('addSong', () => {
 
   it('上限を超えたら古いものから落ちる', () => {
     let songs: SavedSong[] = []
-    for (let i = 0; i < SHELF_MAX + 3; i++) songs = addSong(songs, [['C4']], `s${i}`, i)
+    for (let i = 0; i < SHELF_MAX + 3; i++) songs = addSong(songs, [['C4']], `s${i}`, i, 'treble')
     expect(songs).toHaveLength(SHELF_MAX)
     expect(songs[0].id).toBe(`s${SHELF_MAX + 2}`) // 最新が先頭
     expect(songs.some((s) => s.id === 's0')).toBe(false) // 最古は落ちている
@@ -67,7 +67,7 @@ describe('addSong', () => {
 
   it('元配列を破壊しない', () => {
     const base: SavedSong[] = [song()]
-    addSong(base, [['G4']], 'b', 2)
+    addSong(base, [['G4']], 'b', 2, 'treble')
     expect(base).toHaveLength(1)
   })
 })

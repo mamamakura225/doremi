@@ -47,18 +47,18 @@ describe('座標変換', () => {
 describe('snapYToPitch', () => {
   it('音の真上のYはその音に吸着する', () => {
     for (const p of TREBLE_PITCHES) {
-      expect(snapYToPitch(pitchToY(p, layout), layout)).toEqual(p)
+      expect(snapYToPitch(pitchToY(p, layout), layout, 'treble')).toEqual(p)
     }
   })
 
   it('わずかにずれたYでも最近傍の音に吸着する', () => {
     const y = pitchToY(MIDDLE_C, layout) - layout.staffSpace / 4
-    expect(snapYToPitch(y, layout)).toEqual(MIDDLE_C)
+    expect(snapYToPitch(y, layout, 'treble')).toEqual(MIDDLE_C)
   })
 
   it('範囲外（高すぎ/低すぎ）は端の音にクランプ', () => {
-    expect(snapYToPitch(-9999, layout).note).toBe('E5')
-    expect(snapYToPitch(9999, layout).note).toBe('C4')
+    expect(snapYToPitch(-9999, layout, 'treble').note).toBe('E5')
+    expect(snapYToPitch(9999, layout, 'treble').note).toBe('C4')
   })
 })
 

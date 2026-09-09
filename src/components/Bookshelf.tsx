@@ -1,6 +1,5 @@
-import { SOLFA_COLOR } from '../lib/colors'
-import { parseNoteName } from '../lib/pages'
-import { pitchByNote } from '../lib/pitch'
+import { previewCells } from '../lib/preview'
+import type { Clef } from '../lib/pitch'
 import type { SavedSong } from '../lib/storage'
 
 interface Props {
@@ -11,24 +10,19 @@ interface Props {
 
 /** 各音を音高色の丸で並べたミニプレビュー（読めない子も色で見分けられる）。
  *  のばす音は横長にして、譜面と同じく「長さ＝幅」で見せる。
- *  ページ（フレーズ）ごとに区切って並べる。 */
-function Preview({ pages }: { pages: string[][] }) {
+ *  ページ（フレーズ）ごとに区切って並べる。色の決定には保存時の音部記号が要る。 */
+function Preview({ pages, clef }: { pages: string[][]; clef: Clef }) {
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-      {pages.map((notes, pi) => (
+      {previewCells(pages, clef).map((cells, pi) => (
         <div key={pi} className="flex items-center gap-1.5">
-          {notes.map((n, i) => {
-            const { note, long } = parseNoteName(n)
-            const p = pitchByNote(note)
-            const color = p ? SOLFA_COLOR[p.solfa] : '#cbd5e1'
-            return (
-              <span
-                key={i}
-                className={`inline-block h-5 rounded-full ${long ? 'w-10' : 'w-5'}`}
-                style={{ backgroundColor: color }}
-              />
-            )
-          })}
+          {cells.map((cell, i) => (
+            <span
+              key={i}
+              className={`inline-block h-5 rounded-full ${cell.long ? 'w-10' : 'w-5'}`}
+              style={{ backgroundColor: cell.color }}
+            />
+          ))}
         </div>
       ))}
     </div>
@@ -65,7 +59,7 @@ export default function Bookshelf({ songs, onSelect, onClose }: Props) {
                 onClick={() => onSelect(song)}
                 className="flex flex-col gap-2 rounded-2xl bg-white p-3 text-left shadow active:scale-95"
               >
-                <Preview pages={song.pages} />
+                <Preview pages={song.pages} clef={song.clef} />
                 <span className="text-base font-bold text-[#22c55e]">▶ きく</span>
               </button>
             ))}

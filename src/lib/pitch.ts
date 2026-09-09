@@ -4,7 +4,7 @@
 
 export type Solfa = 'ド' | 'レ' | 'ミ' | 'ファ' | 'ソ' | 'ラ' | 'シ'
 
-/** 音部記号のモード（既定=ト音） */
+/** 音部記号のモード（初期状態はト音） */
 export type Clef = 'treble' | 'bass'
 
 export interface Pitch {
@@ -94,11 +94,7 @@ export function pitchToY(pitch: Pitch, layout: StaffLayout): number {
  * Y座標を最も近い音（線上 or 間）にスナップする。
  * 演奏範囲外は端の音にクランプ。
  */
-export function snapYToPitch(
-  y: number,
-  layout: StaffLayout,
-  clef: Clef = 'treble',
-): Pitch {
+export function snapYToPitch(y: number, layout: StaffLayout, clef: Clef): Pitch {
   const pitches = pitchesOf(clef)
   const rawStep = (y - layout.topLineY) / (layout.staffSpace / 2)
   const minStep = Math.min(...pitches.map((p) => p.step))
@@ -122,8 +118,12 @@ const PITCH_BY_NOTE: Record<Clef, Map<string, Pitch>> = {
   bass: new Map(BASS_PITCHES.map((p) => [p.note, p])),
 }
 
-/** 科学的音名 → 音（その音部記号の演奏範囲外は undefined） */
-export function pitchByNote(note: string, clef: Clef = 'treble'): Pitch | undefined {
+/**
+ * 科学的音名 → 音（その音部記号の演奏範囲外は undefined）。
+ * clef の既定値は置かない——ト音とヘ音の音名は非重複なので、渡し忘れると
+ * ヘ音側で 100% undefined になり、しかも型では見えない（#54）。
+ */
+export function pitchByNote(note: string, clef: Clef): Pitch | undefined {
   return PITCH_BY_NOTE[clef].get(note)
 }
 
