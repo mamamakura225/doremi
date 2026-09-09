@@ -64,7 +64,7 @@ src/App.tsx  状態と操作の結線
 五線の**最上線からの半スペース数**（`step`・下方向が正）を単一の座標系にする。線と間を等しく1ステップとして扱うので、`step * staffSpace / 2` だけで Y が出る。
 
 - ト音記号は最上線 = F5 = `step 0`、C4 = `step 10`（下加線1本）。ヘ音記号は最上線 = A3 = `step 0`、F2 = `step 9`
-- スナップは Y → 生 step → `Math.round` → 演奏範囲に clamp → 最近傍の演奏可能音。**五線の中で高すぎ／低すぎた分は端の音にクランプ**して「惜しかった」を作らない
+- スナップは Y → 生 step → `Math.round` → 最近傍の演奏可能音。**音列は連続**（`buildPitches` が step を1ずつ詰めて作り、両音部とも歯抜けが無い）なので、最近傍探索が高すぎ／低すぎた分を自動的に端の音に寄せる。範囲内クランプの3行はこれと常に同じ結果で、消しても全テストが緑のまま＝デッドコードだったため削除した（[#69](https://github.com/mamamakura225/doremi/issues/69)）。半音・歯抜けの音列を将来入れるなら、そのとき「歯抜けで最近傍が選ばれる」テストと合わせてクランプを戻す
 - **ただし配置していい領域そのものは X と Y の両方で切る**（`isOverPlacement(x, y)`・[#59](https://github.com/mamamakura225/doremi/issues/59)）。クランプは「五線の中での上下」の話であって、鍵盤の上・ヘッダーの上・ゴミ箱帯の上で離したときまで置く意味ではない。X だけ見ていた頃は、鍵盤の白鍵の上で離しても最低音が置かれていた。5歳児にとって「五線譜のどこか」以外で音符が生まれるのは因果が読めない
 - 音名（`'C4'`）を正本にして、Tone.js への受け渡しも保存形式も同じ文字列で統一する
 
@@ -226,6 +226,7 @@ CI（`.github/workflows/ci.yml`）は `lint` → `typecheck` → `test`（カバ
 - **lint**: `oxlint --deny-warnings`。warning も EXIT=1 にする（`--deny-warnings` が無いと `react/rules-of-hooks` 以外は実質ノーゲートで、effect の依存漏れ等が素通りしていた）。`.oxlintrc.json` に足したルールは実際に発火するか壊したファイルで確認する — oxlint は存在しないルール名を黙認する。
 - **typecheck**: `tsc -b --noEmit`。`build` の第1段とは別に独立ゲートとして走らせる。`tsconfig.app.json` は `strict: true`・`include: ["src"]` なのでテストファイルも型検査対象。`noUncheckedIndexedAccess` は既存コードに約28件出るため別issue（配列アクセスの `undefined` 経路＝白画面クラッシュの本丸）で段階導入する。
 - **test**: `vitest run`（`--passWithNoTests` は付けない。テストが消えたら CI を落とす）。カバレッジ閾値は `src/lib/**` に限定（lines 90%）。UI層（`src/components`・`src/App.tsx`）と `src/audio` はテストが揃った時点で対象へ加える。
+  - **期待値に実装の定数をそのまま使わない**。`expect(VIEW_H_KEYS).toBe(VIEW_H + KEYBOARD_H)` は `layout.ts` の定義の写しなので、定数をどう壊しても永久に緑になる（ミューテーションで実測: kill率 59%・[#69](https://github.com/mamamakura225/doremi/issues/69)）。体験を決める値（帯の位置・列間隔の下限・鍵盤の表示条件）はリテラルと要件式で固定し、各アサーションに「どの変異で落ちるか」を対応させる。
 - `src/components/*.test.tsx` は jsdom に無い SVG 座標変換（`createSVGPoint` / `getScreenCTM` / `setPointerCapture`）を**恒等スタブ**で差し込む。したがってこれらのテストは座標→音高の変換そのもののバグは検出できない（そこは `pitch.ts` / `layout.ts` の純ロジックテストの担当）。検証しているのは state 遷移とハンドラの分岐。`clientToSvg` の行列を引数化して本物のテストにするのは [#58](https://github.com/mamamakura225/doremi/issues/58)。
 - Node は `.nvmrc`（22）で固定し、CI（`node-version-file`）と Vercel のビルド設定を揃える。
 

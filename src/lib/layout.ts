@@ -128,6 +128,15 @@ export const KEY_RIGHT = STAFF_RIGHT
  */
 export const KEYBOARD_MIN_RATIO = VIEW_H_KEYS / VIEW_W
 
+/**
+ * 盤面のサイズ（CSS px）から、鍵盤を併記できる形の画面かを判定する純関数。
+ * 横に細長い端末（スマホ横）で出すと鍵盤ぶん縦が伸びた viewBox が高さ基準になり
+ * 五線譜そのものが縮むため、そこでは出さない。iPhone 横 ≈ false / iPad 横 ≈ true。
+ */
+export function fitsKeyboard(width: number, height: number): boolean {
+  return width > 0 && height / width >= KEYBOARD_MIN_RATIO
+}
+
 /** i番目（0始まり）の白鍵の左端X */
 export function whiteKeyX(index: number, count: number): number {
   return KEY_LEFT + (index * (KEY_RIGHT - KEY_LEFT)) / count
