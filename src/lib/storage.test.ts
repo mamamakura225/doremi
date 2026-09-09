@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { SHELF_MAX, addSong, parseSongs, type SavedSong } from './storage'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { SHELF_MAX, addSong, loadSongs, parseSongs, saveSong, type SavedSong } from './storage'
 
 function song(over: Partial<SavedSong> = {}): SavedSong {
   return { id: 'a', createdAt: 1, pages: [['C4']], clef: 'treble', ...over }
@@ -69,5 +69,45 @@ describe('addSong', () => {
     const base: SavedSong[] = [song()]
     addSong(base, [['G4']], 'b', 2)
     expect(base).toHaveLength(1)
+  })
+})
+
+describe('loadSongs / saveSong の I/O', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+    localStorage.clear()
+  })
+
+  it('localStorage が例外を投げても loadSongs は空配列（白画面にしない）', () => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new DOMException('denied', 'SecurityError')
+    })
+    expect(loadSongs()).toEqual([])
+  })
+
+  it('setItem が例外を投げても saveSong は投げず、更新後の一覧を返す', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('quota', 'QuotaExceededError')
+    })
+    const out = saveSong([['C4']], 'treble')
+    expect(out).toHaveLength(1)
+    expect(out[0].pages).toEqual([['C4']])
+  })
+
+  it('saveSong → loadSongs の往復で clef と pages が保たれる', () => {
+    saveSong([['C3', 'D3']], 'bass')
+    const loaded = loadSongs()
+    expect(loaded).toHaveLength(1)
+    expect(loaded[0].clef).toBe('bass')
+    expect(loaded[0].pages).toEqual([['C3', 'D3']])
+  })
+
+  it('crypto.randomUUID が無くても id は非空の文字列になる', () => {
+    vi.stubGlobal('crypto', {})
+    try {
+      expect(saveSong([['C4']], 'treble')[0].id).toMatch(/\S/)
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 })

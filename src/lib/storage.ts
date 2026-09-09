@@ -71,12 +71,26 @@ function newId(): string {
 
 /** 保存済みの曲を読み込む。 */
 export function loadSongs(): SavedSong[] {
-  return parseSongs(localStorage.getItem(KEY))
+  try {
+    return parseSongs(localStorage.getItem(KEY))
+  } catch {
+    // サイトデータ遮断（getItem 自体が SecurityError）。パースだけでなく
+    // I/O も含めて例外を出さない——保存機能を諦めるだけで譜面遊びは続く。
+    return []
+  }
 }
 
-/** 1曲（複数ページ）を保存して、更新後の一覧を返す。 */
+/**
+ * 1曲（複数ページ）を保存して、更新後の一覧を返す。
+ * 永続化に失敗（quota 超過・書き込み不可）しても例外は投げず、一覧はそのまま返す
+ * ＝このセッション中は本棚に反映される。読めない年齢なので失敗は伝えない。
+ */
 export function saveSong(pages: string[][], clef: Clef = 'treble'): SavedSong[] {
   const next = addSong(loadSongs(), pages, newId(), Date.now(), clef)
-  localStorage.setItem(KEY, JSON.stringify(next))
+  try {
+    localStorage.setItem(KEY, JSON.stringify(next))
+  } catch {
+    // 黙って諦める（設計判断・docs/architecture.md 参照）
+  }
   return next
 }
