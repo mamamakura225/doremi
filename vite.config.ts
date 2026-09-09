@@ -26,5 +26,17 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
+    coverage: {
+      provider: 'v8',
+      // UI層（src/components・src/App.tsx）と src/audio は別issueで段階導入する。
+      // いまは純ロジックだけ回帰を数値で止める。
+      include: ['src/lib/**'],
+      thresholds: {
+        statements: 90,
+        branches: 85,
+        functions: 90,
+        lines: 90,
+      },
+    },
   },
 })
