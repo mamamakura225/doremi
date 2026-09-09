@@ -149,7 +149,12 @@ localStorage `doremi.songs.v1` に `SavedSong[]`（ページごとの音名配�
 - 旧形式（`notes: string[]`）は1ページ曲として読む後方互換を `normalize()` に持つ。`clef` を持たない旧データはト音として読む
 
 ## 品質ゲート
-`npm test`（Vitest・`src/lib` 中心）→ `npm run lint`（oxlint）→ `npm run build`（`tsc -b` ＋ vite build）。
+CI（`.github/workflows/ci.yml`）は `lint` → `typecheck` → `test`（カバレッジ付き）→ `build` の4段。ローカルも同じ順で回す。
+
+- **lint**: `oxlint --deny-warnings`。warning も EXIT=1 にする（`--deny-warnings` が無いと `react/rules-of-hooks` 以外は実質ノーゲートで、effect の依存漏れ等が素通りしていた）。`.oxlintrc.json` に足したルールは実際に発火するか壊したファイルで確認する — oxlint は存在しないルール名を黙認する。
+- **typecheck**: `tsc -b --noEmit`。`build` の第1段とは別に独立ゲートとして走らせる。`tsconfig.app.json` は `strict: true`・`include: ["src"]` なのでテストファイルも型検査対象。`noUncheckedIndexedAccess` は既存コードに約28件出るため別issue（配列アクセスの `undefined` 経路＝白画面クラッシュの本丸）で段階導入する。
+- **test**: `vitest run`（`--passWithNoTests` は付けない。テストが消えたら CI を落とす）。カバレッジ閾値は `src/lib/**` に限定（lines 90%）。UI層（`src/components`・`src/App.tsx`）と `src/audio` はテストが揃った時点で対象へ加える。
+- Node は `.nvmrc`（22）で固定し、CI（`node-version-file`）と Vercel のビルド設定を揃える。
 
 CI を無料枠で回すためリポジトリは public にしている（他リポは private のまま。個人 Actions の無料枠が尽きて CI が起動できなくなった際の対処）。公開前提なので、秘密情報・個人情報をコードにもテストにも置かない。
 
