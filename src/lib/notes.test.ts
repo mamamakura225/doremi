@@ -7,6 +7,8 @@ import {
   MIN_COLUMN_PITCH,
   NOTE_HEAD_RY_ROTATED,
   NOTE_HEAD_W,
+  NOTE_HIT_H,
+  NOTE_HIT_W,
   NOTE_MAX,
   STAFF_LAYOUT,
   STAFF_RIGHT,
@@ -150,6 +152,29 @@ describe('columnX', () => {
     expect(columnX(1) - columnX(0)).toBeGreaterThanOrEqual(MIN_COLUMN_PITCH)
     // 下限そのものが符頭1つぶんより広い（隣との間に余白が残る）
     expect(MIN_COLUMN_PITCH).toBeGreaterThan(NOTE_HEAD_W)
+  })
+})
+
+describe('配置済み音符のヒット領域（#62）', () => {
+  it('符頭（21.5 CSS px）よりはっきり大きい', () => {
+    // 符頭の横幅 34 に対し、指の接触幅ぶん（≈指1本）は広い
+    expect(NOTE_HIT_W).toBeGreaterThan(NOTE_HEAD_W + 20)
+    expect(NOTE_HIT_H).toBeGreaterThan(NOTE_HEAD_RY_ROTATED * 2)
+  })
+
+  it('隣の列のヒット領域と重ならない（列は固定グリッド）', () => {
+    const rightEdge0 = columnX(0) + NOTE_HIT_W / 2
+    const leftEdge1 = columnX(1) - NOTE_HIT_W / 2
+    expect(leftEdge1).toBeGreaterThanOrEqual(rightEdge0)
+  })
+
+  it('最低音のヒット領域の下端がゴミ箱帯に届かない', () => {
+    const lowestY = pitchToY(pitchesOf('treble')[0], STAFF_LAYOUT)
+    expect(lowestY + NOTE_HIT_H / 2).toBeLessThan(TRASH_TOP)
+  })
+
+  it('上下方向はスナップ間隔（staffSpace）を超えない', () => {
+    expect(NOTE_HIT_H).toBeLessThanOrEqual(STAFF_LAYOUT.staffSpace)
   })
 })
 
