@@ -38,6 +38,10 @@ export default function App() {
   const [voice, setVoice] = useState<Voice>('piano')
   const [clef, setClefMode] = useState<Clef>('treble')
   const timers = useRef<number[]>([])
+  // 再生の世代。clearTimers のたびに繰り上がる。await をまたいだ継続は
+  // 自分の世代が最新かを確認してからスケジュールする（タイマー削除だけでは
+  // await の隙間に入った中断を無効化できない）。
+  const gen = useRef(0)
   const portrait = usePortrait()
   // 縦が短い画面（横向きスマホ）ではヘッダーを絵文字だけに畳む。
   // 文字を並べるとボタンが潰れてラベルが縦に折り返し、ヘッダーが画面の6割を食う。
@@ -46,13 +50,15 @@ export default function App() {
   const label = (icon: string, text: string) => (compact ? icon : `${icon} ${text}`)
 
   function clearTimers() {
+    gen.current += 1
     timers.current.forEach((t) => window.clearTimeout(t))
     timers.current = []
     stopMelodySpeech()
   }
   useEffect(() => clearTimers, [])
 
-  const notes = pages[currentPage]
+  // 保険: 世代トークンをすり抜けた tick が古いページ番号を指しても落ちない。
+  const notes = pages[currentPage] ?? []
   const busy = playing !== null || celebrating
   // おてほんは1フレーズ＝1ページめのみを対象にする。
   const targets = guide && currentPage === 0 ? TWINKLE[clef].pitches : undefined
@@ -77,6 +83,8 @@ export default function App() {
     setCurrentPage(0)
   }
 
+  // ↺ は再生中も押せる唯一のボタン。await 窓の中の割り込みも、
+  // 曲を止める非常停止も、どちらもここが受ける（他ボタンとの非対称は意図）。
   function handleClear() {
     resetBoard()
   }
@@ -160,10 +168,15 @@ export default function App() {
   }
 
   async function playSequence(pgs: PlacedNote[][]) {
+    // 中断（世代繰り上げ）は常に成立させる。空スケジュールでの early return を
+    // clearTimers より前に置くと、進行中の別の playSequence が生き残る。
+    clearTimers()
+    const my = gen.current
     const pageSteps = pgs.map((p) => p.map(noteWidth))
     if (pageSteps.every((s) => s.length === 0)) return
-    clearTimers()
     await ensureAudio()
+    // await 中にクリア・音部切替・曲選択などの中断が入っていたら何も積まない。
+    if (my !== gen.current) return
     const { ticks, endAt } = playbackSchedule(pageSteps)
     for (const tick of ticks) {
       timers.current.push(
