@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { NOTE_MAX } from './layout'
-import { canAddPage, parseNoteName, toNoteNames } from './pages'
+import { canAddPage, collapseEmptyPages, parseNoteName, toNoteNames } from './pages'
 import type { PlacedNote } from './notes'
 
 function page(notes: string[]): PlacedNote[] {
@@ -67,5 +67,37 @@ describe('parseNoteName', () => {
       { note: 'C4', long: false },
       { note: 'C4', long: true },
     ])
+  })
+})
+
+describe('collapseEmptyPages（#60-6）', () => {
+  it('空ページが無ければそのまま返す', () => {
+    const pgs = [page(['C4']), page(['E4'])]
+    expect(collapseEmptyPages(pgs, 1)).toEqual({ pages: pgs, currentPage: 1 })
+  })
+
+  it('末尾は空でも残す', () => {
+    const pgs = [page(['C4']), []]
+    expect(collapseEmptyPages(pgs, 0)).toEqual({ pages: pgs, currentPage: 0 })
+  })
+
+  it('先頭の空ページを畳み、currentPage を詰める', () => {
+    // [空, [x]] で1ページ目にいる（全消し直後）→ [[x]]・0ページ目へ
+    const r = collapseEmptyPages([[], page(['C4'])], 0)
+    expect(r.pages.map((p) => p.length)).toEqual([1])
+    expect(r.currentPage).toBe(0)
+  })
+
+  it('中間の空ページを畳む', () => {
+    const r = collapseEmptyPages([page(['C4']), [], page(['E4'])], 2)
+    expect(r.pages.map((p) => p.length)).toEqual([1, 1])
+    expect(r.currentPage).toBe(1)
+  })
+
+  it('消えたページを指していたら詰めた先に落ち着く', () => {
+    // [[x], 空, 空] で1ページ目（空）にいる → [[x], 空(末尾)]・末尾へ
+    const r = collapseEmptyPages([page(['C4']), [], []], 1)
+    expect(r.pages.map((p) => p.length)).toEqual([1, 0])
+    expect(r.currentPage).toBe(1)
   })
 })

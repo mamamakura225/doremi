@@ -5,7 +5,7 @@ import RotateOverlay from './components/RotateOverlay'
 import { usePortrait } from './hooks/usePortrait'
 import { useShortScreen } from './hooks/useShortScreen'
 import { type PlacedNote, addNote, noteWidth, removeById, removeLast } from './lib/notes'
-import { canAddPage, parseNoteName, toNoteNames } from './lib/pages'
+import { canAddPage, collapseEmptyPages, parseNoteName, toNoteNames } from './lib/pages'
 import { type Clef, type Pitch, pitchByNote } from './lib/pitch'
 import { CELEBRATE_MS, noteDuration, playbackSchedule } from './lib/playback'
 import { TWINKLE } from './lib/songs'
@@ -15,10 +15,11 @@ import {
   VOICES,
   ensureAudio,
   playMelodyNote,
+  playNote,
   playSparkle,
   setClef,
   setPlaybackVoice,
-  stopMelodySpeech,
+  stopMelody,
 } from './audio/synth'
 
 interface Playing {
@@ -42,6 +43,9 @@ export default function App() {
   // 自分の世代が最新かを確認してからスケジュールする（タイマー削除だけでは
   // await の隙間に入った中断を無効化できない）。
   const gen = useRef(0)
+  // 「✓ ほぞんした」の解除タイマー。共有バッグ（timers）に積むと clearTimers に
+  // 巻き込まれてラベルが固着するので、専用に持って clearTimers の管理外に置く（#60-1）。
+  const saveToast = useRef(0)
   const portrait = usePortrait()
   // 縦が短い画面（横向きスマホ）ではヘッダーを絵文字だけに畳む。
   // 文字を並べるとボタンが潰れてラベルが縦に折り返し、ヘッダーが画面の6割を食う。
@@ -53,9 +57,14 @@ export default function App() {
     gen.current += 1
     timers.current.forEach((t) => window.clearTimeout(t))
     timers.current = []
-    stopMelodySpeech()
+    stopMelody()
   }
-  useEffect(() => clearTimers, [])
+  useEffect(() => {
+    return () => {
+      clearTimers()
+      window.clearTimeout(saveToast.current)
+    }
+  }, [])
 
   // 保険: 世代トークンをすり抜けた tick が古いページ番号を指しても落ちない。
   const notes = pages[currentPage] ?? []
@@ -103,9 +112,10 @@ export default function App() {
     const next: Clef = clef === 'treble' ? 'bass' : 'treble'
     resetBoard()
     setClefMode(next)
-    // 地の音色（ヘ音＝低くて温かい音）を切り替えて、そのまま試聴する。
     setClef(next)
-    void ensureAudio().then(() => playMelodyNote(next === 'bass' ? 'C3' : 'C5'))
+    // 地の音色（制作中の音＝playNote 系）を切り替えて、そのまま試聴する。
+    // playMelodyNote は再生音色（べる等）なので使わない（#60-3）。
+    void ensureAudio().then(() => playNote(next === 'bass' ? 'C3' : 'C5'))
   }
 
   function handleUndo() {
@@ -124,17 +134,28 @@ export default function App() {
   const showPrev = currentPage > 0 && !busy
   const showNext = (hasNextPage || canCreatePage) && !busy
 
+  // ページ移動の前に、末尾以外の空ページを畳む（#60-6）。
+  // 全消しで空になったページがドット表示と再生内容のズレを生むため。
   function handlePrev() {
-    if (showPrev) setCurrentPage((c) => c - 1)
+    if (!showPrev) return
+    const c = collapseEmptyPages(pages, currentPage)
+    setPages(c.pages)
+    setCurrentPage(Math.max(0, c.currentPage - 1))
   }
 
   function handleNext() {
     if (busy) return
-    if (hasNextPage) {
-      setCurrentPage((c) => c + 1)
-    } else if (canCreatePage) {
-      setPages((prev) => [...prev, []])
-      setCurrentPage((c) => c + 1)
+    const c = collapseEmptyPages(pages, currentPage)
+    if (c.currentPage < c.pages.length - 1) {
+      setPages(c.pages)
+      setCurrentPage(c.currentPage + 1)
+    } else if (canAddPage(c.pages, c.currentPage)) {
+      setPages([...c.pages, []])
+      setCurrentPage(c.currentPage + 1)
+    } else if (c.pages.length !== pages.length) {
+      // 行き先は無いが空ページは畳む
+      setPages(c.pages)
+      setCurrentPage(c.currentPage)
     }
   }
 
@@ -144,7 +165,8 @@ export default function App() {
     if (songPages.length === 0) return
     setSavedSongs(saveSong(songPages, clef))
     setJustSaved(true)
-    timers.current.push(window.setTimeout(() => setJustSaved(false), 1200))
+    window.clearTimeout(saveToast.current)
+    saveToast.current = window.setTimeout(() => setJustSaved(false), 1200)
   }
 
   // 本棚から選んだ曲を盤面に読み込み、そのまま再生（自由モード扱い）。
@@ -210,6 +232,7 @@ export default function App() {
 
   // 再生音色を選ぶ。選んだ瞬間にその音色で試聴（タップ＝AudioContext起動も兼ねる）。
   function handleSelectVoice(v: Voice) {
+    if (busy) return
     setVoice(v)
     setPlaybackVoice(v)
     void ensureAudio().then(() => playMelodyNote(clef === 'bass' ? 'C3' : 'C5'))
@@ -244,9 +267,10 @@ export default function App() {
               key={v.id}
               type="button"
               onClick={() => handleSelectVoice(v.id)}
+              disabled={busy}
               aria-label={v.name}
               aria-pressed={voice === v.id}
-              className={`rounded-xl ${compact ? 'px-2 py-1.5 text-2xl' : 'px-3 py-2 text-2xl'} ${
+              className={`rounded-xl ${compact ? 'px-2 py-1.5 text-2xl' : 'px-3 py-2 text-2xl'} disabled:opacity-40 ${
                 voice === v.id ? 'bg-[#f59e0b]' : 'bg-transparent'
               }`}
             >

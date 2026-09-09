@@ -84,6 +84,8 @@ src/App.tsx  状態と操作の結線
 
 代わりに `pages: PlacedNote[][]` として、満杯後「つぎのうた」で空ページを追加する。再生は全ページを連結し、**ページ境界に1ステップの小休符**を入れてフレーズの切れ目を耳で分かるようにする（[#26](https://github.com/mamamakura225/doremi/issues/26)）。空ページは再生・保存から除く。
 
+**全消しで空になったページは、ページ移動時に畳む**（`collapseEmptyPages`・[#60](https://github.com/mamamakura225/doremi/issues/60)）。残すとページドット・`aria-label` が実際の再生内容とズレる。末尾ページは「つぎのうた」で意図的に作った空ページなので残す。畳みを**移動時に限る**のは、音符を消すたびにページ番号が動くと制作中に足元が揺れるため。表示（ドット）は次のページ移動まで古いまま——移動しない限りズレの実害が無いので許容する。
+
 ### 音の長さは「ふつう／のばす」の2値だけ
 拍・小節・音符の種類（四分／八分…）を持ち込むと、位置（音高）の学習にたどり着く前に覚えることが増える。長さは**2値だけ**にした（[#43](https://github.com/mamamakura225/doremi/issues/43)）。記譜としての正しさは追わない。
 
@@ -135,6 +137,8 @@ Web Speech の解錠はさらに厳しく、**初回 `speak()` をユーザー�
 ### 制作中の音は固定、音色切替は再生時だけ
 音色（べる・ぴこぴこ）を制作中にも適用すると、音高の手がかりが音色の派手さに埋もれる。**配置・スクラブ中は通常のピアノ音で固定**し、音色は再生モードにだけ効かせる。
 
+**制作中の音（`playNote`）と再生の音（`playMelodyNote`）は別系統**。前者は `makingSynths[clef]`、後者は選択中の再生音色（`getVoice(playbackVoice)`）。混同すると「地の音色を試聴するはずが選んだ再生音色で鳴る」等が起きる（[#60](https://github.com/mamamakura225/doremi/issues/60)）。**音部切替の試聴は制作側（`playNote`）で鳴らす**——切り替えたのは地の音色であって再生音色ではない。再生音色ボタンの試聴だけ `playMelodyNote`。
+
 ### うたモードは楽器音に重ねる
 音名の読み上げには**音の高さが無い**。読み上げだけにすると、このアプリの目的（音高と位置の対応づけ）が壊れる。ピアノ音を鳴らした上に読み上げを重ねる。
 
@@ -146,6 +150,10 @@ Web Speech の解錠はさらに厳しく、**初回 `speak()` をユーザー�
 `playSequence` は `clearTimers()`（既に積んだ `setTimeout` を消す）と `await ensureAudio()`（初回だけ `Tone.start()` を待つ）の間に隙間がある。この隙間に ↺ クリア・音部切替・曲選択が入っても、**まだ push されていないタイマーは消せない**——await が解決したあと古いスケジュールがまるごと積まれ、存在しないページの tick が盤面を壊して白画面になる（[#55](https://github.com/mamamakura225/doremi/issues/55)）。
 
 対策は**世代トークン**（`gen` ref）。`clearTimers()` で繰り上げ、`playSequence` は clearTimers 直後の世代を控えて `await` 後に一致を確認し、ずれていたら何も積まずに戻る。`clearTimers()` は空スケジュールでの early return より前に呼ぶ（中断は常に成立させる）。再生を状態機械にする構造的な直しは [#73](https://github.com/mamamakura225/doremi/issues/73)。
+
+中断時（`stopMelody`）は読み上げの停止だけでなく、**鳴っている音色を `triggerRelease` する**。のばす音（[#43](https://github.com/mamamakura225/doremi/issues/43)）以降 `playMelodyNote` に秒数が渡るので「楽器音は 8n で自然減衰するから触らない」という前提は失効している（べるなら decay+release で 2秒以上残る・[#60](https://github.com/mamamakura225/doremi/issues/60)）。
+
+再生・お祝い・保存トーストのタイマーを1つの `timers` 配列に混ぜると、`clearTimers()` が全部消すので「✓ ほぞんした」の解除タイマーまで巻き込まれてラベルが固着する。**保存トーストは専用の ref に持ち、`clearTimers` の管理外に置く**（[#60](https://github.com/mamamakura225/doremi/issues/60)）。
 
 窓の中で ↩・💾・📚 は今も通る（クラッシュはしないが、消したはずの音が鳴る等の stale 再生は起きうる）。塞ぐには初回解錠中だけ立つ `preparing` state が要るので #73 に回し、ここでは**古い継続を世代で捨てる**方式に留める。
 

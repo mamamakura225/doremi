@@ -1,17 +1,22 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-// 全 synth インスタンスで共有する triggerAttackRelease。うたモードでも
-// 楽器音を鳴らしている（重ねている）ことをテストから確認できるようにする。
-const h = vi.hoisted(() => ({ attack: vi.fn() }))
+// うたモードでも楽器音を重ねていること（attack）・停止で「その音色」を release
+// すること（#60-4）をテストから確認できるようにする。release は synth の生成時
+// オプションを渡すので、どの音色を止めたかを同定できる。
+const h = vi.hoisted(() => ({ attack: vi.fn(), release: vi.fn<(opts?: unknown) => void>() }))
 
 // Tone.js は AudioContext を要求するので最小のフェイクに差し替える。
 vi.mock('tone', () => {
   class FakeSynth {
+    opts: unknown
+    constructor(opts?: unknown) {
+      this.opts = opts
+    }
     toDestination() {
       return this
     }
     triggerAttackRelease = h.attack
-    triggerRelease = vi.fn()
+    triggerRelease = () => h.release(this.opts)
   }
   class FakePoly {
     toDestination() {
@@ -22,7 +27,7 @@ vi.mock('tone', () => {
   return { start: vi.fn().mockResolvedValue(undefined), Synth: FakeSynth, FMSynth: FakeSynth, PolySynth: FakePoly }
 })
 
-import { playMelodyNote, setClef, setPlaybackVoice } from './synth'
+import { playMelodyNote, setClef, setPlaybackVoice, stopMelody } from './synth'
 
 // jsdom は speechSynthesis を持たない。発話テキストだけ拾えるスタブを入れる。
 function installSpeech() {
@@ -46,6 +51,7 @@ function installSpeech() {
 
 beforeEach(() => {
   h.attack.mockClear()
+  h.release.mockClear()
   // モジュール可変状態を既定へ戻す。
   setClef('treble')
   setPlaybackVoice('piano')
@@ -78,5 +84,39 @@ describe('playMelodyNote のうたモード', () => {
     setPlaybackVoice('bell')
     playMelodyNote('C4')
     expect(spoken).toEqual([])
+  })
+})
+
+describe('stopMelody（#60-4）', () => {
+  it('release 済みの後に再度呼んでも二重に release しない', () => {
+    installSpeech()
+    setPlaybackVoice('bell')
+    playMelodyNote('C4', 1.1)
+    stopMelody()
+    h.release.mockClear()
+    stopMelody() // ringing は既に null
+    expect(h.release).not.toHaveBeenCalled()
+  })
+
+  it('直前に鳴らした再生音色（べる）を release する', () => {
+    installSpeech()
+    setPlaybackVoice('bell')
+    playMelodyNote('C4', 1.1) // のばす音
+    stopMelody()
+    // べる = FMSynth（harmonicity を持つ）
+    expect(h.release).toHaveBeenCalledWith(
+      expect.objectContaining({ harmonicity: 3.01 }),
+    )
+  })
+
+  it('うたモード＋ヘ音では実音の piano-bass（サイン波）を release する', () => {
+    installSpeech()
+    setClef('bass')
+    setPlaybackVoice('sing')
+    playMelodyNote('C3', 1.1)
+    stopMelody()
+    expect(h.release).toHaveBeenCalledWith(
+      expect.objectContaining({ oscillator: { type: 'sine' } }),
+    )
   })
 })
