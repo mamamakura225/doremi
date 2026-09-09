@@ -3,6 +3,7 @@ import {
   NOTE_HEAD_RX,
   NOTE_HEAD_RY,
 } from '../lib/layout'
+import { OUTLINE_COLOR } from '../lib/colors'
 
 interface Props {
   x: number
@@ -35,17 +36,37 @@ export default function NoteHead({
       opacity={opacity}
       filter={shadow ? 'url(#note-shadow)' : undefined}
     >
-      {highlight && <circle cx={0} cy={0} r={32} fill={fill} opacity={0.35} />}
+      {/* 再生ハイライトは色に依存しない輪郭リング（薄い符頭色でも「いまここ」が分かる） */}
+      {highlight && (
+        <circle
+          cx={0}
+          cy={0}
+          r={30}
+          fill="none"
+          stroke={OUTLINE_COLOR}
+          strokeWidth={4}
+          opacity={0.9}
+        />
+      )}
       {/* のばす音は右へバーを伸ばす（音符の種類でなく「長さ」として見せる） */}
       {tail > 0 && (
-        <rect x={0} y={-8} width={tail} height={16} rx={8} fill={fill} />
+        <rect
+          x={0}
+          y={-8}
+          width={tail}
+          height={16}
+          rx={8}
+          fill={fill}
+          stroke={OUTLINE_COLOR}
+          strokeWidth={2}
+        />
       )}
       <line
         x1={15}
         y1={-2}
         x2={15}
         y2={-70}
-        stroke={fill}
+        stroke={OUTLINE_COLOR}
         strokeWidth={4}
         strokeLinecap="round"
       />
@@ -55,6 +76,8 @@ export default function NoteHead({
         rx={NOTE_HEAD_RX}
         ry={NOTE_HEAD_RY}
         fill={fill}
+        stroke={OUTLINE_COLOR}
+        strokeWidth={2}
         transform={`rotate(-${NOTE_HEAD_ROTATION_DEG})`}
       />
     </g>

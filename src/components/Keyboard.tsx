@@ -7,7 +7,7 @@ import {
   whiteKeyX,
 } from '../lib/layout'
 import { hasSharpAbove, pitchesOf, type Clef, type Pitch } from '../lib/pitch'
-import { colorOf } from '../lib/colors'
+import { OUTLINE_COLOR, WHITE_KEY_BG, colorOf } from '../lib/colors'
 
 interface Props {
   clef: Clef
@@ -41,7 +41,7 @@ export default function Keyboard({ clef, onPress, pressed }: Props) {
               width={w}
               height={KEYBOARD_H}
               rx={6}
-              fill={on ? colorOf(p) : '#fffdf7'}
+              fill={on ? colorOf(p) : WHITE_KEY_BG}
               opacity={on ? 0.75 : 1}
               stroke="#d8c9a6"
               strokeWidth={2}
@@ -62,7 +62,7 @@ export default function Keyboard({ clef, onPress, pressed }: Props) {
               dominantBaseline="middle"
               fontSize={20}
               fontWeight="bold"
-              fill={colorOf(p)}
+              fill={OUTLINE_COLOR}
             >
               {p.solfa}
             </text>
