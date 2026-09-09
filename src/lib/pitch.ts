@@ -17,6 +17,11 @@ export interface Pitch {
    * 0=最上線(F5), 1=その下の間(E5), ... 1段ごとに線→間→線と下がる。
    */
   step: number
+  /**
+   * この音がどの音部記号で解決されたか。`step` が音部相対なので、
+   * 値だけでは「同じ位置でも別の音」を区別できない（#56）。
+   */
+  readonly clef: Clef
 }
 
 const SOLFA_BY_LETTER: Record<string, Solfa> = {
@@ -39,6 +44,7 @@ function buildPitches(
   lowest: { letter: string; octave: number },
   lowestStep: number,
   count: number,
+  clef: Clef,
 ): Pitch[] {
   const start = LETTERS.indexOf(lowest.letter)
   return Array.from({ length: count }, (_, i) => {
@@ -49,17 +55,18 @@ function buildPitches(
       note: `${letter}${octave}`,
       solfa: SOLFA_BY_LETTER[letter],
       step: lowestStep - i,
+      clef,
     }
   })
 }
 
 // ト音記号: 最上線=F5(step 0)。演奏範囲は ド(C4・下加線1本) 〜 高いミ(E5)。
 // C4 は最上線から半スペース10個下（下加線1本）。
-export const TREBLE_PITCHES: Pitch[] = buildPitches({ letter: 'C', octave: 4 }, 10, 10)
+export const TREBLE_PITCHES: Pitch[] = buildPitches({ letter: 'C', octave: 4 }, 10, 10, 'treble')
 
 // ヘ音記号: 最上線=A3(step 0)。演奏範囲は ファ(F2・五線の下の間) 〜 ラ(A3・最上線)。
 // ド(C3)は五線の中（上から2番目の間）にあり、加線が要らない。
-export const BASS_PITCHES: Pitch[] = buildPitches({ letter: 'F', octave: 2 }, 9, 10)
+export const BASS_PITCHES: Pitch[] = buildPitches({ letter: 'F', octave: 2 }, 9, 10, 'bass')
 
 const PITCHES: Record<Clef, Pitch[]> = { treble: TREBLE_PITCHES, bass: BASS_PITCHES }
 

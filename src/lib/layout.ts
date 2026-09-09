@@ -1,6 +1,6 @@
 // 五線譜ボードのジオメトリ（SVGビューボックス座標・横向き）。
 // 純データ。SVG/Reactに依存しない（Vitest対象）。
-import type { StaffLayout } from './pitch'
+import type { Clef, StaffLayout } from './pitch'
 
 // 横向き画面に近い 2.2:1 に固定し、`meet` の左右余白を最小化（余白は背景色で吸収）。
 export const VIEW_W = 1100
@@ -44,6 +44,15 @@ export function columnX(index: number): number {
 /** 配置領域（五線譜側）にX座標が入っているか */
 export function isOverPlacement(x: number): boolean {
   return x >= STAFF_LEFT && x <= STAFF_RIGHT
+}
+
+/**
+ * 掴んでいる音を、いま盤面に置いてよいか。
+ * 音部が一致していること（掴んだあとに切り替わっていない）＋配置エリアの上、の両方。
+ * 音部が違う音を流し込むと、保存時に音域外でサイレントに消える（#56）。
+ */
+export function canPlace(dragClef: Clef, boardClef: Clef, x: number): boolean {
+  return dragClef === boardClef && isOverPlacement(x)
 }
 
 // ゴミ箱ゾーン（配置済み音符をドラッグして捨てる：画面下部の帯）。

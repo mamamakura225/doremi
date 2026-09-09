@@ -15,6 +15,7 @@ import {
   VIEW_H_KEYS,
   VIEW_W,
   columnX,
+  canPlace,
   isOverPlacement,
   isOverTrash,
 } from '../lib/layout'
@@ -82,6 +83,18 @@ export default function Board({
   const [drag, setDrag] = useState<DragState | null>(null)
   const [del, setDel] = useState<DeleteDragState | null>(null)
   const [touched, setTouched] = useState(false)
+  // 音部切替は盤面リセットと同義。App 側で pages は空になるが、掴んでいる最中の
+  // drag/del は旧音部で解決された Pitch なので、ここで捨てる。
+  // レンダー中に調整する（React 公式パターン）——effect だとペイント後になり、
+  // 旧音部のゴーストが新しい五線の上に1フレーム残る。`<Board key={clef}>` で
+  // 作り直す案は touched 初期化で起動ヒントが再表示され、鍵盤が出る端末では
+  // useFitsKeyboard が再計測されて viewBox が一瞬跳ねるので採らない。
+  const [prevClef, setPrevClef] = useState(clef)
+  if (prevClef !== clef) {
+    setPrevClef(clef)
+    setDrag(null)
+    setDel(null)
+  }
   const [pressedKey, setPressedKey] = useState<string | null>(null)
   // 縦に余裕のある端末（タブレット横など）でだけ鍵盤を併記する
   const showKeyboard = useFitsKeyboard(svgRef)
@@ -137,7 +150,9 @@ export default function Board({
 
   function handlePointerUp(e: React.PointerEvent) {
     if (!drag || e.pointerId !== drag.pointerId) return
-    if (isOverPlacement(drag.x)) {
+    // canPlace が音部一致も見る。prevClef のリセットが未反映のフレームで
+    // pointerup が来ても、旧音部の音を新しい盤面に流し込まない（#56）。
+    if (canPlace(drag.pitch.clef, clef, drag.x)) {
       onPlace(drag.pitch, drag.long)
       previewNote(drag.pitch.note, drag.long)
     }
@@ -170,7 +185,8 @@ export default function Board({
 
   function handleNoteUp(e: React.PointerEvent) {
     if (!del || e.pointerId !== del.pointerId) return
-    if (isOverTrash(del.x, del.y)) onRemove(del.id)
+    // drag 側と同じく、音部が変わっていたら何もしない（対称にしておく）。
+    if (del.pitch.clef === clef && isOverTrash(del.x, del.y)) onRemove(del.id)
     setDel(null)
   }
 
@@ -295,6 +311,7 @@ export default function Board({
       />
       {/* 掴む的は符頭だけでなく箱の上下半分ぜんぶ（指1本で外しにくくする） */}
       <g
+        data-testid="toolbox-normal"
         onPointerDown={(e) => handlePointerDown(e, false)}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -316,6 +333,7 @@ export default function Board({
         </g>
       </g>
       <g
+        data-testid="toolbox-long"
         onPointerDown={(e) => handlePointerDown(e, true)}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
