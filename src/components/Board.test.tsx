@@ -1,7 +1,7 @@
 import type { ComponentProps } from 'react'
 import { cleanup, fireEvent, render } from '@testing-library/react'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
-import { TRASH_CX, TRASH_CY } from '../lib/layout'
+import { NOTE_HEAD_RX, NOTE_HIT_W, TRASH_CX, TRASH_CY } from '../lib/layout'
 import { type Clef, TREBLE_PITCHES } from '../lib/pitch'
 import type { PlacedNote } from '../lib/notes'
 import Board from './Board'
@@ -160,6 +160,23 @@ describe('単一ポインタ追跡（#58）', () => {
       clientY: TRASH_CY,
     })
     expect(onRemove).toHaveBeenCalledWith('n1')
+  })
+
+  it('配置済み音符は符頭より広い不可視ヒット矩形で受ける（#62）', () => {
+    const view = render(<Board {...boardProps({ notes: [note('n1')] })} />)
+    const g = view.getByTestId('note-n1')
+    const hit = g.querySelector('rect')
+    expect(hit).not.toBeNull()
+    expect(hit!.getAttribute('fill')).toBe('transparent')
+    expect(Number(hit!.getAttribute('width'))).toBe(NOTE_HIT_W)
+    expect(Number(hit!.getAttribute('width'))).toBeGreaterThan(NOTE_HEAD_RX * 2)
+  })
+
+  it('のばす音のヒット矩形は2列ぶん（#62）', () => {
+    const long: PlacedNote = { ...note('L1'), long: true }
+    const view = render(<Board {...boardProps({ notes: [long] })} />)
+    const hit = view.getByTestId('note-L1').querySelector('rect')
+    expect(Number(hit!.getAttribute('width'))).toBe(NOTE_HIT_W * 2)
   })
 
   it('掴んでいる音符が配列から消えたら、ゴースト（ゴミ箱）が残らない', () => {

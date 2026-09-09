@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   COLUMN_PITCH,
+  NOTE_HIT_H,
+  NOTE_HIT_W,
   NOTE_MAX,
   PLACE_LEFT,
   PLACE_RIGHT,
@@ -306,6 +308,15 @@ export default function Board({
             onPointerMove={handleNoteMove}
             onPointerUp={handleNoteUp}
           >
+            {/* 符頭は横向きスマホで 21.5 CSS px しかない。列間隔ぶんの不可視矩形で
+                受けて、指1本で隣を掴まずに済むようにする（#62・お道具箱と同じ手当て）。 */}
+            <rect
+              x={columnX(starts[i]) - NOTE_HIT_W / 2}
+              y={pitchToY(n.pitch, STAFF_LAYOUT) - NOTE_HIT_H / 2}
+              width={NOTE_HIT_W * (n.long ? 2 : 1)}
+              height={NOTE_HIT_H}
+              fill="transparent"
+            />
             <NoteHead
               x={columnX(starts[i])}
               y={pitchToY(n.pitch, STAFF_LAYOUT)}
