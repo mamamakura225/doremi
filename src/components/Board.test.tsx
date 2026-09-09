@@ -11,19 +11,12 @@ vi.mock('../audio/synth', () => ({
   playNote: vi.fn(),
 }))
 
-// jsdom は SVG の座標変換を持たない。恒等変換のスタブ（client 座標＝viewBox 座標）。
+// jsdom は SVG の座標変換を持たない。getScreenCTM に恒等行列を返させて
+// client 座標 = viewBox 座標にする。行列演算そのものは svgPoint.test.ts が検査する。
 beforeAll(() => {
   const proto = SVGSVGElement.prototype as unknown as Record<string, unknown>
-  proto.createSVGPoint = function () {
-    return {
-      x: 0,
-      y: 0,
-      matrixTransform() {
-        return { x: this.x, y: this.y }
-      },
-    }
-  }
-  proto.getScreenCTM = () => ({ inverse: () => ({}) })
+  const identity = { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }
+  proto.getScreenCTM = () => ({ inverse: () => identity })
   ;(SVGElement.prototype as unknown as Record<string, unknown>).setPointerCapture = () => {}
 })
 

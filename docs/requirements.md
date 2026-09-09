@@ -69,4 +69,4 @@
 - **横向きは技術的に強制できない**（iOS Safari 等で `orientation.lock` 不可）。オーバーレイで誘導するしかない
 - **音はユーザー操作なしに出せない**（AudioContext）。初回タップまで無音なのは仕様
 - Web Speech API の ja-JP 音声は端末依存で、ネットワーク音声の端末では機内モード時に読み上げが出ない。うたモードは楽器音に重ねているため無音にはならない
-- 純クライアントのため、テストできるのは `src/lib` の純ロジックと UI のみ
+- 純クライアントのため、テストは `src/lib` の純ロジック（カバレッジ閾値あり）＋ UI 層は「実在したバグを捕まえる最小セット」（`src/components/*.test.tsx`・`src/App.test.tsx`・`src/audio/*.test.ts`）。実ビューポートや `setPointerCapture` が要る3経路は Playwright（別issue）。網羅は追わない
