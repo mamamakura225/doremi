@@ -1,3 +1,9 @@
+import {
+  NOTE_HEAD_ROTATION_DEG,
+  NOTE_HEAD_RX,
+  NOTE_HEAD_RY,
+} from '../lib/layout'
+
 interface Props {
   x: number
   y: number
@@ -43,7 +49,14 @@ export default function NoteHead({
         strokeWidth={4}
         strokeLinecap="round"
       />
-      <ellipse cx={0} cy={0} rx={17} ry={13} fill={fill} transform="rotate(-20)" />
+      <ellipse
+        cx={0}
+        cy={0}
+        rx={NOTE_HEAD_RX}
+        ry={NOTE_HEAD_RY}
+        fill={fill}
+        transform={`rotate(-${NOTE_HEAD_ROTATION_DEG})`}
+      />
     </g>
   )
 }

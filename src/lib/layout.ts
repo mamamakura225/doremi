@@ -26,9 +26,26 @@ export const STAFF_RIGHT = TOOLBOX_X - 30 // 910
 export const PLACE_LEFT = 210
 export const PLACE_RIGHT = STAFF_RIGHT - 30 // 880
 
-// 列間隔の下限（ビューボックス単位）。符頭幅34に対して同じくらいの余白を残す値。
-// 横向きスマホでは倍率が0.375まで落ちるため、これを割ると隣の符頭と接して
-// 掴み間違いが起きる（実測値は docs/architecture.md）。NOTE_MAX はここから決まる。
+// 符頭（楕円）の寸法。NoteHead が描画に、列間隔・帯の隙間計算がここを参照する。
+// ここを触ると MIN_COLUMN_PITCH / TRASH_TOP の根拠が変わるので、両方のコメントを見直す。
+export const NOTE_HEAD_RX = 17
+export const NOTE_HEAD_RY = 13
+/** 符頭の横幅（= rx*2）。MIN_COLUMN_PITCH の根拠。 */
+export const NOTE_HEAD_W = NOTE_HEAD_RX * 2 // 34
+/** 符頭の回転角（度）。傾けて音符らしく見せている。 */
+export const NOTE_HEAD_ROTATION_DEG = 20
+/**
+ * 回転後の符頭の縦方向の張り出し（中心からの半径）。
+ * 傾いた楕円の y 方向の最大値は √((rx·sinθ)² + (ry·cosθ)²)。ry より大きくなる（≈13.5）。
+ */
+export const NOTE_HEAD_RY_ROTATED = Math.hypot(
+  NOTE_HEAD_RX * Math.sin((NOTE_HEAD_ROTATION_DEG * Math.PI) / 180),
+  NOTE_HEAD_RY * Math.cos((NOTE_HEAD_ROTATION_DEG * Math.PI) / 180),
+)
+
+// 列間隔の下限（ビューボックス単位）。符頭幅 NOTE_HEAD_W(34) に対して同じくらいの
+// 余白を隣との間に残す値。横向きスマホでは倍率が0.375まで落ちるため、これを割ると
+// 隣の符頭と接して掴み間違いが起きる（実測値は docs/architecture.md）。NOTE_MAX はここから決まる。
 export const MIN_COLUMN_PITCH = 65
 
 export const NOTE_MAX = 10
@@ -41,25 +58,40 @@ export function columnX(index: number): number {
   return PLACE_LEFT + (index + 0.5) * COLUMN_PITCH
 }
 
-/** 配置領域（五線譜側）にX座標が入っているか */
-export function isOverPlacement(x: number): boolean {
-  return x >= STAFF_LEFT && x <= STAFF_RIGHT
+// ゴミ箱ゾーン（配置済み音符をドラッグして捨てる：画面下部の帯）。
+// 帯の上端は「最も低い音の符頭の下端」から TRASH_GAP ぶん離す（#59）。中心座標だけで
+// 決めると、ト音の C4（符頭下端 ≈ y403.5）との隙間が 4 CSS px しか残らず、
+// ドを下寄りに掴むだけで削除が成立していた。
+/** ゴミ箱帯と最低音の符頭の下端の間に最低限残す余裕（符頭の張り出し1つぶん）。 */
+export const TRASH_GAP = NOTE_HEAD_RY_ROTATED
+export const TRASH_TOP = VIEW_H - 70 // 430（C4符頭下端403.5 に対し余裕26.5 ≥ TRASH_GAP）
+export const TRASH_CX = (PLACE_LEFT + PLACE_RIGHT) / 2
+export const TRASH_CY = VIEW_H - 42
+
+/**
+ * 配置領域（五線譜側）に離した座標が入っているか。
+ * X だけでなく Y も見る（#59）——見ないと鍵盤の上・ヘッダーの上・ゴミ箱帯の上で
+ * 離しても `snapYToPitch` の端クランプで必ず何か置かれ、5歳児には因果が読めない。
+ * 上端は `y >= 0`（ビューボックスの内側）まで許す——最高音より上には競合物が無く、
+ * 五線の少し上で離しても最高音になるのは直感に合う。下端は帯と衝突するので切る。
+ */
+export function isOverPlacement(x: number, y: number): boolean {
+  return x >= STAFF_LEFT && x <= STAFF_RIGHT && y >= 0 && y < TRASH_TOP
 }
 
 /**
  * 掴んでいる音を、いま盤面に置いてよいか。
- * 音部が一致していること（掴んだあとに切り替わっていない）＋配置エリアの上、の両方。
- * 音部が違う音を流し込むと、保存時に音域外でサイレントに消える（#56）。
+ * 音部が一致していること（掴んだあとに切り替わっていない・#56）＋配置エリアの上。
+ * 音部が違う音を流し込むと、保存時に音域外でサイレントに消える。
  */
-export function canPlace(dragClef: Clef, boardClef: Clef, x: number): boolean {
-  return dragClef === boardClef && isOverPlacement(x)
+export function canPlace(
+  dragClef: Clef,
+  boardClef: Clef,
+  x: number,
+  y: number,
+): boolean {
+  return dragClef === boardClef && isOverPlacement(x, y)
 }
-
-// ゴミ箱ゾーン（配置済み音符をドラッグして捨てる：画面下部の帯）。
-// 最も低い音(C4 ≈ y390)より下なので配置音符と重ならない。
-export const TRASH_TOP = VIEW_H - 90 // 410
-export const TRASH_CX = (PLACE_LEFT + PLACE_RIGHT) / 2
-export const TRASH_CY = VIEW_H - 42
 
 /**
  * ゴミ箱ゾーン（下部の帯・お道具箱を除く）に入っているか。
