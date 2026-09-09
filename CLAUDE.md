@@ -12,7 +12,7 @@
 
 ## プロジェクト構成
 - **他プロジェクトとの混同禁止**：dtask / piano-pet / pashari / nuibon 等の規約（`gen-sw`・`apps/*` 構造・Next.js前提など）は一切持ち込まない。完全に独立した Vite + React スタンドアロン構成。
-- 主要ディレクトリ：`src/lib`（純ロジック：音高マッピング・スナップ計算・シーケンス）/ `src/audio`（Tone.jsラッパー）/ `src/components`（UI・SVG五線譜）/ `src/`（App・エントリ）。
+- 主要ディレクトリ：`src/lib`（純ロジック：音高マッピング・スナップ計算・シーケンス・座標変換）/ `src/audio`（Tone.js / Web Speech ラッパー）/ `src/hooks`（DOM計測に依存する判定：鍵盤の表示可否・向き・画面高）/ `src/components`（UI・SVG五線譜・鍵盤・音部記号）/ `src/`（App・エントリ）。
 - 純ロジック（音高↔座標マッピング、スナップ、音符配列）は React/Tone.js から切り離し、Vitest でユニットテスト可能に保つ。
 
 ## 主要実行コマンド
@@ -28,7 +28,7 @@ npm run build     # tsc -b ＋ 本番ビルド（vite build）
 ### ① 設計合意（Antigravityレビュー済み・理由は [docs/architecture.md](./docs/architecture.md)）
 - **D&D**：HTML5 DnD APIは使わず **Pointer Events 自前実装**。単一 `pointerId` のみ追跡・`setPointerCapture`・`touch-action:none`/`user-select:none` は必須。
 - **譜面描画**：**SVG自前**（VexFlow不使用）。音部記号の切り替えは音高↔Y座標のマッピング表の差し替えで行う。
-- **音域**：ト音（デフォルト）で C4〜E5、ヘ音で F2〜A3。どちらも10音で、ドレミの並びは同じ。音部記号の追加は `pitch.ts` のマッピング表を足すだけで済ませる（描画・スナップ・再生は `Pitch` 経由）。切替時は盤面をリセットする（既存の音符が別の音に化けるため）。
+- **音域**：ト音（デフォルト）で C4〜E5、ヘ音で F2〜A3。どちらも10音で、ドレミの並びは同じ。音部記号の追加は `pitch.ts` のマッピング表の追加を軸にする（描画・スナップ・再生は `Pitch` 経由）。ただし記号描画・地の音色・ラベルの三項分岐は残っている → [docs/architecture.md](./docs/architecture.md)。切替時は盤面をリセットする。
 - **ド の位置**：下加線1本。スナップ領域に**半透明の足場ガイド**を常時表示する。
 - **音符上限**：**1ページ10列**（列間隔の下限 `MIN_COLUMN_PITCH` から決まる。列は固定グリッドで、音符数に応じて動かさない）。満杯後は「つぎのうた」で空ページ追加、`pages: PlacedNote[][]` を連結再生（境界に1ステップ小休符）。
 - **音の長さ**：**ふつう／のばす の2値のみ**。のばす音は2列＝2ステップ。上限は音符の個数でなく**列数**で数える（`usedColumns()` が正・`notes.length` で満杯判定しない）。拍・小節・音符の種類は持ち込まない。
@@ -37,19 +37,16 @@ npm run build     # tsc -b ＋ 本番ビルド（vite build）
 - **お祝い演出**：符頭バウンス程度の最小演出に留める。
 
 ### ② オーディオ（Tone.js / Web Speech）
-- **iOS unlock**：**初回タップで `Tone.start()`**。Web Speech の `primeSpeech()` は**タップと同一tickで同期的に**呼ぶ（await を挟むと以後ずっと無言になる）。
+- **iOS unlock**：**初回タップで `Tone.start()`**。Web Speech の `primeSpeech()` は**タップと同一tickで同期的に**呼ぶ（理由は [docs/architecture.md](./docs/architecture.md) オーディオ節）。
 - **スクラブ発音**：**音域ゾーンを跨いだ瞬間のみ**再トリガする（同一音内では鳴らさない）。
 - **制作中の音は通常音で固定**。音色切替は再生時だけに効かせる。うたモードは楽器音に**重ねて**読み上げる（読み上げ単体にしない）。
 
 ### ③ 横向き前提
-- ランドスケープは技術的に強制不可。**縦向き検知で「回してね」オーバーレイ**を出す。PWA manifest は `orientation: landscape` を宣言（保証ではない）。
-- **ヘッダーに高さを使わせない**：ボタンは `shrink-0`（潰すとラベルが縦折り返しして高くなる）・入らなければ折り返す・高さ500px未満では絵文字だけにする（`isShortScreen()`）。横向きスマホでは盤面の高さが最も希少な資源。
+- ランドスケープは技術的に強制不可。**縦向き検知で「よこむきに してね」オーバーレイ**を出す。PWA manifest は `orientation: landscape` を宣言（保証ではない）。
+- **ヘッダーに高さを使わせない**：ボタンは `shrink-0`・入らなければ折り返す・高さ500px未満では絵文字だけにする（`isShortScreen()`）。理由は [docs/architecture.md](./docs/architecture.md)。横向きスマホでは盤面の高さが最も希少な資源。
 
 ### ④ コミット規約（Vercelデプロイブロック防止）
-- コミットは必ず GitHub no-reply を固定：
-  ```bash
-  git -c user.email="284483932+mamamakura225@users.noreply.github.com" -c user.name="mamamakura225" commit -m "..."
-  ```
+- コミット著者メールは **GitHubアカウントに登録済みのもの**（現行 `makura225@gmail.com`）を使う。未登録メールで commit すると Vercel チェックが FAILURE になる → 理由は [docs/architecture.md](./docs/architecture.md) デプロイ節。
 - メッセージ末尾に共同作成者情報（`<現行モデル名>` は現在稼働中のモデル名。例: `Claude Fable 5`）：`Co-Authored-By: Claude <現行モデル名> <noreply@anthropic.com>`
 
 ### ⑤ Issue・PR連動
