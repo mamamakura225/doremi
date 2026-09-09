@@ -95,6 +95,10 @@ export default function Board({
     setDrag(null)
     setDel(null)
   }
+  // 掴んでいる音符が配列から消えたら（別の指で ↩ / ページ切替）掴みを捨てる。
+  // その <g> が DOM から消えるとポインタキャプチャが暗黙解放され、pointerup は
+  // handleNoteUp に届かない＝ゴースト＋ゴミ箱が残り続けるため（#58 症状2）。
+  if (del && !notes.some((n) => n.id === del.id)) setDel(null)
   const [pressedKey, setPressedKey] = useState<string | null>(null)
   // 縦に余裕のある端末（タブレット横など）でだけ鍵盤を併記する
   const showKeyboard = useFitsKeyboard(svgRef)
@@ -109,9 +113,16 @@ export default function Board({
   // 音符の開始列（のばす音は2列ぶん占めるので、後続の列がその分ずれる）
   const starts = columnStarts(notes)
 
+  /**
+   * すでにポインタを1つ追跡していれば、新しい pointerdown は受け付けない。
+   * 「記録するだけ」では単一追跡にならない——2本目の指が drag/del を上書きし、
+   * 1本目のドラッグが宙に消える（#58 症状1）。子どもは画面に手をつく前提。
+   */
+  const tracking = drag !== null || del !== null
+
   /** 鍵盤を押したら、その音を通常音で鳴らす（譜面には置かない） */
   function handleKeyPress(pitch: Pitch) {
-    if (busy) return
+    if (busy || tracking) return
     setTouched(true)
     setPressedKey(pitch.note)
     window.setTimeout(
@@ -127,7 +138,7 @@ export default function Board({
   }
 
   function handlePointerDown(e: React.PointerEvent, long: boolean) {
-    if (!(long ? canLong : canNormal) || !svgRef.current) return
+    if (tracking || !(long ? canLong : canNormal) || !svgRef.current) return
     const p = clientToSvg(svgRef.current, e.clientX, e.clientY)
     if (!p) return
     setTouched(true)
@@ -159,9 +170,21 @@ export default function Board({
     setDrag(null)
   }
 
+  /**
+   * pointerup 以外でポインタが終わる経路の後始末（#58 症状2）:
+   * - pointercancel（システムジェスチャ・タッチ点過多でブラウザが中断）
+   * - キャプチャ先の <g> が消えて pointerup が個別ハンドラに届かなかったとき
+   *   （SVG ルートまでバブルしてくる）
+   * 置く・捨てるは行わず、掴みを解除するだけ。
+   */
+  function endTracking(e: React.PointerEvent) {
+    if (drag && e.pointerId === drag.pointerId) setDrag(null)
+    if (del && e.pointerId === del.pointerId) setDel(null)
+  }
+
   // 配置済み音符を掴む → ゴミ箱で離すと削除（タップ削除は採らない＝誤操作防止）
   function handleNoteDown(e: React.PointerEvent, note: PlacedNote) {
-    if (!editable || !svgRef.current) return
+    if (tracking || !editable || !svgRef.current) return
     e.stopPropagation()
     const p = clientToSvg(svgRef.current, e.clientX, e.clientY)
     if (!p) return
@@ -199,6 +222,8 @@ export default function Board({
       style={{ touchAction: 'none' }}
       role="application"
       aria-label="五線譜ボード"
+      onPointerUp={endTracking}
+      onPointerCancel={endTracking}
     >
       <defs>
         <filter id="note-shadow" x="-50%" y="-50%" width="200%" height="200%">
@@ -265,6 +290,7 @@ export default function Board({
         return (
           <g
             key={n.id}
+            data-testid={`note-${n.id}`}
             className={
               celebrating ? 'note-bounce' : matched ? 'match-pop' : undefined
             }

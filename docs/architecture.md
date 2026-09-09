@@ -20,6 +20,8 @@ src/App.tsx  状態と操作の結線
 
 自前実装で必ず守ること:
 - `pointerdown` で `pointerId` を記録し、**単一ポインタのみ追跡**する（子どもは画面に手をつく。マルチタッチで音符が飛ぶ事故を防ぐ）
+- **すでに `drag` / `del` を追跡している間は新しい `pointerdown` を受け付けない**（[#58](https://github.com/mamamakura225/doremi/issues/58)）。`pointerId` を「記録するだけ」では単一追跡にならない——2本目の指が追跡IDを上書きし、1本目のドラッグが宙に消える。鍵盤タップも同じガードで止める
+- **`pointercancel` と、掴んでいる音符（`del`）の消滅の両方で掴みを解除する**。`pointerup` だけでは戻れない経路がある: システムジェスチャでブラウザがポインタを中断したとき（→ SVG ルートの `onPointerCancel`／`onPointerUp` フォールバック）、掴んでいる音符の `<g>` が別の指の操作（↩・ページ切替）で DOM から消えたとき（キャプチャが暗黙解放され `pointerup` が個別ハンドラに届かない → レンダー中に `del.id` が `notes` に無ければ捨てる）。お道具箱側の `drag` は `<g>` が消えないのでこの穴は無いが、ドラッグ中に別の指でページ切替／クリアすると切替後の盤面に置かれる（[#84](https://github.com/mamamakura225/doremi/issues/84) で `resetBoard` 経路をまとめて対処）
 - `setPointerCapture` で要素外に出ても追従する
 - ドラッグ対象とコンテナに `touch-action: none` / `user-select: none`（スクロールと長押し選択に取られない）
 
