@@ -15,3 +15,16 @@ export const SOLFA_COLOR: Record<Solfa, string> = {
 export function colorOf(pitch: Pitch): string {
   return SOLFA_COLOR[pitch.solfa]
 }
+
+/**
+ * 符頭・ドレミラベル・プレビュー丸の輪郭色（五線と同色）。
+ * SOLFA_COLOR は単体では WCAG 非テキスト 3:1 を満たさない色がある（ミ黄は対 BOARD_BG で 1.42:1）。
+ * 視認性はこの輪郭で確保し、色は識別の手がかりに徹する（#61・contrast.test.ts が数値で固定）。
+ */
+export const OUTLINE_COLOR = '#5b524b'
+
+/** 盤面（クリーム地）。符頭・ラベルはこの上に乗る。 */
+export const BOARD_BG = '#fdf6e3'
+
+/** 白鍵の地の色。 */
+export const WHITE_KEY_BG = '#fffdf7'

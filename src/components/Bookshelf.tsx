@@ -1,4 +1,5 @@
 import { previewCells } from '../lib/preview'
+import { OUTLINE_COLOR } from '../lib/colors'
 import type { Clef } from '../lib/pitch'
 import type { SavedSong } from '../lib/storage'
 
@@ -20,7 +21,10 @@ function Preview({ pages, clef }: { pages: string[][]; clef: Clef }) {
             <span
               key={i}
               className={`inline-block h-5 rounded-full ${cell.long ? 'w-10' : 'w-5'}`}
-              style={{ backgroundColor: cell.color }}
+              style={{
+                backgroundColor: cell.color,
+                boxShadow: `inset 0 0 0 1.5px ${OUTLINE_COLOR}`,
+              }}
             />
           ))}
         </div>

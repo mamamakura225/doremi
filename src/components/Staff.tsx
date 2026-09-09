@@ -6,7 +6,7 @@ import {
   STAFF_RIGHT,
 } from '../lib/layout'
 import { pitchToY, pitchesOf, tonicOf, type Clef } from '../lib/pitch'
-import { colorOf } from '../lib/colors'
+import { OUTLINE_COLOR, colorOf } from '../lib/colors'
 import BassClef from './BassClef'
 import TrebleClef from './TrebleClef'
 
@@ -68,7 +68,10 @@ export default function Staff({ clef }: Props) {
             fontSize={labelSize(p.step, minStep, maxStep)}
             fontWeight="bold"
             fill={colorOf(p)}
-            opacity={0.5}
+            stroke={OUTLINE_COLOR}
+            strokeWidth={0.6}
+            paintOrder="stroke"
+            opacity={0.9}
           >
             {p.solfa}
           </text>
