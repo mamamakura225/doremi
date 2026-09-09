@@ -103,6 +103,10 @@ export function setPlaybackVoice(v: Voice): void {
   playbackVoice = v
 }
 
+// 直近に playMelodyNote で鳴らした synth。中断時にこれだけを release する
+// （音色や音部の写像を推測しない・鳴らしていない synth を新規生成しない・#60）。
+let ringing: AnySynth | null = null
+
 /**
  * 再生用に1音鳴らす（選択中の音色を使用）。
  * うたモードは音名を読み上げるが、読み上げ自体には音の高さが無い。
@@ -110,20 +114,25 @@ export function setPlaybackVoice(v: Voice): void {
  */
 export function playMelodyNote(note: string, duration: Tone.Unit.Time = '8n'): void {
   if (playbackVoice === 'sing') {
-    getVoice('piano').triggerAttackRelease(note, duration)
+    ringing = getVoice('piano')
+    ringing.triggerAttackRelease(note, duration)
     const solfa = pitchByNote(note, clefMode)?.solfa
     if (solfa) speakSolfa(solfa)
     return
   }
-  getVoice(playbackVoice).triggerAttackRelease(note, duration)
+  ringing = getVoice(playbackVoice)
+  ringing.triggerAttackRelease(note, duration)
 }
 
 /**
- * 再生中断時に読み上げだけを止める。
- * 楽器音は 8n で自然減衰するため Tone 側は触らない（＝メロディ全体の停止ではない）。
+ * 再生中断時に、読み上げを止め、鳴っている音をリリースへ移行する。
+ * のばす音（#43 以降 `playMelodyNote` に秒数が渡る）は 8n で自然減衰しないので、
+ * 直近に鳴らした synth を `triggerRelease` する（余韻は release ぶん残る・#60）。
  */
-export function stopMelodySpeech(): void {
+export function stopMelody(): void {
   stopSpeech()
+  ringing?.triggerRelease?.()
+  ringing = null
 }
 
 // おてほん一致時の控えめキラキラ音（メロディ用synthを止めないよう別系統）。

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   COLUMN_PITCH,
   NOTE_MAX,
@@ -102,6 +102,10 @@ export default function Board({
   // handleNoteUp に届かない＝ゴースト＋ゴミ箱が残り続けるため（#58 症状2）。
   if (del && !notes.some((n) => n.id === del.id)) setDel(null)
   const [pressedKey, setPressedKey] = useState<string | null>(null)
+  // 鍵盤ハイライトの消灯タイマー。IDを保持しないと、連打時に前の押下の
+  // タイマーが後の押下を消してしまう（#60-5）。
+  const keyTimer = useRef(0)
+  useEffect(() => () => window.clearTimeout(keyTimer.current), [])
   // 縦に余裕のある端末（タブレット横など）でだけ鍵盤を併記する
   const showKeyboard = useFitsKeyboard(svgRef)
   const playing = playingIndex !== null
@@ -127,10 +131,8 @@ export default function Board({
     if (busy || tracking) return
     setTouched(true)
     setPressedKey(pitch.note)
-    window.setTimeout(
-      () => setPressedKey((k) => (k === pitch.note ? null : k)),
-      260,
-    )
+    window.clearTimeout(keyTimer.current)
+    keyTimer.current = window.setTimeout(() => setPressedKey(null), 260)
     void ensureAudio().then(() => playNote(pitch.note))
   }
 

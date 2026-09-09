@@ -17,6 +17,29 @@ export function toNoteNames(pages: PlacedNote[][]): string[][] {
     .filter((pg) => pg.length > 0)
 }
 
+/**
+ * 末尾以外の空ページを取り除き、`currentPage` を新しい配列に合わせて返す（#60-6）。
+ * 全消しで空になったページを残すと、ページドット・`aria-label` が実際の再生内容
+ * （`toNoteNames` は空ページを除外する）とズレる。末尾ページは常に残す。
+ */
+export function collapseEmptyPages(
+  pages: PlacedNote[][],
+  currentPage: number,
+): { pages: PlacedNote[][]; currentPage: number } {
+  const lastIdx = pages.length - 1
+  const keep = pages.map((p, i) => p.length > 0 || i === lastIdx)
+  if (keep.every(Boolean)) return { pages, currentPage }
+  const kept = pages.filter((_, i) => keep[i])
+  // currentPage より前で落ちたページ数だけ左へずらす。currentPage 自身が落ちた
+  // ページなら、詰めた後に直後へ来ていたページの位置に落ち着く。
+  // currentPage より前で落ちたページ数だけ左へずらす。前が全部空だった場合は
+  // 0 にクランプされる＝残った内容ページに着地する（「まえ」でも進むように見えるが、
+  // 前に内容が無い以上ほかに行き先が無い）。
+  const shift = keep.slice(0, currentPage).filter((k) => !k).length
+  const mapped = Math.min(Math.max(0, currentPage - shift), kept.length - 1)
+  return { pages: kept, currentPage: mapped }
+}
+
 /** 保存された音名を音名と長さに分解する（旧形式の 'C4' は ふつうの音）。 */
 export function parseNoteName(name: string): { note: string; long: boolean } {
   return name.endsWith(LONG_SUFFIX)
