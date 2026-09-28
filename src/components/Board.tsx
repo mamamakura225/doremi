@@ -29,6 +29,8 @@ import { canAddNote, columnStarts, usedColumns } from '../lib/notes'
 import { noteDuration } from '../lib/playback'
 import {
   OUTLINE_COLOR,
+  PAPER,
+  PAPER_EDGE,
   TOOLBOX_NOTE_COLOR,
   WOOD,
   WOOD_GRAIN,
@@ -66,6 +68,13 @@ interface DragState {
 
 /** 置いた瞬間の演出（着地＋キラ粒）を出しておく時間。CSS のアニメ（最長 0.6s）より少し長く */
 const LANDING_MS = 700
+
+// 五線の紙（#99）: 左端の音部記号から五線の右端の先まで、上は最上線の上の余白、
+// 下はゴミ箱帯（TRASH_CY=458）まで覆う。鍵盤（y500〜）には掛けない。
+const PAPER_X = 20
+const PAPER_Y = 16
+const PAPER_W = 905
+const PAPER_H = 476
 
 /** 配置済み音符を掴んでゴミ箱へ捨てる操作 */
 interface DeleteDragState {
@@ -268,6 +277,25 @@ export default function Board({
           />
         </filter>
       </defs>
+
+      {/* 五線の紙（#99）: 五線・足場ガイド・ゴミ箱帯を載せる。紙の外は透明にしてページ背景を透かす */}
+      <rect
+        data-testid="paper"
+        x={PAPER_X}
+        y={PAPER_Y}
+        width={PAPER_W}
+        height={PAPER_H}
+        rx={36}
+        fill={PAPER}
+        stroke={PAPER_EDGE}
+        strokeWidth={2}
+        filter="url(#note-shadow-soft)"
+      />
+      {/* 紙を留めるテープ（五線から離れた上の角だけ・7色以外の淡色） */}
+      <g aria-hidden="true" opacity={0.85}>
+        <rect x={6} y={14} width={84} height={26} rx={4} fill="#ffe4cc" transform="rotate(-24 48 27)" />
+        <rect x={852} y={14} width={84} height={26} rx={4} fill="#dff3ea" transform="rotate(22 894 27)" />
+      </g>
 
       <Staff clef={clef} />
 

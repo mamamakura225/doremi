@@ -180,3 +180,13 @@ test('再生中は音色ボタンが disabled（#60-2）', async () => {
 
   expect((screen.getByLabelText('ベル') as HTMLButtonElement).disabled).toBe(true)
 })
+
+test('盤面の外にページ背景（おんぷのもり）を敷き、操作の邪魔をしない（#99）', () => {
+  render(<App />)
+  const bg = screen.getByTestId('page-background')
+  expect(bg.getAttribute('aria-hidden')).toBe('true')
+  expect(bg.getAttribute('class')).toContain('pointer-events-none')
+  // 背景は盤面より先（下）に描かれる
+  const board = screen.getByLabelText('五線譜ボード')
+  expect(bg.compareDocumentPosition(board) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+})

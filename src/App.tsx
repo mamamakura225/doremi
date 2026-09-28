@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import Background from './components/Background'
 import Board from './components/Board'
 import Bookshelf from './components/Bookshelf'
 import RotateOverlay from './components/RotateOverlay'
@@ -239,12 +240,14 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-full w-full flex-col bg-[#fdf6e3]">
+    <div className="relative flex h-full w-full flex-col bg-[#fdf6e3]">
+      {/* ページ背景（空・丘）。盤面 SVG の紙の外とヘッダーの後ろに見える（#99） */}
+      <Background />
       {portrait && <RotateOverlay />}
       {/* ボタンは縮ませない（潰れるとラベルが縦に折り返してヘッダーが伸びる）。
           幅が足りなければ行を折り返す＝はみ出して切れることはない。 */}
       <header
-        className={`flex shrink-0 flex-wrap items-center ${compact ? 'gap-2 p-2' : 'gap-3 p-3'}`}
+        className={`relative flex shrink-0 flex-wrap items-center ${compact ? 'gap-2 p-2' : 'gap-3 p-3'}`}
       >
         <button
           type="button"

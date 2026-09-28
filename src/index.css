@@ -130,6 +130,19 @@ body {
   animation: sparkle 0.6s ease-out forwards;
 }
 
+/* ページ背景の雲がゆっくり流れる（#99） */
+@keyframes cloud-drift {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(60px);
+  }
+}
+.cloud-drift {
+  animation: cloud-drift 40s ease-in-out infinite alternate;
+}
+
 /*
  * 動きを減らす設定の端末では、動きだけ止めて見え方は残す（#63）。
  * アニメーションを持つクラスを足したら、必ずここにも足す（src/motion.test.ts が検査する）。
@@ -139,7 +152,8 @@ body {
   .note-hint,
   .finger-poke,
   .match-pop,
-  .note-land {
+  .note-land,
+  .cloud-drift {
     animation: none;
   }
   /* キラ粒は飾りなので、止めるなら出さない（止めた姿のまま符頭に重なって残るのを避ける） */

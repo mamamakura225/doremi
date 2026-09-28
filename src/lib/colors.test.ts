@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   BOARD_BG,
   OUTLINE_COLOR,
+  PAPER,
   SOLFA_COLOR,
   WHITE_KEY_BG,
   colorOf,
@@ -37,6 +38,10 @@ describe('輪郭で視認性を確保する（#61）', () => {
   // 塗り色が何であれ（ミ黄が対背景 1.42:1 でも）シルエットが読める。
   it('輪郭色は盤面（クリーム地）に対して 3:1 以上', () => {
     expect(contrastRatio(OUTLINE_COLOR, BOARD_BG)).toBeGreaterThanOrEqual(3)
+  })
+
+  it('輪郭色は五線の紙に対して 7:1 以上（#99・docs/art-direction.md の禁則3）', () => {
+    expect(contrastRatio(OUTLINE_COLOR, PAPER)).toBeGreaterThanOrEqual(7)
   })
 
   it('輪郭色は白鍵の地に対して 3:1 以上', () => {
