@@ -169,12 +169,15 @@ export default function Board({
   const [pressedKey, setPressedKey] = useState<string | null>(null)
   // 鍵盤と五線を光でつなぐ（#107）。
   // 鍵盤 → 五線: 押した鍵の音の高さに、同じ色の帯と、次に置く列のゴースト符頭
-  const echoPitch = pressedKey ? (pitchByNote(pressedKey, clef) ?? null) : null
+  // 再生中は出さない（鳴っている音と違う色の光を紙に残さない・art-direction の禁則2）
+  const keyLive = pressedKey !== null && playingIndex === null
+  const echoPitch = keyLive ? (pitchByNote(pressedKey, clef) ?? null) : null
   // 五線 → 鍵盤: 押している鍵 ＞ 掴んで五線の上を動かしている音 ＞ 再生で鳴っている音 ＞ いま置いた音
   function litKeyNow(): string | null {
-    if (pressedKey) return pressedKey
+    if (keyLive) return pressedKey
     if (drag && isOverPlacement(drag.x, drag.y)) return drag.pitch.note
     if (playingIndex !== null) return notes[playingIndex]?.pitch.note ?? null
+    if (wiggle) return notes.find((n) => n.id === wiggle.id)?.pitch.note ?? null // タップで鳴らした音（#108）
     if (freshId) return notes.find((n) => n.id === freshId)?.pitch.note ?? null
     return null
   }
@@ -221,11 +224,18 @@ export default function Board({
     playNote(note, noteDuration(long ? 2 : 1))
   }
 
+  /** 鍵盤の光を消す（掴みはじめたら、光る鍵はいま掴んでいる音に譲る） */
+  function clearKeyEcho() {
+    window.clearTimeout(keyTimer.current)
+    setPressedKey(null)
+  }
+
   function handlePointerDown(e: React.PointerEvent, long: boolean) {
     if (tracking || !(long ? canLong : canNormal) || !svgRef.current) return
     const p = clientToSvgPoint(svgRef.current, e.clientX, e.clientY)
     if (!p) return
     setTouched(true)
+    clearKeyEcho()
     e.currentTarget.setPointerCapture(e.pointerId)
     const pitch = snapYToPitch(p.y, STAFF_LAYOUT, clef)
     setDrag({ pointerId: e.pointerId, x: p.x, y: p.y, pitch, long })
@@ -273,6 +283,7 @@ export default function Board({
   function handleNoteDown(e: React.PointerEvent, note: PlacedNote) {
     if (tracking || !editable || !svgRef.current) return
     e.stopPropagation()
+    clearKeyEcho()
     const p = clientToSvgPoint(svgRef.current, e.clientX, e.clientY)
     if (!p) return
     e.currentTarget.setPointerCapture(e.pointerId)
@@ -387,7 +398,7 @@ export default function Board({
           const color = colorOf(echoPitch)
           const col = usedColumns(notes)
           return (
-            <g data-testid="key-echo" data-y={y} data-color={color} pointerEvents="none" aria-hidden="true">
+            <g data-testid="staff-echo" data-y={y} data-color={color} pointerEvents="none" aria-hidden="true">
               <rect
                 x={PLACE_LEFT}
                 y={y - 18}
@@ -397,7 +408,8 @@ export default function Board({
                 fill={color}
                 opacity={0.2}
               />
-              {col < NOTE_MAX && (
+              {/* おてほんの途中はゴーストを出さない（お手本と同じ列に、別の高さの「置く場所」が出て紛らわしい） */}
+              {col < NOTE_MAX && !targets?.[notes.length] && (
                 <NoteHead x={columnX(col)} y={y} fill={color} opacity={0.55} stemDown={stemDown(echoPitch)} />
               )}
             </g>

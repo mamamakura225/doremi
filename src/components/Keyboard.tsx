@@ -50,7 +50,7 @@ export default function Keyboard({ clef, onPress, pressed }: Props) {
               x={x}
               y={KEYBOARD_TOP + (on ? SINK : 0)}
               width={w}
-              height={KEYBOARD_H}
+              height={KEYBOARD_H - (on ? SINK : 0)}
               rx={6}
               fill={on ? colorOf(p) : WHITE_KEY_BG}
               opacity={on ? 0.75 : 1}
