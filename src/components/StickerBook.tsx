@@ -75,7 +75,7 @@ export function StickerBook({
                 type="button"
                 disabled={!open}
                 onClick={() => onPickTheme(t.id)}
-                aria-label={open ? t.name : `${t.name}（シール ${t.need} まいで つかえる）`}
+                aria-label={open ? t.name : `${t.name} あと ${t.need - earned.length}（シール ${t.need} まいで つかえる）`}
                 aria-pressed={t.id === themeId}
                 className={`flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-base font-bold shadow disabled:opacity-60 ${
                   t.id === themeId ? 'ring-4 ring-[#5b524b]/40' : ''
@@ -85,7 +85,7 @@ export function StickerBook({
                   className="inline-block h-7 w-7 rounded-full border-2 border-[#5b524b]"
                   style={{ background: `linear-gradient(${t.sky[0]}, ${t.sky[1]} 55%, ${t.hills[1]} 56%)` }}
                 />
-                <span className={open ? 'text-[#6b6375]' : 'text-[#cfc6b8]'}>
+                <span className={open ? 'text-[#6b6375]' : 'text-[#9a8f80]'}>
                   {open ? t.name : `あと ${t.need - earned.length}`}
                 </span>
               </button>

@@ -47,7 +47,8 @@ export default function EarPanel({
         <EarIcon /> もういちど きく
       </button>
       {/* この段階で見つけた数（5つで次の段階へ） */}
-      <span role="img" className="flex gap-1" aria-label={`${inStage} こ みつけた`}>
+      {/* 空（夜のテーマでは暗い）の上に出ても読めるよう、白い地に載せる */}
+      <span role="img" className="flex gap-1 rounded-full bg-white/90 px-3 py-2 shadow" aria-label={`${inStage} こ みつけた`}>
         {Array.from({ length: FOUND_PER_STAGE }, (_, i) => (
           <span
             key={i}
@@ -59,7 +60,7 @@ export default function EarPanel({
       {/* 幅を固定して、ヒントが出ても「もういちど きく」が横に動かないようにする */}
       <span role="status" className="flex w-[12.5rem] items-center gap-1 text-2xl font-bold whitespace-nowrap text-[#6b6375]">
         {hint === 'same' && (
-          <span className="flex items-center gap-1">
+          <span className="flex items-center gap-1 rounded-full bg-white/90 px-3 py-1 shadow">
             <span className="inline-block w-10">
               <Mascot mood="banzai" width="100%" height="100%" />
             </span>

@@ -734,7 +734,7 @@ test('シールを集めると背景を着せ替えられ、選んだ背景を�
   expect(screen.getByTestId('page-background').getAttribute('data-theme')).toBe('meadow')
   fireEvent.click(screen.getByLabelText('シールちょう'))
   expect((screen.getByLabelText('さくら') as HTMLButtonElement).disabled).toBe(false)
-  expect((screen.getByLabelText('よぞら（シール 9 まいで つかえる）') as HTMLButtonElement).disabled).toBe(true)
+  expect((screen.getByLabelText('よぞら あと 6（シール 9 まいで つかえる）') as HTMLButtonElement).disabled).toBe(true)
   fireEvent.click(screen.getByLabelText('さくら'))
   expect(screen.getByTestId('page-background').getAttribute('data-theme')).toBe('sakura')
   first.unmount()

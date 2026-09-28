@@ -74,7 +74,7 @@ function Star({ x, y, s = 1 }: { x: number; y: number; s?: number }) {
 // 空に散らす飾りの位置（ヘッダーの後ろと、紙の外の左右に見える所）
 const SKY_SPOTS: [number, number, number][] = [
   [120, 230, 1], [300, 120, 0.8], [520, 250, 0.9], [700, 110, 1.1], [930, 230, 0.8],
-  [1150, 120, 1], [1470, 250, 0.9], [60, 420, 0.8], [1540, 450, 1], [200, 560, 0.7], [1440, 600, 0.8],
+  [1150, 120, 1], [1470, 250, 0.9], [60, 420, 0.8], [1540, 450, 1], [40, 590, 0.7], [1560, 610, 0.8],
 ]
 
 export default function Background({ themeId = 'meadow' }: { themeId?: ThemeId }) {
@@ -95,6 +95,11 @@ export default function Background({ themeId = 'meadow' }: { themeId?: ThemeId }
           <stop offset="0.5" stopColor={t.sky[1]} />
           <stop offset="0.85" stopColor={t.sky[2]} />
         </linearGradient>
+        {/* 三日月は円を切り抜いて作る（空の色で塗って隠すと、グラデーションと光の輪の上で円盤に見える） */}
+        <mask id="bg-moon-cut">
+          <rect width={W} height={H} fill="#fff" />
+          <circle cx={1350} cy={218} r={34} fill="#000" />
+        </mask>
         <radialGradient id="bg-sun" cx="0.5" cy="0.5" r="0.5">
           <stop offset="0.55" stopColor={night ? '#fff6cf' : '#fff1a8'} stopOpacity={night ? 0.35 : 1} />
           <stop offset="1" stopColor="#fff1a8" stopOpacity="0" />
@@ -104,10 +109,7 @@ export default function Background({ themeId = 'meadow' }: { themeId?: ThemeId }
       {/* 太陽（夜は三日月）は右上。スマホ横（上が切れる）でも欠けにくい高さに置く */}
       <circle cx={1330} cy={230} r={110} fill="url(#bg-sun)" />
       {night ? (
-        <g>
-          <circle cx={1330} cy={230} r={40} fill="#fff6cf" />
-          <circle cx={1350} cy={218} r={34} fill={t.sky[0]} />
-        </g>
+        <circle cx={1330} cy={230} r={40} fill="#fff6cf" mask="url(#bg-moon-cut)" />
       ) : (
         <circle cx={1330} cy={230} r={42} fill="#ffe680" />
       )}
