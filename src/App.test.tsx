@@ -613,3 +613,18 @@ test('ほんだなは開くと「とじる」にフォーカスし、Escape で�
   fireEvent.keyDown(shelf, { key: 'Escape' })
   expect(screen.queryByRole('dialog', { name: 'ほんだな' })).toBeNull()
 })
+
+test('はじめて開いたときだけタイトルが出て、はじめるで音を解錠する（#112）', () => {
+  const first = render(<App />)
+  const title = screen.getByRole('dialog', { name: 'どれみ' })
+  expect(title.textContent).toContain('はじめる')
+  vi.mocked(ensureAudio).mockClear()
+  fireEvent.click(screen.getByLabelText('はじめる'))
+  expect(ensureAudio).toHaveBeenCalled()
+  expect(screen.queryByRole('dialog', { name: 'どれみ' })).toBeNull()
+  first.unmount()
+
+  // 2回目に開いたときは出さない
+  render(<App />)
+  expect(screen.queryByRole('dialog', { name: 'どれみ' })).toBeNull()
+})

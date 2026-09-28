@@ -28,6 +28,8 @@ import {
   saveStickers,
 } from './lib/stickers'
 import BookCover from './components/BookCover'
+import TitleScreen from './components/TitleScreen'
+import { hasSeenTitle, markTitleSeen } from './lib/firstRun'
 import Bookshelf from './components/Bookshelf'
 import RotateOverlay from './components/RotateOverlay'
 import { usePortrait } from './hooks/usePortrait'
@@ -100,6 +102,8 @@ export default function App() {
   const [voice, setVoice] = useState<Voice>('piano')
   const [clef, setClefMode] = useState<Clef>('treble')
   const [adultOpen, setAdultOpen] = useState(false)
+  // はじめて開いたときだけタイトル（#112）。2回目からは出さない（毎回挟むと邪魔）
+  const [showTitle, setShowTitle] = useState(() => !hasSeenTitle())
   // シール帳（#105）。一覧は ref にも持つ——同じハンドラで2枚続けてもらっても、
   // state の更新を待たずに「もう持っているか」を判定できるように
   const [stickers, setStickers] = useState<readonly StickerId[]>(() => loadStickers())
@@ -645,6 +649,18 @@ export default function App() {
           />
         )}
       </main>
+      {showTitle && (
+        <TitleScreen
+          onStart={() => {
+            markTitleSeen()
+            setShowTitle(false)
+            // このタップが音の解錠を兼ねる（最初の音から確実に鳴る）
+            ensureAudio()
+              .then(() => playSparkle())
+              .catch(() => {})
+          }}
+        />
+      )}
     </div>
   )
 }
