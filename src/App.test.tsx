@@ -353,3 +353,85 @@ test('おてほんどおりに置いて聞くと「特別」のお祝い（#103�
   })
   expect(screen.getByTestId('celebration').getAttribute('data-level')).toBe('special')
 })
+
+test('おてほんモード中に本棚の曲を聞いても、おてほん完成とは数えない（#103）', async () => {
+  const twinkle = ['C4', 'C4', 'G4', 'G4', 'A4', 'A4', 'G4']
+  localStorage.setItem(
+    'doremi.songs.v1',
+    JSON.stringify([{ id: 't', createdAt: 1, clef: 'treble', pages: [twinkle] }]),
+  )
+  vi.useFakeTimers()
+  render(<App />)
+  openAdultMenu()
+  fireEvent.click(screen.getByLabelText('じゆう')) // → おてほん
+  fireEvent.click(screen.getByLabelText('ほんだな'))
+  fireEvent.click(screen.getByText('きく')) // 選ぶと同じハンドラでおてほんが切れる
+
+  await act(async () => {
+    h.resolveAudio?.()
+    await vi.advanceTimersByTimeAsync(600 * 9)
+  })
+  expect(screen.getByTestId('celebration').getAttribute('data-level')).toBe('small')
+})
+
+test('1ページの曲は「小」のお祝いで、1.4秒で消える（#103）', async () => {
+  localStorage.setItem(
+    'doremi.songs.v1',
+    JSON.stringify([{ id: 's', createdAt: 1, clef: 'treble', pages: [['C4']] }]),
+  )
+  vi.useFakeTimers()
+  render(<App />)
+  fireEvent.click(screen.getByLabelText('ほんだな'))
+  fireEvent.click(screen.getByText('きく'))
+  // 1音を聞き終えるまで進める（終わった瞬間にお祝いが始まる）
+  await act(async () => {
+    h.resolveAudio?.()
+    await vi.advanceTimersByTimeAsync(1)
+  })
+  let t = 1
+  while (!screen.queryByTestId('celebration') && t < 5000) {
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10)
+    })
+    t += 10
+  }
+  expect(screen.getByTestId('celebration').getAttribute('data-level')).toBe('small')
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1390)
+  })
+  expect(screen.queryByTestId('celebration')).not.toBeNull() // まだ出ている
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(20)
+  })
+  expect(screen.queryByTestId('celebration')).toBeNull()
+})
+
+test('お祝いの途中で次の音符を置くと、お祝いが終わって置ける（ふさぎすぎない・#103）', async () => {
+  const proto = SVGSVGElement.prototype as unknown as Record<string, unknown>
+  const identity = { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }
+  proto.getScreenCTM = () => ({ inverse: () => identity })
+  ;(SVGElement.prototype as unknown as Record<string, unknown>).setPointerCapture = () => {}
+
+  localStorage.setItem(
+    'doremi.songs.v1',
+    JSON.stringify([{ id: 's', createdAt: 1, clef: 'treble', pages: [['C4']] }]),
+  )
+  vi.useFakeTimers()
+  render(<App />)
+  fireEvent.click(screen.getByLabelText('ほんだな'))
+  fireEvent.click(screen.getByText('きく'))
+  await act(async () => {
+    h.resolveAudio?.()
+    await vi.advanceTimersByTimeAsync(1200)
+  })
+  expect(screen.getByTestId('celebration')).toBeTruthy()
+
+  const toolbox = screen.getByTestId('toolbox-normal')
+  fireEvent.pointerDown(toolbox, { pointerId: 1, clientX: 1000, clientY: 165 })
+  fireEvent.pointerMove(toolbox, { pointerId: 1, clientX: 400, clientY: 290 })
+  fireEvent.pointerUp(toolbox, { pointerId: 1, clientX: 400, clientY: 290 })
+
+  expect(screen.queryByTestId('celebration')).toBeNull()
+  expect(screen.getByLabelText('さいせい')).toBeTruthy() // ⏹ ではなく ▶ に戻っている
+  expect(document.querySelectorAll('[data-testid^="note-"]').length).toBe(2)
+})

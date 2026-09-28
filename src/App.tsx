@@ -117,8 +117,16 @@ export default function App() {
     setPages((prev) => prev.map((pg, i) => (i === currentPage ? fn(pg) : pg)))
   }
 
+  /** お祝いの途中で盤面を触ったら、お祝いを終えて次の操作に移る（ふさぎすぎない・#103） */
+  function endCelebration() {
+    if (!celebrating) return
+    clearTimers()
+    setCelebrating(false)
+  }
+
   function handlePlace(pitch: Pitch, long: boolean) {
-    if (busy) return
+    if (playing) return
+    endCelebration()
     const idx = notes.length
     // お手本と一致したら控えめなキラキラ音（不一致でも普通に置ける・×なし）
     if (targets?.[idx]?.note === pitch.note) playSparkle()
@@ -165,7 +173,8 @@ export default function App() {
   }
 
   function handleRemove(id: string) {
-    if (busy) return
+    if (playing) return
+    endCelebration()
     updateCurrentPage((pg) => removeById(pg, id))
   }
 
@@ -230,7 +239,11 @@ export default function App() {
     void playSequence(loaded)
   }
 
-  async function playSequence(pgs: PlacedNote[][]) {
+  /**
+   * @param guideTargets おてほんの完成を判定するお手本。呼び出し側が渡す——本棚から選んだときは
+   *   同じハンドラでおてほんを切るので、描画時点の `targets` を閉包で読むと古い値になる（#103）
+   */
+  async function playSequence(pgs: PlacedNote[][], guideTargets?: Pitch[]) {
     // 中断（世代繰り上げ）は常に成立させる。空スケジュールでの early return を
     // clearTimers より前に置くと、進行中の別の playSequence が生き残る。
     clearTimers()
@@ -241,10 +254,10 @@ export default function App() {
     const level = celebrationLevel({
       pages: pgs.filter((p) => p.length > 0).length,
       guideComplete:
-        targets !== undefined &&
+        guideTargets !== undefined &&
         isGuideComplete(
           (pgs[0] ?? []).map((n) => n.pitch.note),
-          targets.map((t) => t.note),
+          guideTargets.map((t) => t.note),
         ),
     })
     await ensureAudio()
@@ -285,7 +298,8 @@ export default function App() {
 
   function handlePlay() {
     if (busy || empty) return
-    void playSequence(pages)
+    // おてほんの完成は、いま表示しているページに関係なく1ページ目で判定する
+    void playSequence(pages, guide ? TWINKLE[clef].pitches : undefined)
   }
 
   /**

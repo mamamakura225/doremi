@@ -156,16 +156,20 @@ body {
 /* お祝い（#103）: 紙吹雪がひらひら落ちる（横のずれ・回転は --drift/--spin） */
 @keyframes confetti-fall {
   0% {
-    top: -8%;
-    transform: translateX(0) rotate(0deg);
+    transform: translate(0, 0) rotate(0deg);
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
   }
   100% {
-    top: 108%;
-    transform: translateX(var(--drift)) rotate(var(--spin));
+    transform: translate(var(--drift), var(--fall)) rotate(var(--spin));
+    opacity: 0;
   }
 }
+/* 落ちる時間・距離は Celebration が段階ごとに指定する（animation-duration・--fall） */
 .confetti {
-  animation: confetti-fall 1.7s cubic-bezier(0.3, 0.6, 0.5, 1) both;
+  animation: confetti-fall 1.3s cubic-bezier(0.3, 0.6, 0.5, 1) both;
 }
 
 /* お祝い: ぴぴが下からぴょんと飛び出してばんざい */

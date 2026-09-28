@@ -1,5 +1,5 @@
-import type { CSSProperties } from 'react'
-import type { CelebrationLevel } from '../lib/celebration'
+import { type CSSProperties, useLayoutEffect, useRef, useState } from 'react'
+import { CELEBRATION_MS, type CelebrationLevel } from '../lib/celebration'
 import Mascot from './Mascot'
 
 // 再生を最後まで聞いたときのお祝い（#103）。盤面の上に重ねる HTML の層で、触れない。
@@ -10,6 +10,9 @@ import Mascot from './Mascot'
 const CONFETTI_COLORS = ['#ffc9dc', '#dff3ea', '#ffe4cc', '#fff3b0', '#ffffff', '#d9ecff']
 const COUNT: Record<CelebrationLevel, number> = { small: 14, big: 28, special: 22 }
 
+/** 紙吹雪が出はじめるまでの最大の遅れ（s）。落ちる時間はお祝いの長さからこれを引いた分 */
+const MAX_DELAY = 0.5
+
 /** 0〜1 の決まった並び（描画のたびに位置が変わらないよう、乱数でなく添字から作る） */
 function spread(i: number, salt: number) {
   const x = Math.sin(i * 12.9898 + salt * 78.233) * 43758.5453
@@ -18,16 +21,25 @@ function spread(i: number, salt: number) {
 
 export default function Celebration({ level }: { level: CelebrationLevel }) {
   const n = COUNT[level]
+  // お祝いが消える前に落ちきるよう、落ちる時間を段階の長さに合わせる
+  const fall = CELEBRATION_MS[level] / 1000 - MAX_DELAY
+  // 落ちる距離は層の高さ。top を動かすと毎フレーム配置計算が走るので、高さを一度測って
+  // transform だけで落とす（合成だけで済む）
+  const ref = useRef<HTMLDivElement>(null)
+  const [height, setHeight] = useState(0)
+  useLayoutEffect(() => setHeight(ref.current?.clientHeight ?? 0), [])
   return (
     <div
+      ref={ref}
       className="pointer-events-none absolute inset-0 z-10 overflow-hidden"
+      style={{ '--fall': `${height + 40}px` } as CSSProperties}
       aria-hidden="true"
       data-testid="celebration"
       data-level={level}
     >
       {Array.from({ length: n }, (_, i) => {
         const left = 4 + spread(i, 1) * 92
-        const delay = spread(i, 2) * 0.5
+        const delay = spread(i, 2) * MAX_DELAY
         const drift = (spread(i, 3) - 0.5) * 120
         const spin = 180 + spread(i, 4) * 360
         const size = 10 + spread(i, 5) * 10
@@ -37,6 +49,7 @@ export default function Celebration({ level }: { level: CelebrationLevel }) {
           height: level === 'special' ? size : size * 0.55,
           background: level === 'special' ? 'transparent' : CONFETTI_COLORS[i % CONFETTI_COLORS.length],
           animationDelay: `${delay}s`,
+          animationDuration: `${fall}s`,
           '--drift': `${drift}px`,
           '--spin': `${spin}deg`,
         } as CSSProperties

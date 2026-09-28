@@ -153,7 +153,9 @@ export default function Board({
   // 縦に余裕のある端末（タブレット横など）でだけ鍵盤を併記する
   const showKeyboard = useFitsKeyboard(svgRef)
   const playing = playingIndex !== null
-  const busy = playing || celebrating
+  // お祝い中は盤面を止めない（次の音符を持ってきたら、そこでお祝いが終わる・#103）。
+  // 止めるのは再生中だけ
+  const busy = playing
   const canNormal = canAddNote(notes, false) && !busy
   const canLong = canAddNote(notes, true) && !busy
   // 配置済み音符の編集（捨てる）は満杯でも可。再生・演出中のみ不可。

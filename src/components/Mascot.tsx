@@ -1,4 +1,4 @@
-import type { SVGProps } from 'react'
+import { type SVGProps, useId } from 'react'
 import { OUTLINE_COLOR } from '../lib/colors'
 
 // マスコット「ぴぴ」（ひよこ）。art/mascot.svg を移植したもの。規則は docs/art-direction.md。
@@ -22,10 +22,11 @@ interface Props extends Omit<SVGProps<SVGSVGElement>, 'children'> {
 
 /**
  * ぴぴを描く。単独の <svg>（HTML 側）でも、盤面 SVG の中に入れ子の <svg>（x/y/width/height）
- * でも使える。グラデーションの id は表情ごとに一意にする（同じ画面に複数出ても衝突しない）。
+ * でも使える。グラデーションの id は描画ごとに一意にする（同じ表情が同じ画面に複数出ても、
+ * 先頭の1体が非表示になったとき残りの塗りが消えないように）。
  */
 export default function Mascot({ mood = 'normal', ...rest }: Props) {
-  const grad = `pipi-body-${mood}`
+  const grad = `pipi-body-${useId().replace(/:/g, '')}`
   const happy = mood === 'happy' || mood === 'banzai'
   return (
     <svg viewBox="0 0 200 200" aria-hidden="true" focusable="false" {...rest}>
