@@ -12,11 +12,21 @@ import {
   SaveIcon,
   ShelfIcon,
   SingIcon,
+  StarIcon,
   StopIcon,
   UndoIcon,
 } from './components/Icons'
 import Board from './components/Board'
 import Celebration from './components/Celebration'
+import { StickerBook, StickerToast } from './components/StickerBook'
+import {
+  STICKERS,
+  type StickerId,
+  award,
+  hasAllColors,
+  loadStickers,
+  saveStickers,
+} from './lib/stickers'
 import Bookshelf from './components/Bookshelf'
 import RotateOverlay from './components/RotateOverlay'
 import { usePortrait } from './hooks/usePortrait'
@@ -40,6 +50,7 @@ import {
   playMelodyNote,
   playFanfare,
   playNote,
+  playChime,
   playPop,
   playSparkle,
   setClef,
@@ -59,6 +70,9 @@ const VOICE_ICON: Record<Voice, (p: { width?: string; height?: string }) => Reac
 const KID_BTN =
   'grid shrink-0 place-items-center rounded-full shadow-md transition-transform active:scale-90 motion-reduce:transition-none disabled:opacity-40'
 
+/** シールのお知らせを出しておく時間（ms） */
+const STICKER_TOAST_MS = 2000
+
 interface Playing {
   page: number
   index: number
@@ -77,6 +91,13 @@ export default function App() {
   const [voice, setVoice] = useState<Voice>('piano')
   const [clef, setClefMode] = useState<Clef>('treble')
   const [adultOpen, setAdultOpen] = useState(false)
+  // シール帳（#105）。一覧は ref にも持つ——同じハンドラで2枚続けてもらっても、
+  // state の更新を待たずに「もう持っているか」を判定できるように
+  const [stickers, setStickers] = useState<readonly StickerId[]>(() => loadStickers())
+  const stickersRef = useRef(stickers)
+  const [stickerQueue, setStickerQueue] = useState<StickerId[]>([])
+  const [bookOpen, setBookOpen] = useState(false)
+  const celebratingRef = useRef(false)
   const timers = useRef<number[]>([])
   // 再生の世代。clearTimers のたびに繰り上がる。await をまたいだ継続は
   // 自分の世代が最新かを確認してからスケジュールする（タイマー削除だけでは
@@ -117,6 +138,37 @@ export default function App() {
     setPages((prev) => prev.map((pg, i) => (i === currentPage ? fn(pg) : pg)))
   }
 
+  /**
+   * シールを1枚あげる（#105）。もう持っていれば何もしない。保存に失敗しても、このセッション中は
+   * 手元の一覧で見える（#57 と同じ方針）。もらったら、お知らせとキラキラ音
+   */
+  function giveSticker(id: StickerId) {
+    const next = award(stickersRef.current, id)
+    if (next === stickersRef.current) return
+    stickersRef.current = next
+    setStickers(next)
+    saveStickers(next)
+    setStickerQueue((q) => [...q, id])
+  }
+
+  // お知らせは1枚ずつ、順番に出す。音もお知らせ1枚ごとに鳴らす（何枚か同時にもらっても
+  // 重ならない）。お祝い中はファンファーレと重なるので鳴らさない。キラキラ音（おてほんの一致）
+  // とは別の音にする——意味が混ざらないように
+  celebratingRef.current = celebrating
+  const shownSticker = stickerQueue[0]
+  useEffect(() => {
+    if (!shownSticker) return
+    if (!celebratingRef.current) {
+      try {
+        playChime()
+      } catch {
+        // 音は飾り（#116）
+      }
+    }
+    const t = window.setTimeout(() => setStickerQueue((q) => q.slice(1)), STICKER_TOAST_MS)
+    return () => window.clearTimeout(t)
+  }, [shownSticker])
+
   /** お祝いの途中で盤面を触ったら、お祝いを終えて次の操作に移る（ふさぎすぎない・#103） */
   function endCelebration() {
     if (!celebrating) return
@@ -131,6 +183,9 @@ export default function App() {
     // お手本と一致したら控えめなキラキラ音（不一致でも普通に置ける・×なし）
     if (targets?.[idx]?.note === pitch.note) playSparkle()
     updateCurrentPage((pg) => addNote(pg, pitch, long))
+    giveSticker('first-note')
+    if (long) giveSticker('long-note')
+    if (clef === 'bass') giveSticker('bass')
   }
 
   function resetBoard() {
@@ -214,6 +269,7 @@ export default function App() {
     const songPages = toNoteNames(pages)
     if (songPages.length === 0) return
     setSavedSongs(saveSong(songPages, clef))
+    giveSticker('save')
     setJustSaved(true)
     window.clearTimeout(saveToast.current)
     saveToast.current = window.setTimeout(() => setJustSaved(false), 1200)
@@ -231,6 +287,7 @@ export default function App() {
     )
     const loaded = pgs.length > 0 ? pgs : [[]]
     setShelfOpen(false)
+    giveSticker('shelf-listen') // 選んだ瞬間（そのまま再生される）
     setGuide(false)
     setClefMode(song.clef)
     setClef(song.clef)
@@ -281,6 +338,10 @@ export default function App() {
       window.setTimeout(() => {
         setPlaying(null)
         setCelebration(level)
+        giveSticker('play-end')
+        if (pgs.filter((p) => p.length > 0).length > 1) giveSticker('long-song')
+        if (level === 'special') giveSticker('guide-complete')
+        if (hasAllColors(pgs.flat().map((n) => n.pitch.solfa))) giveSticker('all-colors')
         setCelebrating(true)
         try {
           playFanfare(level)
@@ -297,6 +358,7 @@ export default function App() {
   const empty = toNoteNames(pages).length === 0
 
   function handlePlay() {
+    setBookOpen(false)
     if (busy || empty) return
     // おてほんの完成は、いま表示しているページに関係なく1ページ目で判定する
     void playSequence(pages, guide ? TWINKLE[clef].pitches : undefined)
@@ -404,12 +466,27 @@ export default function App() {
         </button>
         <button
           type="button"
-          onClick={withPop(() => setShelfOpen(true))}
+          onClick={withPop(() => {
+            setBookOpen(false)
+            setShelfOpen(true)
+          })}
           disabled={busy}
           aria-label="ほんだな"
           className={`${KID_BTN} ${size} bg-white`}
         >
           <ShelfIcon width="62%" height="62%" />
+        </button>
+        <button
+          type="button"
+          onClick={withPop(() => {
+            setShelfOpen(false)
+            setBookOpen(true)
+          })}
+          disabled={busy}
+          aria-label="シールちょう"
+          className={`${KID_BTN} ${size} bg-white`}
+        >
+          <StarIcon width="62%" height="62%" />
         </button>
         <AdultMenuButton onOpen={() => setAdultOpen(true)} sizeClass={`${size} text-2xl`} />
       </header>
@@ -430,6 +507,7 @@ export default function App() {
           notes={notes}
           onPlace={handlePlace}
           onRemove={handleRemove}
+          onTapNote={() => giveSticker('tap-note')}
           playingIndex={playing?.page === currentPage ? playing.index : null}
           playingPage={playing?.page}
           celebrating={celebrating}
@@ -478,6 +556,17 @@ export default function App() {
             )}
           </div>
         )}
+        {bookOpen && <StickerBook earned={stickers} onClose={() => setBookOpen(false)} />}
+        {/* 読み上げの入れ物は常に置き、中身だけ出し入れする（live region は先に DOM に無いと読まれにくい） */}
+        <div role="status" className="contents">
+          {shownSticker && (
+            <StickerToast
+              key={shownSticker}
+              id={shownSticker}
+              name={STICKERS.find((s) => s.id === shownSticker)?.name ?? ''}
+            />
+          )}
+        </div>
         {shelfOpen && (
           <Bookshelf
             songs={savedSongs}

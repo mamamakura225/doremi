@@ -25,6 +25,7 @@ vi.mock('./audio/synth', () => ({
   ),
   playMelodyNote: vi.fn(),
   playFanfare: vi.fn(),
+  playChime: vi.fn(),
   playNote: vi.fn(),
   playPop: vi.fn(),
   playSparkle: vi.fn(),
@@ -44,6 +45,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup()
   vi.useRealTimers()
+  vi.restoreAllMocks() // localStorage を塞ぐ spyOn を後のテストに漏らさない
 })
 
 /** ⚙ を長押ししておとなメニューを開く（フェイクタイマー前提） */
@@ -297,6 +299,10 @@ test('画面に絵文字を出さない（OS ごとに絵柄が変わる・#101�
   fireEvent.click(screen.getByLabelText('ほんだな'))
   expect(screen.getByText('きく')).toBeTruthy()
   expect(document.body.textContent ?? '').not.toMatch(emoji)
+  // シール帳
+  fireEvent.click(screen.getByLabelText('シールちょう'))
+  expect(screen.getByRole('dialog', { name: 'シールちょう' })).toBeTruthy()
+  expect(document.body.textContent ?? '').not.toMatch(emoji)
   cleanup()
   // 回転の案内
   render(<RotateOverlay />)
@@ -434,4 +440,101 @@ test('お祝いの途中で次の音符を置くと、お祝いが終わって�
   expect(screen.queryByTestId('celebration')).toBeNull()
   expect(screen.getByLabelText('さいせい')).toBeTruthy() // ⏹ ではなく ▶ に戻っている
   expect(document.querySelectorAll('[data-testid^="note-"]').length).toBe(2)
+})
+
+/** jsdom には SVG の座標変換が無いので、client 座標＝viewBox 座標にする（Board.test と同じ） */
+function stubSvgGeometry() {
+  const proto = SVGSVGElement.prototype as unknown as Record<string, unknown>
+  const identity = { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }
+  proto.getScreenCTM = () => ({ inverse: () => identity })
+  ;(SVGElement.prototype as unknown as Record<string, unknown>).setPointerCapture = () => {}
+}
+
+/** お道具箱から (400, y) へ音符を1つ置く */
+function placeNote(y: number) {
+  const toolbox = screen.getByTestId('toolbox-normal')
+  fireEvent.pointerDown(toolbox, { pointerId: 1, clientX: 1000, clientY: 165 })
+  fireEvent.pointerMove(toolbox, { pointerId: 1, clientX: 400, clientY: y })
+  fireEvent.pointerUp(toolbox, { pointerId: 1, clientX: 400, clientY: y })
+}
+
+test('はじめて音符を置くとシールがもらえ、シール帳に入る（#105）', () => {
+  stubSvgGeometry()
+  vi.useFakeTimers()
+  render(<App />)
+  placeNote(390)
+  const toast = screen.getByRole('status')
+  expect(toast.textContent).toContain('はじめての おんぷ')
+  expect(JSON.parse(localStorage.getItem('doremi.stickers.v1') ?? '[]')).toEqual(['first-note'])
+
+  // 2つ目では同じシールは出ない
+  act(() => {
+    vi.advanceTimersByTime(3000)
+  })
+  placeNote(290)
+  expect(screen.getByRole('status').textContent).toBe('')
+
+  fireEvent.click(screen.getByLabelText('シールちょう'))
+  const book = screen.getByRole('dialog', { name: 'シールちょう' })
+  expect(book.textContent).toContain('1 / 10')
+})
+
+test('localStorage が使えなくても、シールで白画面にならない（#105・#57 と同じ方針）', () => {
+  stubSvgGeometry()
+  vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+    throw new DOMException('blocked', 'SecurityError')
+  })
+  vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    throw new DOMException('blocked', 'SecurityError')
+  })
+  vi.useFakeTimers()
+  render(<App />)
+  placeNote(390)
+  expect(screen.getByRole('status').textContent).toContain('はじめての おんぷ') // このセッション中はもらえる
+})
+
+test('一度に何枚かもらったら、お知らせは1枚ずつ順番に出る（#105）', () => {
+  stubSvgGeometry()
+  vi.useFakeTimers()
+  render(<App />)
+  openAdultMenu()
+  fireEvent.click(screen.getByLabelText('おとの たかさ')) // くま（ヘ音）
+  placeNote(290) // はじめての おんぷ ＋ くまさんの ひくい おと
+  const first = screen.getByRole('status')
+  expect(first.textContent).toContain('はじめての おんぷ')
+  act(() => {
+    vi.advanceTimersByTime(2300)
+  })
+  expect(screen.getByRole('status').textContent).toContain('くまさんの ひくい おと')
+  act(() => {
+    vi.advanceTimersByTime(2300)
+  })
+  expect(screen.getByRole('status').textContent).toBe('')
+  // 同じハンドラで続けてもらっても、2枚とも保存される（state を待たずに ref で判定する理由）
+  expect(JSON.parse(localStorage.getItem('doremi.stickers.v1') ?? '[]')).toEqual(['first-note', 'bass'])
+})
+
+test('最後まで聞くと「さいごまで きいた」、途中で止めたらもらえない（#105）', async () => {
+  localStorage.setItem('doremi.songs.v1', SONG_2P)
+  vi.useFakeTimers()
+  render(<App />)
+  fireEvent.click(screen.getByLabelText('ほんだな'))
+  fireEvent.click(screen.getByText('きく'))
+  await act(async () => {
+    h.resolveAudio?.()
+    await vi.advanceTimersByTimeAsync(700)
+  })
+  fireEvent.click(screen.getByLabelText('とめる'))
+  await act(async () => {
+    await vi.runAllTimersAsync()
+  })
+  const stored = () => JSON.parse(localStorage.getItem('doremi.stickers.v1') ?? '[]') as string[]
+  expect(stored()).not.toContain('play-end')
+
+  fireEvent.click(screen.getByLabelText('さいせい'))
+  await act(async () => {
+    h.resolveAudio?.()
+    await vi.advanceTimersByTimeAsync(600 * 5)
+  })
+  expect(stored()).toEqual(expect.arrayContaining(['shelf-listen', 'play-end', 'long-song']))
 })

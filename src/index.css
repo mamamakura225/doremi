@@ -231,6 +231,25 @@ body {
   animation: pipi-sway 0.6s ease-in-out 0.3s infinite;
 }
 
+/* シールをもらったお知らせが、ぽんっと出る（#105） */
+@keyframes sticker-pop {
+  0% {
+    transform: scale(0.4) rotate(-12deg);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.08) rotate(3deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+.sticker-pop {
+  animation: sticker-pop 0.45s ease-out both;
+}
+
 /* ページ背景の雲がゆっくり流れる（#99） */
 @keyframes cloud-drift {
   0% {
@@ -273,6 +292,7 @@ body {
   .note-wiggle,
   .pipi-land,
   .pipi-sway,
+  .sticker-pop,
   .celebrate-pipi,
   .cloud-drift {
     animation: none;
