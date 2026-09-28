@@ -92,3 +92,21 @@ body {
 .match-pop {
   animation: match-pop 0.45s ease;
 }
+
+/*
+ * 動きを減らす設定の端末では、動きだけ止めて見え方は残す（#63）。
+ * アニメーションを持つクラスを足したら、必ずここにも足す（src/motion.test.ts が検査する）。
+ */
+@media (prefers-reduced-motion: reduce) {
+  .note-bounce,
+  .note-hint,
+  .finger-poke,
+  .match-pop {
+    animation: none;
+  }
+  /* 「次に置く位置」という情報なので、止めてもキーフレーム外の値に戻さず見える濃さを保つ */
+  .target-glow {
+    animation: none;
+    opacity: 0.5;
+  }
+}

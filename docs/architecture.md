@@ -157,6 +157,15 @@ src/App.tsx  状態と操作の結線
 
 白鍵はその音部記号で置ける10音そのもので、符頭と同じ `SOLFA_COLOR` で塗る（譜面の音と鍵が色で結びつく）。黒鍵は本物の並びに見せるための飾りで、当たり判定を持たない（`hasSharpAbove()` が「ミ→ファ」「シ→ド」だけ黒鍵無しと判定する）。**鍵盤から音符を置けるようにはしない**——置く操作をお道具箱の1通りに保つ。
 
+### 動きは `prefers-reduced-motion` で必ず止める
+対象年齢には前庭系が未成熟な子・感覚過敏の子が含まれ、起動直後のおてほんモードでは無限アニメ（`note-hint`・`finger-poke`・`target-glow`）が3本同時に走る。保護者が OS で「視差効果を減らす」を有効にしたら効かなければならない（[#63](https://github.com/mamamakura225/doremi/issues/63)）。
+
+- `src/index.css` 末尾の `@media (prefers-reduced-motion: reduce)` で `animation: none` にする。**動きだけ止めて、見え方（情報）は残す**。`target-glow` は「次に置く位置」を示す同色の円で、opacity 属性を持たない。止めるとキーフレーム外の値（opacity 1＝不透明）に戻り、上に重なる薄いお手本の符頭を塗りつぶす。静的な `opacity: 0.5` を明示する
+- Tailwind のアニメは `motion-safe:` 修飾を付ける（`RotateOverlay` の `animate-pulse`）
+- アニメーションは `index.css` に**単一クラスのセレクタ**で書き、reduced-motion ブロックは**ファイルの最後**に置く。複合セレクタ（`svg .a`）は詳細度で、ブロックより後ろの宣言は後勝ちで、reduce 側の `animation: none` が負ける
+- **検査は機械化する**: `src/motion.test.ts` が上の3つ（停止漏れ・単一クラス・ブロックより後ろに宣言が無い）と、TSX に `motion-safe:` の無い `animate-*` が無いことを検査する。リッチ化（#113）でアニメを足し続けるので、目視ゲートでは書き忘れが必ず出る。4種の偽緑（後勝ち・複合セレクタ・`-webkit-animation`・素の `animate-*`）を1つずつ仕込んで赤になることを実測済み。`?raw` import は Vitest の CSS 処理で空文字になるため `fs` で直接読む
+- 不採用: jsdom で `matchMedia` を差し替えて描画を見る案。jsdom は CSS のアニメーションを計算しないので、クラスが付くことまでしか確かめられない
+
 ## オーディオ
 
 ### iOS の AudioContext unlock
