@@ -9,7 +9,7 @@ import { useShortScreen } from './hooks/useShortScreen'
 import { type PlacedNote, addNote, noteWidth, removeById, removeLast } from './lib/notes'
 import { canAddPage, collapseEmptyPages, parseNoteName, toNoteNames } from './lib/pages'
 import { type Clef, type Pitch, pitchByNote } from './lib/pitch'
-import { CELEBRATE_MS, noteDuration, playbackSchedule } from './lib/playback'
+import { CELEBRATE_MS, STEP_MS, noteDuration, playbackSchedule } from './lib/playback'
 import { TWINKLE } from './lib/songs'
 import { type SavedSong, loadSongs, saveSong } from './lib/storage'
 import {
@@ -55,9 +55,11 @@ export default function App() {
   // 巻き込まれてラベルが固着するので、専用に持って clearTimers の管理外に置く（#60-1）。
   const saveToast = useRef(0)
   const portrait = usePortrait()
-  // 縦が短い画面（横向きスマホ）ではヘッダーを絵文字だけに畳む。
-  // 文字を並べるとボタンが潰れてラベルが縦に折り返し、ヘッダーが画面の6割を食う。
-  // 丸ボタンの大きさ。横向きスマホでも 44px（タップ的の下限）は割らない。
+  // 縦が短い画面（横向きスマホ）では丸ボタンを小さくして盤面に高さを譲る。
+  // それでも 44px（タップ的の下限）は割らない。
+  // 再生を始めた時刻。▶ を連打すると2回目が同じ場所の ⏹ に当たるので、
+  // 始めてすぐの ⏹ は受け付けない（handleStop・#102）。
+  const playStartedAt = useRef(0)
   const compact = useShortScreen()
   const size = compact ? 'h-11 w-11 text-2xl' : 'h-16 w-16 text-3xl'
 
@@ -100,8 +102,8 @@ export default function App() {
     setCurrentPage(0)
   }
 
-  // ↺ は再生中も押せる唯一のボタン。await 窓の中の割り込みも、
-  // 曲を止める非常停止も、どちらもここが受ける（他ボタンとの非対称は意図）。
+  // ↺（おとなメニューの「ぜんぶけす」）は再生中も押せる。await 窓の中の割り込みも
+  // ここが受ける（⏹ は busy になってから出るので、窓の中では押せない）。
   function handleClear() {
     resetBoard()
   }
@@ -208,6 +210,7 @@ export default function App() {
     // await 中にクリア・音部切替・曲選択などの中断が入っていたら何も積まない。
     if (my !== gen.current) return
     const { ticks, endAt } = playbackSchedule(pageSteps)
+    playStartedAt.current = Date.now()
     for (const tick of ticks) {
       timers.current.push(
         window.setTimeout(() => {
@@ -238,17 +241,29 @@ export default function App() {
     void playSequence(pages)
   }
 
-  /** 再生・お祝いを止める。盤面（曲）はそのまま（#102） */
+  /**
+   * 再生・お祝いを止める。盤面（曲）はそのまま（#102）。
+   * 始めて STEP_MS 以内は受け付けない: ▶ と ⏹ は同じ場所なので、▶ の連打の2回目で
+   * 1音で止まってしまう（最初の tick は at=0 なので、押した直後にはもう ⏹ になっている）。
+   */
   function handleStop() {
+    if (Date.now() - playStartedAt.current < STEP_MS) return
     clearTimers()
     setPlaying(null)
     setCelebrating(false)
   }
 
-  /** 押下音を添える（ボタンが働いた手応え・#102） */
+  /**
+   * 押下音を添える（ボタンが働いた手応え・#102）。操作が先・音は後で、音が失敗しても
+   * 操作は止めない（モノフォニックの synth は同じ時刻に2回鳴らすと例外を投げる・#116）。
+   */
   const withPop = (fn: () => void) => () => {
-    playPop()
     fn()
+    try {
+      playPop()
+    } catch {
+      // 押下音は飾り。鳴らなくてよい
+    }
   }
 
   const currentVoice = VOICES.find((v) => v.id === voice) ?? VOICES[0]
@@ -320,11 +335,10 @@ export default function App() {
           type="button"
           onClick={withPop(handleSave)}
           disabled={busy || empty}
-          aria-label="ほぞん"
+          aria-label={justSaved ? 'ほぞんした' : 'ほぞん'}
           className={`${KID_BTN} ${size} bg-white text-[#6b6375]`}
         >
           {justSaved ? '✓' : '💾'}
-          {justSaved && <span className="sr-only">ほぞんした</span>}
         </button>
         <button
           type="button"

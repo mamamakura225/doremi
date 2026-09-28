@@ -1,7 +1,7 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import App from './App'
-import { ensureAudio, playMelodyNote, playNote } from './audio/synth'
+import { ensureAudio, playMelodyNote, playNote, playPop } from './audio/synth'
 
 const SONG_2P = JSON.stringify([
   { id: 'x', createdAt: 1, clef: 'treble', pages: [['C4', 'D4'], ['E4']] },
@@ -124,7 +124,7 @@ test('ほぞん直後に別操作しても「✓ほぞんした」が固着し�
   fireEvent.click(screen.getByText('▶ きく'))
 
   fireEvent.click(screen.getByLabelText('ほぞん'))
-  expect(screen.getByLabelText('ほぞん').textContent).toContain('ほぞんした')
+  expect(screen.getByLabelText('ほぞんした').textContent).toContain('✓')
 
   // 1.2秒以内に ▶ さいせい（clearTimers を呼ぶ）
   fireEvent.click(screen.getByLabelText('さいせい'))
@@ -136,7 +136,7 @@ test('ほぞん直後に別操作しても「✓ほぞんした」が固着し�
   // 専用タイマーなので clearTimers に巻き込まれず、ラベルが戻っている
   // （#102 でヘッダーはアイコンだけになった。戻ったかは 💾 に戻ったかで見る）
   expect(screen.getByLabelText('ほぞん').textContent).toContain('💾')
-  expect(screen.getByLabelText('ほぞん').textContent).not.toContain('した')
+  expect(screen.queryByLabelText('ほぞんした')).toBeNull()
 })
 
 test('音部切替の試聴は「地の音色」で鳴らす（再生音色ではない・#60-3）', async () => {
@@ -212,7 +212,7 @@ test('おとなメニューは短いタップでは開かず、1.5秒の長押�
   render(<App />)
   const gear = screen.getByLabelText('おとなの メニュー（ながおし）')
 
-  fireEvent.click(gear)
+  fireEvent.click(gear, { detail: 1 }) // 指のタップ（click の detail は 1 以上）
   fireEvent.pointerDown(gear, { pointerId: 1 })
   act(() => {
     vi.advanceTimersByTime(1000)
@@ -230,6 +230,13 @@ test('おとなメニューは短いタップでは開かず、1.5秒の長押�
   expect(screen.getByRole('dialog', { name: 'おとなの メニュー' })).toBeTruthy()
   fireEvent.click(screen.getByLabelText('とじる'))
   expect(screen.queryByRole('dialog', { name: 'おとなの メニュー' })).toBeNull()
+
+  // キーボード・読み上げの操作（detail=0 の click）ではすぐ開き、Escape で閉じる
+  fireEvent.click(gear, { detail: 0 })
+  const dialog = screen.getByRole('dialog', { name: 'おとなの メニュー' })
+  expect(document.activeElement).toBe(screen.getByLabelText('とじる'))
+  fireEvent.keyDown(dialog, { key: 'Escape' })
+  expect(screen.queryByRole('dialog', { name: 'おとなの メニュー' })).toBeNull()
 })
 
 test('再生中は ▶ が ⏹ とめる になり、曲を消さずに止める（#102）', async () => {
@@ -244,6 +251,14 @@ test('再生中は ▶ が ⏹ とめる になり、曲を消さずに止める
   })
   vi.mocked(playMelodyNote).mockClear()
 
+  // ▶ の連打（押した直後の2回目）では止めない
+  fireEvent.click(screen.getByLabelText('とめる'))
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(700)
+  })
+  expect(playMelodyNote).toHaveBeenCalled()
+  vi.mocked(playMelodyNote).mockClear()
+
   fireEvent.click(screen.getByLabelText('とめる'))
   await act(async () => {
     await vi.runAllTimersAsync()
@@ -252,4 +267,13 @@ test('再生中は ▶ が ⏹ とめる になり、曲を消さずに止める
   expect(playMelodyNote).not.toHaveBeenCalled() // 残りの tick は捨てられた
   expect(screen.getByLabelText('さいせい')).toBeTruthy()
   expect(screen.getByLabelText(/ぜんぶで2ページ/)).toBeTruthy() // 曲は残っている
+})
+
+test('押下音が失敗しても、ボタンの操作は実行される（#102・#116）', () => {
+  render(<App />)
+  vi.mocked(playPop).mockImplementationOnce(() => {
+    throw new Error('Start time must be strictly greater than previous start time')
+  })
+  expect(() => fireEvent.click(screen.getByLabelText('ほんだな'))).not.toThrow()
+  expect(screen.getByText(/ほんだな/, { selector: 'h2' })).toBeTruthy()
 })

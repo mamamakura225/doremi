@@ -13,7 +13,8 @@ interface ButtonProps {
 /**
  * おとなメニューを開く ⚙（#102）。HOLD_MS 押し続けると開く。途中で離す・指が外れると取り消し。
  * 押している間はまわりのリングが満ちていく（reduced-motion ではリングは出ない）。
- * キーボード（Enter/Space）ではすぐ開く——キーボードを使うのは大人なので。
+ * キーボード（Enter/Space）や読み上げの操作（どちらも detail=0 の click になる）ではすぐ開く——
+ * それを使うのは大人なので。指やマウスのクリック（detail≥1）では開かない。
  */
 export function AdultMenuButton({ onOpen, sizeClass }: ButtonProps) {
   const [holding, setHolding] = useState(false)
@@ -42,11 +43,8 @@ export function AdultMenuButton({ onOpen, sizeClass }: ButtonProps) {
       onPointerLeave={cancel}
       onPointerCancel={cancel}
       onContextMenu={(e) => e.preventDefault()}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          onOpen()
-        }
+      onClick={(e) => {
+        if (e.detail === 0) onOpen()
       }}
       className={`relative ml-auto grid shrink-0 place-items-center rounded-full bg-white/70 text-[#9a8f80] shadow ${sizeClass}`}
     >
@@ -89,8 +87,16 @@ export default function AdultMenu({
     fn()
     onClose()
   }
+  // 開いたら「とじる」にフォーカスを移し、Escape で閉じる（背景の inert 化は #64）
+  const closeRef = useRef<HTMLButtonElement>(null)
+  useEffect(() => closeRef.current?.focus(), [])
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-[#3d3530]/30 p-4">
+    <div
+      className="fixed inset-0 z-40 flex items-center justify-center bg-[#3d3530]/30 p-4"
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') onClose()
+      }}
+    >
       <div
         role="dialog"
         aria-modal="true"
@@ -100,6 +106,7 @@ export default function AdultMenu({
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold text-[#6b6375]">おとなの メニュー</h2>
           <button
+            ref={closeRef}
             type="button"
             onClick={onClose}
             aria-label="とじる"
