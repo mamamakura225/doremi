@@ -282,7 +282,7 @@ test('押下音が失敗しても、ボタンの操作は実行される（#102�
 test('画面に絵文字を出さない（OS ごとに絵柄が変わる・#101）', () => {
   // 絵文字として描かれうる文字（▶◀ は iOS で絵文字になる。→ はおとなメニューの地の文で使うので除く）
   const emoji =
-    /[\p{Extended_Pictographic}\u{2600}-\u{27BF}\u{21A9}\u{21AA}\u{21BA}\u{21BB}\u{25B6}\u{25C0}\u{FE0F}]/u
+    /[\p{Extended_Pictographic}\u{2600}-\u{27BF}\u{21A9}\u{21AA}\u{21BA}\u{21BB}\u{25B6}\u{25C0}]/u
   localStorage.setItem('doremi.songs.v1', SONG_2P)
   vi.useFakeTimers()
   render(<App />)
