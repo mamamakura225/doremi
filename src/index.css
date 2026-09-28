@@ -153,6 +153,41 @@ body {
   animation: note-wiggle 0.45s ease-out;
 }
 
+/* お祝い（#103）: 紙吹雪がひらひら落ちる（横のずれ・回転は --drift/--spin） */
+@keyframes confetti-fall {
+  0% {
+    top: -8%;
+    transform: translateX(0) rotate(0deg);
+  }
+  100% {
+    top: 108%;
+    transform: translateX(var(--drift)) rotate(var(--spin));
+  }
+}
+.confetti {
+  animation: confetti-fall 1.7s cubic-bezier(0.3, 0.6, 0.5, 1) both;
+}
+
+/* お祝い: ぴぴが下からぴょんと飛び出してばんざい */
+@keyframes pipi-pop {
+  0% {
+    transform: translateY(120%) scale(0.8);
+  }
+  55% {
+    transform: translateY(-12%) scale(1.05);
+  }
+  75% {
+    transform: translateY(0) scale(0.97);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+.celebrate-pipi {
+  transform-origin: bottom center;
+  animation: pipi-pop 0.9s ease-out both;
+}
+
 /* ページ背景の雲がゆっくり流れる（#99） */
 @keyframes cloud-drift {
   0% {
@@ -193,8 +228,14 @@ body {
   .match-pop,
   .note-land,
   .note-wiggle,
+  .celebrate-pipi,
   .cloud-drift {
     animation: none;
+  }
+  /* 紙吹雪は飾りなので、止めるなら出さない（止めた姿で画面の上端に並ぶのを避ける） */
+  .confetti {
+    animation: none;
+    display: none;
   }
   /* 止めると満ちたリングのまま残って「もう開く」と誤解させるので出さない（長押し自体は効く） */
   .hold-ring {

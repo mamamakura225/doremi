@@ -16,6 +16,7 @@ import {
   UndoIcon,
 } from './components/Icons'
 import Board from './components/Board'
+import Celebration from './components/Celebration'
 import Bookshelf from './components/Bookshelf'
 import RotateOverlay from './components/RotateOverlay'
 import { usePortrait } from './hooks/usePortrait'
@@ -23,7 +24,13 @@ import { useShortScreen } from './hooks/useShortScreen'
 import { type PlacedNote, addNote, noteWidth, removeById, removeLast } from './lib/notes'
 import { canAddPage, collapseEmptyPages, parseNoteName, toNoteNames } from './lib/pages'
 import { type Clef, type Pitch, pitchByNote } from './lib/pitch'
-import { CELEBRATE_MS, STEP_MS, noteDuration, playbackSchedule } from './lib/playback'
+import { STEP_MS, noteDuration, playbackSchedule } from './lib/playback'
+import {
+  CELEBRATION_MS,
+  type CelebrationLevel,
+  celebrationLevel,
+  isGuideComplete,
+} from './lib/celebration'
 import { TWINKLE } from './lib/songs'
 import { type SavedSong, loadSongs, saveSong } from './lib/storage'
 import {
@@ -31,6 +38,7 @@ import {
   VOICES,
   ensureAudio,
   playMelodyNote,
+  playFanfare,
   playNote,
   playPop,
   playSparkle,
@@ -61,6 +69,7 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState(0)
   const [playing, setPlaying] = useState<Playing | null>(null)
   const [celebrating, setCelebrating] = useState(false)
+  const [celebration, setCelebration] = useState<CelebrationLevel>('small')
   const [guide, setGuide] = useState(false)
   const [savedSongs, setSavedSongs] = useState<SavedSong[]>(() => loadSongs())
   const [shelfOpen, setShelfOpen] = useState(false)
@@ -228,6 +237,16 @@ export default function App() {
     const my = gen.current
     const pageSteps = pgs.map((p) => p.map(noteWidth))
     if (pageSteps.every((s) => s.length === 0)) return
+    // お祝いの強さは再生を始めた時点の曲とモードで決める（#103）
+    const level = celebrationLevel({
+      pages: pgs.filter((p) => p.length > 0).length,
+      guideComplete:
+        targets !== undefined &&
+        isGuideComplete(
+          (pgs[0] ?? []).map((n) => n.pitch.note),
+          targets.map((t) => t.note),
+        ),
+    })
     await ensureAudio()
     // await 中にクリア・音部切替・曲選択などの中断が入っていたら何も積まない。
     if (my !== gen.current) return
@@ -248,9 +267,15 @@ export default function App() {
     timers.current.push(
       window.setTimeout(() => {
         setPlaying(null)
+        setCelebration(level)
         setCelebrating(true)
+        try {
+          playFanfare(level)
+        } catch {
+          // ファンファーレは飾り。鳴らなくてもお祝いの絵は出す（#116）
+        }
         timers.current.push(
-          window.setTimeout(() => setCelebrating(false), CELEBRATE_MS),
+          window.setTimeout(() => setCelebrating(false), CELEBRATION_MS[level]),
         )
       }, endAt),
     )
@@ -396,6 +421,7 @@ export default function App() {
           clef={clef}
           targets={targets}
         />
+        {celebrating && <Celebration level={celebration} />}
         {!shelfOpen && (
           <div className="pointer-events-none absolute inset-x-0 bottom-3 flex items-center justify-between px-6">
             {showPrev ? (
