@@ -34,7 +34,7 @@ npm run build     # tsc -b ＋ 本番ビルド（vite build）
 - **音の長さ**：**ふつう／のばす の2値のみ**。のばす音は2列＝2ステップ。上限は音符の個数でなく**列数**で数える（`usedColumns()` が正・`notes.length` で満杯判定しない）。拍・小節・音符の種類は持ち込まない。
 - **ドレミ色相連動**：符頭を音高色で塗る（`src/lib/colors.ts` が正）。鍵盤の白鍵も同じ色。
 - **鍵盤併記**：縦に余裕がある画面だけ（`KEYBOARD_MIN_RATIO`）。出すときは viewBox を下へ伸ばす＝五線譜は縮めない。黒鍵は飾り（当たり判定なし）。鍵盤から音符は置かない。
-- **お祝い演出**：符頭バウンス程度の最小演出に留める。
+- **絵と演出**：[docs/art-direction.md](./docs/art-direction.md) に従う（インライン SVG・パレット・可読性の禁則・容量予算）。五線の紙の上には音符と学習の手がかり以外を常駐させない。
 - **アニメーションを足したら** `src/index.css` の `prefers-reduced-motion` ブロックにも `animation: none` を足す（`src/motion.test.ts` が検査）。
 
 ### ② オーディオ（Tone.js / Web Speech）

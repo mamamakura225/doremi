@@ -24,3 +24,10 @@ async function raster(svgUrl, size) {
 - `pwa-192x192.png` / `pwa-512x512.png` … `icon.svg`
 - `maskable-icon-512x512.png` … `icon-maskable.svg`（ロゴを中央 ~64% に収めてある）
 - `apple-touch-icon-180x180.png` … `icon.svg`（不透明・角丸は焼き込まない）
+
+# 世界観の見本（#96）
+
+- `moodboard.svg` … 「おんぷのもり」の画面全体の雰囲気（空・丘と花・紙のステージ・ぷっくり音符・木のかご・マスコット）。実装の見本で、画面にそのまま貼る素材ではない
+- `mascot.svg` … マスコット「ぴぴ」の表情4種（ふつう／にっこり／びっくり／ばんざい）。アプリでは React コンポーネントに移植して使う
+
+規則（パレット・線と塗り・可読性の禁則・容量予算）は [docs/art-direction.md](../docs/art-direction.md)。dev サーバ起動中は `/art/moodboard.svg` で開ける。

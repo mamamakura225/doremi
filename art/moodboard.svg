@@ -1,0 +1,137 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 620" width="1100" height="620">
+  <!-- 世界観「おんぷのもり」のムードボード（#96）。
+       森のひらけた原っぱで開く小さな音楽会。五線譜は原っぱに広げた紙（ステージ）。
+       実装時の見本であって、そのまま画面に貼る素材ではない。規則は docs/art-direction.md -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#cdeeff"/>
+      <stop offset="0.45" stop-color="#eaf8ff"/>
+      <stop offset="0.8" stop-color="#fdf6e3"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0.55" stop-color="#fff1a8"/>
+      <stop offset="1" stop-color="#fff1a8" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="soft" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#8a7a5c" flood-opacity="0.18"/>
+    </filter>
+    <!-- ぷっくり符頭: 上からのハイライト＋下の沈み -->
+    <radialGradient id="puff" cx="0.35" cy="0.3" r="0.8">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.75"/>
+      <stop offset="0.45" stop-color="#fff" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.12"/>
+    </radialGradient>
+    <g id="cloud">
+      <path d="M20 40 Q0 40 4 26 Q8 12 26 16 Q32 0 52 4 Q70 -4 80 14 Q100 10 102 28 Q104 42 86 42 Z" fill="#fff"/>
+      <path d="M12 38 Q50 46 96 38" fill="none" stroke="#dcebf6" stroke-width="4" stroke-linecap="round"/>
+    </g>
+    <g id="flower">
+      <circle cx="0" cy="-7" r="5.5"/><circle cx="6.7" cy="-2.2" r="5.5"/><circle cx="4.1" cy="5.7" r="5.5"/>
+      <circle cx="-4.1" cy="5.7" r="5.5"/><circle cx="-6.7" cy="-2.2" r="5.5"/>
+      <circle r="3.6" fill="#fff6cf"/>
+    </g>
+  </defs>
+
+  <!-- 空・太陽・雲 -->
+  <rect width="1100" height="620" fill="url(#sky)"/>
+  <circle cx="990" cy="60" r="90" fill="url(#sun)"/>
+  <circle cx="990" cy="60" r="36" fill="#ffe680"/>
+  <use href="#cloud" transform="translate(120 40) scale(1.2)"/>
+  <use href="#cloud" transform="translate(470 22) scale(0.8)"/>
+  <use href="#cloud" transform="translate(760 70)"/>
+
+  <!-- 遠くの丘・近くの丘・花（ドレミ7色） -->
+  <path d="M0 520 Q180 450 380 505 T780 490 T1100 500 V620 H0 Z" fill="#d6efc8"/>
+  <path d="M0 560 Q240 515 520 555 T1100 545 V620 H0 Z" fill="#bfe3a8"/>
+  <g stroke="#5b524b" stroke-width="2">
+    <use href="#flower" transform="translate(70 580)" fill="#e23b3b"/>
+    <use href="#flower" transform="translate(210 596)" fill="#f59e0b"/>
+    <use href="#flower" transform="translate(360 578)" fill="#facc15"/>
+    <use href="#flower" transform="translate(540 598)" fill="#22c55e"/>
+    <use href="#flower" transform="translate(700 580)" fill="#38bdf8"/>
+    <use href="#flower" transform="translate(850 597)" fill="#a78bfa"/>
+    <use href="#flower" transform="translate(1010 582)" fill="#f472b6"/>
+  </g>
+
+  <!-- ヘッダー（ボタンは白い丸・影つき） -->
+  <g filter="url(#soft)">
+    <circle cx="60" cy="52" r="34" fill="#22c55e"/>
+    <path d="M50 36 L76 52 L50 68 Z" fill="#fff" stroke="#fff" stroke-width="4" stroke-linejoin="round"/>
+    <circle cx="140" cy="52" r="30" fill="#fff"/>
+    <circle cx="210" cy="52" r="30" fill="#fff"/>
+  </g>
+
+  <!-- ステージ（原っぱに広げた紙）: 五線はこの上。低彩度・高明度で静かに -->
+  <rect x="30" y="112" width="900" height="400" rx="36" fill="#fffdf5" opacity="0.94" filter="url(#soft)"/>
+  <g stroke="#5b524b" stroke-width="3">
+    <line x1="60" y1="222" x2="900" y2="222"/><line x1="60" y1="272" x2="900" y2="272"/>
+    <line x1="60" y1="322" x2="900" y2="322"/><line x1="60" y1="372" x2="900" y2="372"/>
+    <line x1="60" y1="422" x2="900" y2="422"/>
+  </g>
+
+  <!-- ぷっくり音符（ド・ミ・ソ・シ） -->
+  <g stroke="#5b524b">
+    <g transform="translate(280 472)">
+      <line x1="-30" y1="0" x2="30" y2="0" stroke-width="3"/>
+      <line x1="15" y1="-2" x2="15" y2="-70" stroke-width="4" stroke-linecap="round"/>
+      <ellipse rx="17" ry="13" fill="#e23b3b" stroke-width="2.5" transform="rotate(-20)"/>
+      <ellipse rx="17" ry="13" fill="url(#puff)" stroke="none" transform="rotate(-20)"/>
+    </g>
+    <g transform="translate(380 422)">
+      <line x1="15" y1="-2" x2="15" y2="-70" stroke-width="4" stroke-linecap="round"/>
+      <ellipse rx="17" ry="13" fill="#facc15" stroke-width="2.5" transform="rotate(-20)"/>
+      <ellipse rx="17" ry="13" fill="url(#puff)" stroke="none" transform="rotate(-20)"/>
+    </g>
+    <g transform="translate(480 372)">
+      <line x1="15" y1="-2" x2="15" y2="-70" stroke-width="4" stroke-linecap="round"/>
+      <ellipse rx="17" ry="13" fill="#38bdf8" stroke-width="2.5" transform="rotate(-20)"/>
+      <ellipse rx="17" ry="13" fill="url(#puff)" stroke="none" transform="rotate(-20)"/>
+    </g>
+    <g transform="translate(580 322)">
+      <line x1="-15" y1="2" x2="-15" y2="70" stroke-width="4" stroke-linecap="round"/>
+      <ellipse rx="17" ry="13" fill="#f472b6" stroke-width="2.5" transform="rotate(-20)"/>
+      <ellipse rx="17" ry="13" fill="url(#puff)" stroke="none" transform="rotate(-20)"/>
+    </g>
+  </g>
+
+  <!-- お道具箱（木のかご） -->
+  <g filter="url(#soft)">
+    <rect x="950" y="150" width="120" height="340" rx="22" fill="#f3d9ae" stroke="#5b524b" stroke-width="3"/>
+    <g stroke="#e0bd85" stroke-width="3">
+      <line x1="962" y1="235" x2="1058" y2="235"/><line x1="962" y1="320" x2="1058" y2="320"/><line x1="962" y1="405" x2="1058" y2="405"/>
+    </g>
+  </g>
+  <g stroke="#5b524b">
+    <g transform="translate(1004 260)">
+      <line x1="15" y1="-2" x2="15" y2="-70" stroke-width="4" stroke-linecap="round"/>
+      <ellipse rx="17" ry="13" fill="#ffd9e8" stroke-width="2.5" transform="rotate(-20)"/>
+      <ellipse rx="17" ry="13" fill="url(#puff)" stroke="none" transform="rotate(-20)"/>
+    </g>
+  </g>
+
+  <!-- マスコット「ぴぴ」（art/mascot.svg のにっこり）-->
+  <g transform="translate(900 470) scale(0.62)">
+    <ellipse cx="100" cy="190" rx="50" ry="7" fill="#5b524b" opacity="0.12"/>
+    <ellipse cx="84" cy="180" rx="11" ry="6" fill="#ffa94d" stroke="#5b524b" stroke-width="4"/>
+    <ellipse cx="116" cy="180" rx="11" ry="6" fill="#ffa94d" stroke="#5b524b" stroke-width="4"/>
+    <ellipse cx="100" cy="113" rx="66" ry="64" fill="#ffe38f" stroke="#5b524b" stroke-width="5"/>
+    <ellipse cx="100" cy="140" rx="36" ry="26" fill="#fffbee" opacity="0.75"/>
+    <path d="M90 52 C84 34 98 28 101 42 C104 28 120 32 110 52" fill="#ffe38f" stroke="#5b524b" stroke-width="4" stroke-linejoin="round"/>
+    <g transform="translate(133 58) rotate(18)">
+      <path d="M0 0 L-17 -11 Q-22 0 -17 11 Z" fill="#f472b6" stroke="#5b524b" stroke-width="3.5" stroke-linejoin="round"/>
+      <path d="M0 0 L17 -11 Q22 0 17 11 Z" fill="#f472b6" stroke="#5b524b" stroke-width="3.5" stroke-linejoin="round"/>
+      <circle r="5" fill="#f9a8d4" stroke="#5b524b" stroke-width="3.5"/>
+    </g>
+    <ellipse cx="62" cy="130" rx="12" ry="7.5" fill="#ff8fab" opacity="0.6"/>
+    <ellipse cx="138" cy="130" rx="12" ry="7.5" fill="#ff8fab" opacity="0.6"/>
+    <g fill="#ffd166" stroke="#5b524b" stroke-width="4">
+      <ellipse cx="30" cy="94" rx="23" ry="12" transform="rotate(55 30 94)"/>
+      <ellipse cx="170" cy="94" rx="23" ry="12" transform="rotate(-55 170 94)"/>
+    </g>
+    <g fill="none" stroke="#3d3530" stroke-width="5" stroke-linecap="round">
+      <path d="M68 111 Q78 98 88 111"/><path d="M112 111 Q122 98 132 111"/>
+    </g>
+    <path d="M88 121 Q100 110 112 121 Q100 126 88 121 Z" fill="#ffa94d" stroke="#5b524b" stroke-width="3.5" stroke-linejoin="round"/>
+    <path d="M93 125 Q100 138 107 125 Q100 127 93 125 Z" fill="#ff7a59" stroke="#5b524b" stroke-width="3.5" stroke-linejoin="round"/>
+  </g>
+</svg>

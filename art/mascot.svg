@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 250" width="880" height="250">
+  <!-- マスコット「ぴぴ」（ひよこ）。表情4種: ふつう／にっこり／びっくり／ばんざい。
+       線・塗りのルールは docs/art-direction.md。1体ぶんは 200×200 の座標で描く。 -->
+  <defs>
+    <radialGradient id="pp-body" cx="0.38" cy="0.32" r="0.75">
+      <stop offset="0" stop-color="#fff6cf"/>
+      <stop offset="0.65" stop-color="#ffe38f"/>
+      <stop offset="1" stop-color="#ffd166"/>
+    </radialGradient>
+    <g id="pp-base">
+      <ellipse cx="100" cy="190" rx="50" ry="7" fill="#5b524b" opacity="0.12"/>
+      <!-- あし -->
+      <ellipse cx="84" cy="180" rx="11" ry="6" fill="#ffa94d" stroke="#5b524b" stroke-width="4"/>
+      <ellipse cx="116" cy="180" rx="11" ry="6" fill="#ffa94d" stroke="#5b524b" stroke-width="4"/>
+      <!-- からだ -->
+      <ellipse cx="100" cy="113" rx="66" ry="64" fill="url(#pp-body)" stroke="#5b524b" stroke-width="5"/>
+      <ellipse cx="100" cy="140" rx="36" ry="26" fill="#fffbee" opacity="0.75"/>
+      <ellipse cx="72" cy="76" rx="15" ry="9" fill="#fff" opacity="0.7" transform="rotate(-30 72 76)"/>
+      <!-- とさか -->
+      <path d="M90 52 C84 34 98 28 101 42 C104 28 120 32 110 52" fill="#ffe38f" stroke="#5b524b" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
+      <!-- リボン（シの桃色） -->
+      <g transform="translate(133 58) rotate(18)">
+        <path d="M0 0 L-17 -11 Q-22 0 -17 11 Z" fill="#f472b6" stroke="#5b524b" stroke-width="3.5" stroke-linejoin="round"/>
+        <path d="M0 0 L17 -11 Q22 0 17 11 Z" fill="#f472b6" stroke="#5b524b" stroke-width="3.5" stroke-linejoin="round"/>
+        <circle r="5" fill="#f9a8d4" stroke="#5b524b" stroke-width="3.5"/>
+      </g>
+      <!-- ほっぺ -->
+      <ellipse cx="62" cy="130" rx="12" ry="7.5" fill="#ff8fab" opacity="0.6"/>
+      <ellipse cx="138" cy="130" rx="12" ry="7.5" fill="#ff8fab" opacity="0.6"/>
+    </g>
+    <path id="pp-wing-l" d="M40 118 Q22 132 36 150 Q52 146 50 126 Z" fill="#ffd166" stroke="#5b524b" stroke-width="4" stroke-linejoin="round"/>
+    <path id="pp-wing-r" d="M160 118 Q178 132 164 150 Q148 146 150 126 Z" fill="#ffd166" stroke="#5b524b" stroke-width="4" stroke-linejoin="round"/>
+    <g id="pp-wings-down"><use href="#pp-wing-l"/><use href="#pp-wing-r"/></g>
+    <g id="pp-wings-up" fill="#ffd166" stroke="#5b524b" stroke-width="4"><ellipse cx="30" cy="94" rx="23" ry="12" transform="rotate(55 30 94)"/><ellipse cx="170" cy="94" rx="23" ry="12" transform="rotate(-55 170 94)"/></g>
+    <g id="pp-eyes-open">
+      <ellipse cx="78" cy="108" rx="9.5" ry="11.5" fill="#3d3530"/>
+      <ellipse cx="122" cy="108" rx="9.5" ry="11.5" fill="#3d3530"/>
+      <circle cx="81" cy="103" r="3.6" fill="#fff"/>
+      <circle cx="125" cy="103" r="3.6" fill="#fff"/>
+      <circle cx="75.5" cy="112.5" r="1.7" fill="#fff"/>
+      <circle cx="119.5" cy="112.5" r="1.7" fill="#fff"/>
+    </g>
+    <g id="pp-eyes-happy" fill="none" stroke="#3d3530" stroke-width="5" stroke-linecap="round">
+      <path d="M68 111 Q78 98 88 111"/>
+      <path d="M112 111 Q122 98 132 111"/>
+    </g>
+    <path id="pp-beak" d="M92 123 Q100 116 108 123 Q100 133 92 123 Z" fill="#ffa94d" stroke="#5b524b" stroke-width="3.5" stroke-linejoin="round"/>
+    <g id="pp-beak-open">
+      <path d="M88 121 Q100 110 112 121 Q100 126 88 121 Z" fill="#ffa94d" stroke="#5b524b" stroke-width="3.5" stroke-linejoin="round"/>
+      <path d="M93 125 Q100 138 107 125 Q100 127 93 125 Z" fill="#ff7a59" stroke="#5b524b" stroke-width="3.5" stroke-linejoin="round"/>
+    </g>
+  </defs>
+
+  <!-- ふつう -->
+  <g transform="translate(10 20)">
+    <use href="#pp-base"/><use href="#pp-wings-down"/><use href="#pp-eyes-open"/><use href="#pp-beak"/>
+  </g>
+  <!-- にっこり -->
+  <g transform="translate(230 20)">
+    <use href="#pp-base"/><use href="#pp-wings-down"/><use href="#pp-eyes-happy"/><use href="#pp-beak-open"/>
+  </g>
+  <!-- びっくり -->
+  <g transform="translate(450 20)">
+    <use href="#pp-base"/><use href="#pp-wings-down"/>
+    <circle cx="78" cy="107" r="12" fill="#fff" stroke="#3d3530" stroke-width="4"/>
+    <circle cx="122" cy="107" r="12" fill="#fff" stroke="#3d3530" stroke-width="4"/>
+    <circle cx="78" cy="108" r="5.5" fill="#3d3530"/>
+    <circle cx="122" cy="108" r="5.5" fill="#3d3530"/>
+    <ellipse cx="100" cy="129" rx="7" ry="8" fill="#ff7a59" stroke="#5b524b" stroke-width="3.5"/>
+  </g>
+  <!-- ばんざい -->
+  <g transform="translate(670 20)">
+    <use href="#pp-base"/>
+    <use href="#pp-wings-up"/>
+    <use href="#pp-eyes-happy"/><use href="#pp-beak-open"/>
+  </g>
+</svg>
