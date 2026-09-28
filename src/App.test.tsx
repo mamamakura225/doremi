@@ -1,6 +1,7 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import App from './App'
+import RotateOverlay from './components/RotateOverlay'
 import { ensureAudio, playMelodyNote, playNote, playPop } from './audio/synth'
 
 const SONG_2P = JSON.stringify([
@@ -13,8 +14,8 @@ const h = vi.hoisted(() => ({ resolveAudio: null as null | (() => void) }))
 
 vi.mock('./audio/synth', () => ({
   VOICES: [
-    { id: 'piano', name: 'ピアノ', label: '🎹' },
-    { id: 'bell', name: 'ベル', label: '🔔' },
+    { id: 'piano', name: 'ピアノ' },
+    { id: 'bell', name: 'ベル' },
   ],
   ensureAudio: vi.fn(
     () =>
@@ -65,7 +66,7 @@ test('再生開始直後にクリアしても、止めた再生のtickが盤面�
 
   // 📚 ほんだな → 曲を選ぶ（handleSelectSong → playSequence。ensureAudio は未解決）
   fireEvent.click(screen.getByLabelText('ほんだな'))
-  fireEvent.click(screen.getByText('▶ きく'))
+  fireEvent.click(screen.getByText('きく'))
   expect(ensureAudio).toHaveBeenCalled()
 
   // 音が鳴る前に、おとなメニューの「ぜんぶけす」
@@ -99,10 +100,10 @@ test('割り込み窓で空スケジュールの曲を選んでも、前の再�
   render(<App />)
 
   fireEvent.click(screen.getByLabelText('ほんだな'))
-  fireEvent.click(screen.getAllByText('▶ きく')[0]) // 2ページの曲 → 窓が開く（本棚は閉じる）
+  fireEvent.click(screen.getAllByText('きく')[0]) // 2ページの曲 → 窓が開く（本棚は閉じる）
   // 窓の中（busy はまだ false）で本棚を開き直し、空の曲を選ぶ
   fireEvent.click(screen.getByLabelText('ほんだな'))
-  fireEvent.click(screen.getAllByText('▶ きく')[1])
+  fireEvent.click(screen.getAllByText('きく')[1])
 
   await act(async () => {
     h.resolveAudio?.()
@@ -121,7 +122,7 @@ test('ほぞん直後に別操作しても「✓ほぞんした」が固着し�
 
   // 曲を読み込んで盤面を非空にする（ensureAudio 未解決＝busy にならない）
   fireEvent.click(screen.getByLabelText('ほんだな'))
-  fireEvent.click(screen.getByText('▶ きく'))
+  fireEvent.click(screen.getByText('きく'))
 
   fireEvent.click(screen.getByLabelText('ほぞん'))
   expect(screen.getByLabelText('ほぞんした')).toBeTruthy()
@@ -166,7 +167,7 @@ test('全消しで空になったページは、ページ移動で畳まれる�
   vi.useFakeTimers()
   render(<App />)
   fireEvent.click(screen.getByLabelText('ほんだな'))
-  fireEvent.click(screen.getByText('▶ きく'))
+  fireEvent.click(screen.getByText('きく'))
 
   expect(screen.getByLabelText(/ぜんぶで2ページ/)).toBeTruthy()
 
@@ -184,7 +185,7 @@ test('再生中は音色ボタンが disabled（#60-2）', async () => {
   render(<App />)
 
   fireEvent.click(screen.getByLabelText('ほんだな'))
-  fireEvent.click(screen.getByText('▶ きく'))
+  fireEvent.click(screen.getByText('きく'))
   // 再生を開始させて最初の tick を撃つ（playing がセットされ busy になる）
   await act(async () => {
     h.resolveAudio?.()
@@ -244,7 +245,7 @@ test('再生中は ▶ が ⏹ とめる になり、曲を消さずに止める
   vi.useFakeTimers()
   render(<App />)
   fireEvent.click(screen.getByLabelText('ほんだな'))
-  fireEvent.click(screen.getByText('▶ きく'))
+  fireEvent.click(screen.getByText('きく'))
   await act(async () => {
     h.resolveAudio?.()
     await vi.advanceTimersByTimeAsync(1)
@@ -279,10 +280,24 @@ test('押下音が失敗しても、ボタンの操作は実行される（#102�
 })
 
 test('画面に絵文字を出さない（OS ごとに絵柄が変わる・#101）', () => {
+  // 絵文字として描かれうる文字（▶◀ は iOS で絵文字になる。→ はおとなメニューの地の文で使うので除く）
+  const emoji =
+    /[\p{Extended_Pictographic}\u{2600}-\u{27BF}\u{21A9}\u{21AA}\u{21BA}\u{21BB}\u{25B6}\u{25C0}\u{FE0F}]/u
+  localStorage.setItem('doremi.songs.v1', SONG_2P)
   vi.useFakeTimers()
   render(<App />)
+  // 子どもの面・盤面（起動ヒント）
+  expect(document.body.textContent ?? '').not.toMatch(emoji)
+  // おとなメニュー
   openAdultMenu()
-  // 子どもの面・盤面（起動ヒント）・おとなメニューのテキストに絵文字が無い
-  const emoji = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B05}-\u{2B55}\u{23E9}-\u{23FA}\u{21A9}\u{21AA}]/u
+  expect(document.body.textContent ?? '').not.toMatch(emoji)
+  fireEvent.click(screen.getByLabelText('とじる'))
+  // 本棚（曲あり）
+  fireEvent.click(screen.getByLabelText('ほんだな'))
+  expect(screen.getByText('きく')).toBeTruthy()
+  expect(document.body.textContent ?? '').not.toMatch(emoji)
+  cleanup()
+  // 回転の案内
+  render(<RotateOverlay />)
   expect(document.body.textContent ?? '').not.toMatch(emoji)
 })

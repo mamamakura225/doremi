@@ -464,8 +464,9 @@ export default function Board({
       </g>
 
       {/* 起動ヒント: 指アイコン＋「さわってね」（読めない子にも指で直感誘発） */}
+      {/* ヒントは触れない（指や「さわってね」をつついても、下のお道具箱を掴めるように） */}
       {showHint && (
-        <g aria-hidden="true">
+        <g aria-hidden="true" pointerEvents="none">
           {/* 入れ子の <svg> には CSS の transform が効かないので、揺れは外側の <g> に付ける */}
           <g className="finger-poke">
             <HandIcon x={TOOLBOX_CX - 26} y={TOOLBOX_NORMAL_CY + 6} width={52} height={52} />

@@ -2,7 +2,7 @@ import { previewCells } from '../lib/preview'
 import { OUTLINE_COLOR } from '../lib/colors'
 import type { Clef } from '../lib/pitch'
 import type { SavedSong } from '../lib/storage'
-import { CloseIcon, ShelfIcon } from './Icons'
+import { CloseIcon, PlayIcon, ShelfIcon } from './Icons'
 
 interface Props {
   songs: SavedSong[]
@@ -67,7 +67,9 @@ export default function Bookshelf({ songs, onSelect, onClose }: Props) {
                 className="flex flex-col gap-2 rounded-2xl bg-white p-3 text-left shadow active:scale-95"
               >
                 <Preview pages={song.pages} clef={song.clef} />
-                <span className="text-base font-bold text-[#22c55e]">▶ きく</span>
+                <span className="flex items-center gap-1 text-base font-bold text-[#22c55e]">
+                  <PlayIcon /> きく
+                </span>
               </button>
             ))}
           </div>

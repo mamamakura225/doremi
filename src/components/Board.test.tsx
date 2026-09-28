@@ -347,3 +347,11 @@ describe('五線の紙（#99）', () => {
     expect(paper.compareDocumentPosition(firstLine) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 })
+
+describe('起動ヒント（#101）', () => {
+  it('指と「さわってね」はポインタを受けない（下のお道具箱を掴める）', () => {
+    const view = render(<Board {...boardProps()} />)
+    const hint = view.getByText('さわってね').closest('g[aria-hidden="true"]')!
+    expect(hint.getAttribute('pointer-events')).toBe('none')
+  })
+})

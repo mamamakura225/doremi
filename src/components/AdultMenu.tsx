@@ -52,7 +52,7 @@ export function AdultMenuButton({ onOpen, sizeClass }: ButtonProps) {
       <GearIcon width="62%" height="62%" />
       {holding && (
         <svg className="pointer-events-none absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 40 40" aria-hidden="true">
-          <circle cx={20} cy={20} r={18} fill="none" stroke="#f59e0b" strokeWidth={3} className="hold-ring" />
+          <circle cx={20} cy={20} r={18} fill="none" stroke="#5b524b" strokeWidth={3} className="hold-ring" />
         </svg>
       )}
     </button>
