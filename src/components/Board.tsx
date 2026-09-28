@@ -40,6 +40,7 @@ import { clientToSvgPoint } from '../lib/svgPoint'
 import { ensureAudio, playNote } from '../audio/synth'
 import { useFitsKeyboard } from '../hooks/useFitsKeyboard'
 import Keyboard from './Keyboard'
+import { HandIcon, StarIcon, TrashIcon } from './Icons'
 import NoteHead from './NoteHead'
 import Sparkles from './Sparkles'
 import Staff from './Staff'
@@ -392,14 +393,7 @@ export default function Board({
             </g>
             {fresh && <Sparkles x={cx} y={cy} color={colorOf(n.pitch)} />}
             {matched && (
-              <text
-                x={columnX(starts[i]) + 20}
-                y={pitchToY(n.pitch, STAFF_LAYOUT) - 28}
-                fontSize={26}
-                textAnchor="middle"
-              >
-                ✨
-              </text>
+              <StarIcon x={cx + 20 - 13} y={cy - 36 - 13} width={26} height={26} data-testid="match-star" />
             )}
           </g>
         )
@@ -472,15 +466,10 @@ export default function Board({
       {/* 起動ヒント: 指アイコン＋「さわってね」（読めない子にも指で直感誘発） */}
       {showHint && (
         <g aria-hidden="true">
-          <text
-            className="finger-poke"
-            x={TOOLBOX_CX}
-            y={TOOLBOX_NORMAL_CY + 52}
-            textAnchor="middle"
-            fontSize={48}
-          >
-            👆
-          </text>
+          {/* 入れ子の <svg> には CSS の transform が効かないので、揺れは外側の <g> に付ける */}
+          <g className="finger-poke">
+            <HandIcon x={TOOLBOX_CX - 26} y={TOOLBOX_NORMAL_CY + 6} width={52} height={52} />
+          </g>
           <text
             x={TOOLBOX_CX}
             y={TOOLBOX_NORMAL_CY + 96}
@@ -519,17 +508,16 @@ export default function Board({
         <g aria-hidden="true">
           {(() => {
             const over = isOverTrash(del.x, del.y)
+            const s = over ? 64 : 48
             return (
-              <text
-                x={TRASH_CX}
-                y={TRASH_CY}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fontSize={over ? 64 : 48}
+              <TrashIcon
+                x={TRASH_CX - s / 2}
+                y={TRASH_CY - s / 2}
+                width={s}
+                height={s}
                 opacity={over ? 1 : 0.7}
-              >
-                🗑️
-              </text>
+                data-testid="trash"
+              />
             )
           })()}
         </g>

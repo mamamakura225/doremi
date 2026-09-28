@@ -190,12 +190,12 @@ describe('単一ポインタ追跡（#58）', () => {
       clientX: 300,
       clientY: 300,
     })
-    expect(view.queryByText('🗑️')).not.toBeNull() // 掴めている
+    expect(view.queryByTestId('trash')).not.toBeNull() // 掴めている
 
     // 別の指で ↩ / ページ切替 → その音符が notes から消える
     view.rerender(<Board {...boardProps({ notes: [], onPlace: props.onPlace })} />)
 
-    expect(view.queryByText('🗑️')).toBeNull()
+    expect(view.queryByTestId('trash')).toBeNull()
 
     // 掴みが解けている＝盤面が生きている（お道具箱から普通に置ける）
     fireEvent.pointerDown(view.getByTestId('toolbox-normal'), {

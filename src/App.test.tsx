@@ -124,7 +124,7 @@ test('ほぞん直後に別操作しても「✓ほぞんした」が固着し�
   fireEvent.click(screen.getByText('▶ きく'))
 
   fireEvent.click(screen.getByLabelText('ほぞん'))
-  expect(screen.getByLabelText('ほぞんした').textContent).toContain('✓')
+  expect(screen.getByLabelText('ほぞんした')).toBeTruthy()
 
   // 1.2秒以内に ▶ さいせい（clearTimers を呼ぶ）
   fireEvent.click(screen.getByLabelText('さいせい'))
@@ -134,8 +134,8 @@ test('ほぞん直後に別操作しても「✓ほぞんした」が固着し�
   })
 
   // 専用タイマーなので clearTimers に巻き込まれず、ラベルが戻っている
-  // （#102 でヘッダーはアイコンだけになった。戻ったかは 💾 に戻ったかで見る）
-  expect(screen.getByLabelText('ほぞん').textContent).toContain('💾')
+  // （#101 でアイコンは SVG になった。戻ったかは読み上げ名で見る）
+  expect(screen.getByLabelText('ほぞん')).toBeTruthy()
   expect(screen.queryByLabelText('ほぞんした')).toBeNull()
 })
 
@@ -276,4 +276,13 @@ test('押下音が失敗しても、ボタンの操作は実行される（#102�
   })
   expect(() => fireEvent.click(screen.getByLabelText('ほんだな'))).not.toThrow()
   expect(screen.getByText(/ほんだな/, { selector: 'h2' })).toBeTruthy()
+})
+
+test('画面に絵文字を出さない（OS ごとに絵柄が変わる・#101）', () => {
+  vi.useFakeTimers()
+  render(<App />)
+  openAdultMenu()
+  // 子どもの面・盤面（起動ヒント）・おとなメニューのテキストに絵文字が無い
+  const emoji = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B05}-\u{2B55}\u{23E9}-\u{23FA}\u{21A9}\u{21AA}]/u
+  expect(document.body.textContent ?? '').not.toMatch(emoji)
 })
