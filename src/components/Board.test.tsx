@@ -11,7 +11,7 @@ import {
   TRASH_CY,
   columnX,
 } from '../lib/layout'
-import { type Clef, type Pitch, TREBLE_PITCHES, pitchByNote } from '../lib/pitch'
+import { type Clef, type Pitch, TREBLE_PITCHES, pitchByNote, pitchToY } from '../lib/pitch'
 import type { PlacedNote } from '../lib/notes'
 import { PAPER, TOOLBOX_NOTE_COLOR } from '../lib/colors'
 import Board from './Board'
@@ -463,16 +463,37 @@ describe('再生中にぴぴが音符の上を渡り歩く（#104）', () => {
     expect(view.queryByTestId('walker')).toBeNull()
   })
 
+  /** 描かれている位置（translate の x, y）と大きさ */
+  function walkerBox(view: ReturnType<typeof render>) {
+    const walker = view.getByTestId('walker')
+    const m = /translate\(([-\d.]+)px, ([-\d.]+)px\)/.exec(walker.style.transform)!
+    const size = Number(walker.querySelector('svg')!.getAttribute('height'))
+    return { x: Number(m[1]), y: Number(m[2]), size }
+  }
+
   it('鳴っている音の列の真上、五線より上にいる（符頭・五線を隠さない）', () => {
     const view = render(<Board {...boardProps({ notes, playingIndex: 2 })} />)
-    const walker = view.getByTestId('walker')
-    // のばす音（b）が2列ぶん占めるので、c は3列目（columnX(3)）
-    const x = Number(walker.getAttribute('data-x'))
-    expect(x).toBeCloseTo(columnX(3))
-    const pipi = walker.querySelector('svg')!
-    const bottom = Number(pipi.getAttribute('y')) + Number(pipi.getAttribute('height'))
-    expect(bottom).toBeLessThan(STAFF_LAYOUT.topLineY)
-    expect(Number(pipi.getAttribute('height'))).toBeGreaterThanOrEqual(26 * 2) // 符頭の高さの2倍以上
+    const { x, y, size } = walkerBox(view)
+    // のばす音（b）が2列ぶん占めるので、c は3列目（columnX(3)）の真上
+    expect(x + size / 2).toBeCloseTo(columnX(3))
+    expect(y + size).toBeLessThan(STAFF_LAYOUT.topLineY)
+    expect(size).toBeGreaterThanOrEqual(26 * 2) // 符頭の高さの2倍以上
+  })
+
+  it('最上線より上に出る音（ヘ音の ラ）では、その再生リングより上に上がる', () => {
+    const a3: PlacedNote[] = [{ id: 'hi', pitch: pitchByNote('A3', 'bass')!, long: false }]
+    const view = render(<Board {...boardProps({ notes: a3, playingIndex: 0, clef: 'bass' })} />)
+    const { y, size } = walkerBox(view)
+    const ringTop = pitchToY(pitchByNote('A3', 'bass')!, STAFF_LAYOUT) - 30
+    expect(y + size).toBeLessThan(ringTop)
+    expect(y).toBeGreaterThanOrEqual(16) // 紙（y16〜）からはみ出さない
+  })
+
+  it('ページが変わったら作り直す（右端から左端へ滑って戻らない）', () => {
+    const view = render(<Board {...boardProps({ notes, playingIndex: 2, playingPage: 0 })} />)
+    const before = view.getByTestId('walker')
+    view.rerender(<Board {...boardProps({ notes, playingIndex: 0, playingPage: 1 })} />)
+    expect(view.getByTestId('walker')).not.toBe(before)
   })
 
   it('のばす音では着地したまま揺れる', () => {

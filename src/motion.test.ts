@@ -66,6 +66,17 @@ describe('prefers-reduced-motion（#63）', () => {
     expect(animated.filter((s) => !stopped.has(s))).toEqual([])
   })
 
+  it('トランジションを持つクラスも reduced-motion で transition: none になる（#104）', () => {
+    const TRANSITION_DECL = /(^|[;\s{])transition(-property)?\s*:/
+    const moving = selectorsOf(before, (b) => TRANSITION_DECL.test(b))
+    const stopped = new Set(
+      selectorsOf(reduce, (b) => /(^|[;\s{])transition\s*:\s*none/.test(b)).filter((s) =>
+        SINGLE_CLASS.test(s),
+      ),
+    )
+    expect(moving.filter((s) => !stopped.has(s))).toEqual([])
+  })
+
   it('Tailwind のアニメ（animate-*）は motion-safe: を付けて使う', () => {
     const tsx = readdirSync(SRC, { recursive: true })
       .map(String)

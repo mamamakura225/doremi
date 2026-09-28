@@ -431,6 +431,7 @@ export default function App() {
           onPlace={handlePlace}
           onRemove={handleRemove}
           playingIndex={playing?.page === currentPage ? playing.index : null}
+          playingPage={playing?.page}
           celebrating={celebrating}
           clef={clef}
           targets={targets}
