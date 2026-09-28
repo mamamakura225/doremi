@@ -43,3 +43,17 @@ describe('NoteHead の輪郭（#61）', () => {
     expect(rect!.getAttribute('stroke')).toBe(OUTLINE_COLOR)
   })
 })
+
+describe('NoteHead の符尾の向き（#97）', () => {
+  it('既定は上向き・符頭の右側', () => {
+    const line = draw().querySelector('line')!
+    expect(Number(line.getAttribute('x1'))).toBeGreaterThan(0)
+    expect(Number(line.getAttribute('y2'))).toBeLessThan(0)
+  })
+
+  it('stemDown なら下向き・符頭の左側', () => {
+    const line = draw({ stemDown: true }).querySelector('line')!
+    expect(Number(line.getAttribute('x1'))).toBeLessThan(0)
+    expect(Number(line.getAttribute('y2'))).toBeGreaterThan(0)
+  })
+})

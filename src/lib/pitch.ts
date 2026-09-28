@@ -145,3 +145,14 @@ const NO_SHARP_ABOVE = new Set(['E', 'B'])
 export function hasSharpAbove(pitch: Pitch): boolean {
   return !NO_SHARP_ABOVE.has(pitch.note[0])
 }
+
+/** 第3線（五線の中央の線）の step。最上線(0)から線2本ぶん下 */
+const MIDDLE_LINE_STEP = 4
+
+/**
+ * 符尾を下向きにするか（#97）。記譜の慣習どおり、第3線とそれより上は下向き・
+ * それより下は上向き。第3線上はどちらでも誤りではないが、下向きに揃える。
+ */
+export function stemDown(pitch: Pitch): boolean {
+  return pitch.step <= MIDDLE_LINE_STEP
+}

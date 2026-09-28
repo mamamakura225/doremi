@@ -2,7 +2,7 @@ import type { ComponentProps } from 'react'
 import { cleanup, fireEvent, render } from '@testing-library/react'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { NOTE_HEAD_RX, NOTE_HIT_W, TRASH_CX, TRASH_CY } from '../lib/layout'
-import { type Clef, TREBLE_PITCHES } from '../lib/pitch'
+import { type Clef, TREBLE_PITCHES, pitchByNote } from '../lib/pitch'
 import type { PlacedNote } from '../lib/notes'
 import Board from './Board'
 
@@ -218,5 +218,21 @@ describe('単一ポインタ追跡（#58）', () => {
     fireEvent.pointerUp(toolbox, { pointerId: 1, clientX: 400, clientY: 200 })
 
     expect(onPlace).not.toHaveBeenCalled()
+  })
+})
+
+describe('配置済み音符の符尾（#97）', () => {
+  function stemY2(view: ReturnType<typeof render>, id: string) {
+    return Number(view.getByTestId(`note-${id}`).querySelector('line')!.getAttribute('y2'))
+  }
+
+  it('第3線より上（ト音の高いミ）は下向き、下のド は上向き', () => {
+    const notes: PlacedNote[] = [
+      { id: 'low', pitch: pitchByNote('C4', 'treble')!, long: false },
+      { id: 'high', pitch: pitchByNote('E5', 'treble')!, long: false },
+    ]
+    const view = render(<Board {...boardProps({ notes })} />)
+    expect(stemY2(view, 'low')).toBeLessThan(0)
+    expect(stemY2(view, 'high')).toBeGreaterThan(0)
   })
 })
