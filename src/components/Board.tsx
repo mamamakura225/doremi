@@ -23,7 +23,7 @@ import {
   isOverTrash,
 } from '../lib/layout'
 import { STAFF_LAYOUT } from '../lib/layout'
-import { type Clef, type Pitch, pitchToY, snapYToPitch, stemDown } from '../lib/pitch'
+import { type Clef, type Pitch, pitchByNote, pitchToY, snapYToPitch, stemDown } from '../lib/pitch'
 import type { PlacedNote } from '../lib/notes'
 import { canAddNote, columnStarts, usedColumns } from '../lib/notes'
 import { noteDuration } from '../lib/playback'
@@ -71,6 +71,9 @@ interface DragState {
   /** 掴んでいるのが「のばす音」か */
   long: boolean
 }
+
+/** 鍵盤を押したときに、鍵と五線の光を出しておく時間（ms・#107） */
+const KEY_ECHO_MS = 600
 
 /** 置いた瞬間の演出（着地＋キラ粒）を出しておく時間。CSS のアニメ（最長 0.6s）より少し長く */
 const LANDING_MS = 700
@@ -164,6 +167,18 @@ export default function Board({
   const wiggleTimer = useRef(0)
   useEffect(() => () => window.clearTimeout(wiggleTimer.current), [])
   const [pressedKey, setPressedKey] = useState<string | null>(null)
+  // 鍵盤と五線を光でつなぐ（#107）。
+  // 鍵盤 → 五線: 押した鍵の音の高さに、同じ色の帯と、次に置く列のゴースト符頭
+  const echoPitch = pressedKey ? (pitchByNote(pressedKey, clef) ?? null) : null
+  // 五線 → 鍵盤: 押している鍵 ＞ 掴んで五線の上を動かしている音 ＞ 再生で鳴っている音 ＞ いま置いた音
+  function litKeyNow(): string | null {
+    if (pressedKey) return pressedKey
+    if (drag && isOverPlacement(drag.x, drag.y)) return drag.pitch.note
+    if (playingIndex !== null) return notes[playingIndex]?.pitch.note ?? null
+    if (freshId) return notes.find((n) => n.id === freshId)?.pitch.note ?? null
+    return null
+  }
+  const litKey = litKeyNow()
   // 鍵盤ハイライトの消灯タイマー。IDを保持しないと、連打時に前の押下の
   // タイマーが後の押下を消してしまう（#60-5）。
   const keyTimer = useRef(0)
@@ -196,7 +211,8 @@ export default function Board({
     setTouched(true)
     setPressedKey(pitch.note)
     window.clearTimeout(keyTimer.current)
-    keyTimer.current = window.setTimeout(() => setPressedKey(null), 260)
+    // 五線の光も見せるので、鍵の点灯より少し長く残す
+    keyTimer.current = window.setTimeout(() => setPressedKey(null), KEY_ECHO_MS)
     void ensureAudio().then(() => playNote(pitch.note))
   }
 
@@ -361,8 +377,32 @@ export default function Board({
       <Staff clef={clef} />
 
       {showKeyboard && (
-        <Keyboard clef={clef} onPress={handleKeyPress} pressed={pressedKey} />
+        <Keyboard clef={clef} onPress={handleKeyPress} pressed={litKey} />
       )}
+
+      {/* 鍵盤で押した音が、五線のどこかを光で見せる（#107・触れない・一時的） */}
+      {echoPitch &&
+        (() => {
+          const y = pitchToY(echoPitch, STAFF_LAYOUT)
+          const color = colorOf(echoPitch)
+          const col = usedColumns(notes)
+          return (
+            <g data-testid="key-echo" data-y={y} data-color={color} pointerEvents="none" aria-hidden="true">
+              <rect
+                x={PLACE_LEFT}
+                y={y - 18}
+                width={PLACE_RIGHT - PLACE_LEFT}
+                height={36}
+                rx={18}
+                fill={color}
+                opacity={0.2}
+              />
+              {col < NOTE_MAX && (
+                <NoteHead x={columnX(col)} y={y} fill={color} opacity={0.55} stemDown={stemDown(echoPitch)} />
+              )}
+            </g>
+          )
+        })()}
 
       {/* スナップ先の行ハイライト（指で隠れても着地点が分かる） */}
       {drag && isOverPlacement(drag.x, drag.y) && (
