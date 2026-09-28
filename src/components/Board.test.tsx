@@ -248,7 +248,7 @@ describe('配置済み音符の符尾（#97）', () => {
   })
 
   it('おてほんのゴーストも同じ規則に従う', () => {
-    const targets = [pitchByNote('E5', 'treble')!]
+    const targets = [{ pitch: pitchByNote('E5', 'treble')!, long: false }]
     const view = render(<Board {...boardProps({ targets })} />)
     const ghost = view.container.querySelector('g[opacity="0.28"] line')!
     expect(Number(ghost.getAttribute('y2'))).toBeGreaterThan(0)
@@ -500,5 +500,16 @@ describe('再生中にぴぴが音符の上を渡り歩く（#104）', () => {
     expect(view.getByTestId('walker').querySelector('.pipi-sway')).not.toBeNull()
     view.rerender(<Board {...boardProps({ notes, playingIndex: 0 })} />)
     expect(view.getByTestId('walker').querySelector('.pipi-sway')).toBeNull()
+  })
+})
+
+describe('おてほんのゴースト（#106）', () => {
+  it('のばす音は2列ぶんとって、続くお手本を右へずらす（ぶんぶんぶん: ソ ファ ミー レ…）', async () => {
+    const { songOf } = await import('../lib/songs')
+    const view = render(<Board {...boardProps({ targets: songOf('bee', 'treble').notes })} />)
+    const cols = [...view.container.querySelectorAll('[data-testid="guide-ghost"]')].map((g) =>
+      g.getAttribute('data-col'),
+    )
+    expect(cols).toEqual(['0', '1', '2', '4', '5', '6', '7', '8'])
   })
 })

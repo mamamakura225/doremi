@@ -25,6 +25,7 @@ import {
 import { STAFF_LAYOUT } from '../lib/layout'
 import { type Clef, type Pitch, pitchByNote, pitchToY, snapYToPitch, stemDown } from '../lib/pitch'
 import type { PlacedNote } from '../lib/notes'
+import type { GuideNote } from '../lib/songs'
 import { canAddNote, columnStarts, usedColumns } from '../lib/notes'
 import { noteDuration } from '../lib/playback'
 import {
@@ -58,8 +59,8 @@ interface Props {
   celebrating: boolean
   /** 音部記号（譜面・スナップ先の音がまるごと変わる） */
   clef: Clef
-  /** おてほんモードのお手本音列（未指定＝自由制作） */
-  targets?: Pitch[]
+  /** おてほんモードのお手本（のばす音つき・未指定＝自由制作） */
+  targets?: GuideNote[]
 }
 
 interface DragState {
@@ -431,35 +432,39 @@ export default function Board({
 
       {/* おてほんモード: お手本ゴースト（これから置く音）＋現在位置の発光。
           お手本はふつうの音だけなので、置いた音符が使った列の続きに並べる。 */}
-      {targets?.map((t, i) => {
-        if (i < notes.length) return null
-        const col = usedColumns(notes) + (i - notes.length)
-        if (col >= NOTE_MAX) return null
-        return (
-          <g key={`ghost-${i}`}>
-            {i === notes.length && (
-              <circle
-                className="target-glow"
-                cx={columnX(col)}
-                cy={pitchToY(t, STAFF_LAYOUT)}
-                r={30}
-                fill={colorOf(t)}
+      {targets &&
+        targets.map((t, i) => {
+          if (i < notes.length) return null
+          // 置いた音の続きに、残りのお手本を並べる（のばす音は2列ぶん）
+          const col =
+            usedColumns(notes) + targets.slice(notes.length, i).reduce((c, g) => c + (g.long ? 2 : 1), 0)
+          if (col >= NOTE_MAX) return null
+          return (
+            <g key={`ghost-${i}`} data-testid="guide-ghost" data-col={col} data-long={t.long}>
+              {i === notes.length && (
+                <circle
+                  className="target-glow"
+                  cx={columnX(col)}
+                  cy={pitchToY(t.pitch, STAFF_LAYOUT)}
+                  r={30}
+                  fill={colorOf(t.pitch)}
+                />
+              )}
+              <NoteHead
+                x={columnX(col)}
+                y={pitchToY(t.pitch, STAFF_LAYOUT)}
+                fill={colorOf(t.pitch)}
+                opacity={0.28}
+                tail={t.long ? COLUMN_PITCH : 0}
+                stemDown={stemDown(t.pitch)}
               />
-            )}
-            <NoteHead
-              x={columnX(col)}
-              y={pitchToY(t, STAFF_LAYOUT)}
-              fill={colorOf(t)}
-              opacity={0.28}
-              stemDown={stemDown(t)}
-            />
-          </g>
-        )
-      })}
+            </g>
+          )
+        })}
 
       {/* 配置済み音符（置いた順に左→右へ等間隔）。掴んでゴミ箱へ捨てられる。 */}
       {notes.map((n, i) => {
-        const matched = targets?.[i]?.note === n.pitch.note
+        const matched = targets?.[i]?.pitch.note === n.pitch.note
         const dragging = del?.id === n.id && del.moved
         const fresh = n.id === freshId
         const cx = columnX(starts[i])

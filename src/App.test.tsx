@@ -538,3 +538,46 @@ test('最後まで聞くと「さいごまで きいた」、途中で止めた�
   })
   expect(stored()).toEqual(expect.arrayContaining(['shelf-listen', 'play-end', 'long-song']))
 })
+
+test('おてほんに入ると曲えらびが開き、えらんだ曲のお手本が出る（#106）', () => {
+  vi.useFakeTimers()
+  render(<App />)
+  openAdultMenu()
+  fireEvent.click(screen.getByLabelText('じゆう')) // → おてほん
+  const picker = screen.getByRole('dialog', { name: 'きょくを えらぶ' })
+  expect(picker.textContent).toContain('かえるのうた')
+  fireEvent.click(screen.getByLabelText('かえるのうた'))
+
+  expect(screen.queryByRole('dialog', { name: 'きょくを えらぶ' })).toBeNull()
+  const ghosts = document.querySelectorAll('[data-testid="guide-ghost"]')
+  expect(ghosts.length).toBe(7) // ド レ ミ ファ ミ レ ドー
+  expect(ghosts[6].getAttribute('data-long')).toBe('true')
+  expect(ghosts[6].getAttribute('data-col')).toBe('6')
+
+  // おてほん中はヘッダーから選び直せる
+  fireEvent.click(screen.getByLabelText('きょくを えらぶ'))
+  expect(screen.getByRole('dialog', { name: 'きょくを えらぶ' })).toBeTruthy()
+})
+
+test('かえるのうたをお手本どおり（のばす音も）置いて聞くと「特別」のお祝い（#106）', async () => {
+  stubSvgGeometry()
+  vi.useFakeTimers()
+  render(<App />)
+  openAdultMenu()
+  fireEvent.click(screen.getByLabelText('じゆう'))
+  fireEvent.click(screen.getByLabelText('かえるのうた'))
+
+  // ド レ ミ ファ ミ レ（ふつう）→ ド（のばす）。ト音の y: ド390・レ365・ミ340・ファ315
+  for (const y of [390, 365, 340, 315, 340, 365]) placeNote(y)
+  const long = screen.getByTestId('toolbox-long')
+  fireEvent.pointerDown(long, { pointerId: 1, clientX: 1000, clientY: 335 })
+  fireEvent.pointerMove(long, { pointerId: 1, clientX: 400, clientY: 390 })
+  fireEvent.pointerUp(long, { pointerId: 1, clientX: 400, clientY: 390 })
+
+  fireEvent.click(screen.getByLabelText('さいせい'))
+  await act(async () => {
+    h.resolveAudio?.()
+    await vi.advanceTimersByTimeAsync(600 * 10)
+  })
+  expect(screen.getByTestId('celebration').getAttribute('data-level')).toBe('special')
+})

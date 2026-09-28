@@ -12,7 +12,7 @@ import {
   SaveIcon,
   ShelfIcon,
   SingIcon,
-  StarIcon,
+  StickerBookIcon,
   StopIcon,
   UndoIcon,
 } from './components/Icons'
@@ -41,7 +41,9 @@ import {
   celebrationLevel,
   isGuideComplete,
 } from './lib/celebration'
-import { TWINKLE } from './lib/songs'
+import { type GuideNote, type SongId, songOf } from './lib/songs'
+import SongPicker from './components/SongPicker'
+import { SONG_ICON } from './components/songIcons'
 import { type SavedSong, loadSongs, saveSong } from './lib/storage'
 import {
   type Voice,
@@ -85,6 +87,9 @@ export default function App() {
   const [celebrating, setCelebrating] = useState(false)
   const [celebration, setCelebration] = useState<CelebrationLevel>('small')
   const [guide, setGuide] = useState(false)
+  // おてほんの曲（#106）と、曲えらびを開いているか
+  const [guideSong, setGuideSong] = useState<SongId>('twinkle')
+  const [pickerOpen, setPickerOpen] = useState(false)
   const [savedSongs, setSavedSongs] = useState<SavedSong[]>(() => loadSongs())
   const [shelfOpen, setShelfOpen] = useState(false)
   const [justSaved, setJustSaved] = useState(false)
@@ -132,7 +137,8 @@ export default function App() {
   const notes = pages[currentPage] ?? []
   const busy = playing !== null || celebrating
   // おてほんは1フレーズ＝1ページめのみを対象にする。
-  const targets = guide && currentPage === 0 ? TWINKLE[clef].pitches : undefined
+  const guideNotes = songOf(guideSong, clef).notes
+  const targets = guide && currentPage === 0 ? guideNotes : undefined
 
   function updateCurrentPage(fn: (page: PlacedNote[]) => PlacedNote[]) {
     setPages((prev) => prev.map((pg, i) => (i === currentPage ? fn(pg) : pg)))
@@ -181,7 +187,7 @@ export default function App() {
     endCelebration()
     const idx = notes.length
     // お手本と一致したら控えめなキラキラ音（不一致でも普通に置ける・×なし）
-    if (targets?.[idx]?.note === pitch.note) playSparkle()
+    if (targets?.[idx]?.pitch.note === pitch.note) playSparkle()
     updateCurrentPage((pg) => addNote(pg, pitch, long))
     giveSticker('first-note')
     if (long) giveSticker('long-note')
@@ -204,7 +210,24 @@ export default function App() {
 
   function toggleGuide() {
     resetBoard()
+    // おてほんに入ったら、まず曲をえらぶ（#106）
+    if (!guide) openPicker()
     setGuide((g) => !g)
+  }
+
+  /** 曲えらびを開く（ほかの重ねる画面は閉じる） */
+  function openPicker() {
+    setShelfOpen(false)
+    setBookOpen(false)
+    setPickerOpen(true)
+  }
+
+  /** 曲をえらんだら、盤面を空にしてその曲のお手本を出す */
+  function pickSong(id: SongId) {
+    resetBoard()
+    setGuideSong(id)
+    setGuide(true)
+    setPickerOpen(false)
   }
 
   /**
@@ -300,7 +323,7 @@ export default function App() {
    * @param guideTargets おてほんの完成を判定するお手本。呼び出し側が渡す——本棚から選んだときは
    *   同じハンドラでおてほんを切るので、描画時点の `targets` を閉包で読むと古い値になる（#103）
    */
-  async function playSequence(pgs: PlacedNote[][], guideTargets?: Pitch[]) {
+  async function playSequence(pgs: PlacedNote[][], guideTargets?: GuideNote[]) {
     // 中断（世代繰り上げ）は常に成立させる。空スケジュールでの early return を
     // clearTimers より前に置くと、進行中の別の playSequence が生き残る。
     clearTimers()
@@ -314,7 +337,7 @@ export default function App() {
         guideTargets !== undefined &&
         isGuideComplete(
           (pgs[0] ?? []).map((n) => n.pitch.note),
-          guideTargets.map((t) => t.note),
+          guideTargets.map((t) => t.pitch.note),
         ),
     })
     await ensureAudio()
@@ -359,9 +382,10 @@ export default function App() {
 
   function handlePlay() {
     setBookOpen(false)
+    setPickerOpen(false)
     if (busy || empty) return
     // おてほんの完成は、いま表示しているページに関係なく1ページ目で判定する
-    void playSequence(pages, guide ? TWINKLE[clef].pitches : undefined)
+    void playSequence(pages, guide ? guideNotes : undefined)
   }
 
   /**
@@ -468,6 +492,7 @@ export default function App() {
           type="button"
           onClick={withPop(() => {
             setBookOpen(false)
+            setPickerOpen(false)
             setShelfOpen(true)
           })}
           disabled={busy}
@@ -480,14 +505,31 @@ export default function App() {
           type="button"
           onClick={withPop(() => {
             setShelfOpen(false)
+            setPickerOpen(false)
             setBookOpen(true)
           })}
           disabled={busy}
           aria-label="シールちょう"
           className={`${KID_BTN} ${size} bg-white`}
         >
-          <StarIcon width="62%" height="62%" />
+          <StickerBookIcon width="62%" height="62%" />
         </button>
+        {/* おてほん中は、いまの曲の絵。押すと曲えらび（#106） */}
+        {guide && (
+          <button
+            type="button"
+            onClick={withPop(openPicker)}
+            disabled={busy}
+            aria-label="きょくを えらぶ"
+            title={songOf(guideSong, clef).name}
+            className={`${KID_BTN} ${size} bg-white`}
+          >
+            {(() => {
+              const SongIcon = SONG_ICON[guideSong]
+              return <SongIcon width="62%" height="62%" />
+            })()}
+          </button>
+        )}
         <AdultMenuButton onOpen={() => setAdultOpen(true)} sizeClass={`${size} text-2xl`} />
       </header>
       {adultOpen && (
@@ -557,6 +599,9 @@ export default function App() {
           </div>
         )}
         {bookOpen && <StickerBook earned={stickers} onClose={() => setBookOpen(false)} />}
+        {pickerOpen && (
+          <SongPicker current={guideSong} onPick={pickSong} onClose={() => setPickerOpen(false)} />
+        )}
         {/* 読み上げの入れ物は常に置き、中身だけ出し入れする（live region は先に DOM に無いと読まれにくい） */}
         <div role="status" className="contents">
           {shownSticker && (

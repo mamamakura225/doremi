@@ -64,7 +64,7 @@ describe('鍵盤と五線を光でつなぐ（#107）', () => {
     expect(ghost.getAttribute('transform')).toContain('translate(377.5 ') // columnX(2)
     cleanup()
 
-    const guide = render(<Board {...props({ targets: [pitchByNote('C4', 'treble')!] })} />)
+    const guide = render(<Board {...props({ targets: [{ pitch: pitchByNote('C4', 'treble')!, long: false }] })} />)
     fireEvent.pointerDown(guide.getByTestId('key-E4'))
     expect(guide.getByTestId('staff-echo').querySelector('g[transform]')).toBeNull()
   })
