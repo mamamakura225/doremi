@@ -581,3 +581,35 @@ test('かえるのうたをお手本どおり（のばす音も）置いて聞�
   })
   expect(screen.getByTestId('celebration').getAttribute('data-level')).toBe('special')
 })
+
+test('ほんだなで選んだ本が開く演出が出て、再生はすぐ始まる（#109）', () => {
+  localStorage.setItem('doremi.songs.v1', SONG_2P)
+  vi.useFakeTimers()
+  render(<App />)
+  fireEvent.click(screen.getByLabelText('ほんだな'))
+  expect(screen.getByRole('dialog', { name: 'ほんだな' })).toBeTruthy()
+  fireEvent.click(screen.getByText('きく'))
+  expect(screen.getByTestId('book-opening')).toBeTruthy()
+  expect(ensureAudio).toHaveBeenCalled() // 演出を待たずに再生へ
+  act(() => {
+    vi.advanceTimersByTime(600)
+  })
+  expect(screen.queryByTestId('book-opening')).toBeNull()
+})
+
+test('ほんだなが空なら、空の棚とぴぴ（#109）', () => {
+  render(<App />)
+  fireEvent.click(screen.getByLabelText('ほんだな'))
+  const shelf = screen.getByRole('dialog', { name: 'ほんだな' })
+  expect(shelf.textContent).toContain('まだ なにも ほぞんして いないよ')
+  expect(shelf.querySelector('svg[viewBox="0 0 200 200"]')).not.toBeNull() // ぴぴ
+})
+
+test('ほんだなは開くと「とじる」にフォーカスし、Escape で閉じる（#109）', () => {
+  render(<App />)
+  fireEvent.click(screen.getByLabelText('ほんだな'))
+  const shelf = screen.getByRole('dialog', { name: 'ほんだな' })
+  expect(document.activeElement).toBe(screen.getByLabelText('とじる'))
+  fireEvent.keyDown(shelf, { key: 'Escape' })
+  expect(screen.queryByRole('dialog', { name: 'ほんだな' })).toBeNull()
+})
