@@ -1,9 +1,10 @@
 import type { ComponentProps } from 'react'
-import { cleanup, fireEvent, render } from '@testing-library/react'
+import { act, cleanup, fireEvent, render } from '@testing-library/react'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { NOTE_HEAD_RX, NOTE_HIT_W, TRASH_CX, TRASH_CY } from '../lib/layout'
-import { type Clef, TREBLE_PITCHES, pitchByNote } from '../lib/pitch'
+import { type Clef, type Pitch, TREBLE_PITCHES, pitchByNote } from '../lib/pitch'
 import type { PlacedNote } from '../lib/notes'
+import { TOOLBOX_NOTE_COLOR } from '../lib/colors'
 import Board from './Board'
 
 vi.mock('../audio/synth', () => ({
@@ -255,5 +256,65 @@ describe('配置済み音符の符尾（#97）', () => {
 
     fireEvent.pointerMove(toolbox, { pointerId: 1, clientX: 400, clientY: 460 }) // 下の帯（置けない）
     expect(ghostY2()).toBeLessThan(0)
+  })
+})
+
+describe('置いた瞬間の演出とお道具箱（#100）', () => {
+  function placeAt(view: ReturnType<typeof render>, x: number, y: number) {
+    const toolbox = view.getByTestId('toolbox-normal')
+    fireEvent.pointerDown(toolbox, { pointerId: 1, clientX: 950, clientY: 200 })
+    fireEvent.pointerMove(toolbox, { pointerId: 1, clientX: x, clientY: y })
+    fireEvent.pointerUp(toolbox, { pointerId: 1, clientX: x, clientY: y })
+  }
+
+  it('置いた音符だけが着地してキラ粒を出し、しばらくすると消える', () => {
+    vi.useFakeTimers()
+    try {
+      const old: PlacedNote = { id: 'old', pitch: pitchByNote('C4', 'treble')!, long: false }
+      const onPlace = vi.fn<(pitch: Pitch, long: boolean) => void>()
+      const props = boardProps({ notes: [old], onPlace })
+      const view = render(<Board {...props} />)
+      placeAt(view, 400, 290)
+      expect(onPlace).toHaveBeenCalledTimes(1)
+
+      // App が末尾に足した状態で描き直される
+      const added: PlacedNote = { id: 'new', pitch: onPlace.mock.calls[0][0], long: false }
+      view.rerender(<Board {...props} notes={[old, added]} />)
+
+      const fresh = view.getByTestId('note-new')
+      expect(fresh.querySelector('.note-land')).not.toBeNull()
+      expect(fresh.querySelectorAll('.sparkle').length).toBeGreaterThan(0)
+      expect(view.getByTestId('note-old').querySelector('.note-land')).toBeNull()
+
+      act(() => vi.advanceTimersByTime(1000))
+      expect(fresh.querySelector('.note-land')).toBeNull()
+      expect(fresh.querySelectorAll('.sparkle').length).toBe(0)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('演出の間にページが変わっても、新しいページの音符は跳ねない', () => {
+    const onPlace = vi.fn<(pitch: Pitch, long: boolean) => void>()
+    const page2: PlacedNote[] = [{ id: 'p2', pitch: pitchByNote('C4', 'treble')!, long: false }]
+    const props = boardProps({ notes: page2, onPlace })
+    const view = render(<Board {...props} />)
+    placeAt(view, 400, 290)
+    expect(onPlace).toHaveBeenCalledTimes(1)
+
+    // 置いてすぐ ▶ を押すと、再生が1ページ目へ切り替える（id はページをまたいで一意）
+    const page1: PlacedNote[] = [
+      { id: 'a', pitch: pitchByNote('E4', 'treble')!, long: false },
+      { id: 'b', pitch: pitchByNote('G4', 'treble')!, long: false },
+    ]
+    view.rerender(<Board {...props} notes={page1} />)
+    expect(view.container.querySelector('.note-land')).toBeNull()
+    expect(view.container.querySelector('.sparkle')).toBeNull()
+  })
+
+  it('お道具箱の音符は7色に無いチョコ色（色は置いてから決まる）', () => {
+    const view = render(<Board {...boardProps()} />)
+    const head = view.getByTestId('toolbox-normal').querySelector('ellipse')!
+    expect(head.getAttribute('fill')).toBe(TOOLBOX_NOTE_COLOR)
   })
 })

@@ -93,6 +93,43 @@ body {
   animation: match-pop 0.45s ease;
 }
 
+/* 置いた瞬間: 符頭の下端を支点に、ぷにっと潰れて戻る（#100・transform-origin は Board が指定） */
+@keyframes note-land {
+  0% {
+    transform: scale(1.25, 0.7);
+  }
+  45% {
+    transform: scale(0.9, 1.12);
+  }
+  75% {
+    transform: scale(1.04, 0.97);
+  }
+  100% {
+    transform: scale(1, 1);
+  }
+}
+.note-land {
+  animation: note-land 0.34s ease-out;
+}
+
+/* 置いた瞬間のキラ粒: 符頭のまわりへ飛んで消える（行き先は --dx/--dy） */
+@keyframes sparkle {
+  0% {
+    transform: translate(0, 0) scale(0.3);
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--dx), var(--dy)) scale(1) rotate(45deg);
+    opacity: 0;
+  }
+}
+.sparkle {
+  animation: sparkle 0.6s ease-out forwards;
+}
+
 /*
  * 動きを減らす設定の端末では、動きだけ止めて見え方は残す（#63）。
  * アニメーションを持つクラスを足したら、必ずここにも足す（src/motion.test.ts が検査する）。
@@ -101,8 +138,14 @@ body {
   .note-bounce,
   .note-hint,
   .finger-poke,
-  .match-pop {
+  .match-pop,
+  .note-land {
     animation: none;
+  }
+  /* キラ粒は飾りなので、止めるなら出さない（止めた姿のまま符頭に重なって残るのを避ける） */
+  .sparkle {
+    animation: none;
+    display: none;
   }
   /* 「次に置く位置」という情報なので、止めてもキーフレーム外の値に戻さず見える濃さを保つ */
   .target-glow {

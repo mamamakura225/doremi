@@ -108,7 +108,7 @@
       <ellipse rx="17" ry="13" fill="none" stroke="#5b524b" stroke-width="2.5" transform="rotate(-20)"/>
     </g>
 
-    <!-- お道具箱（木のかご・x940〜1060）。中の音符は無彩色のクリーム（色は置いてから決まる） -->
+    <!-- お道具箱（木のかご・x940〜1060）。中の音符はミルクチョコ（色は置いてから決まる・白玉に見せない） -->
     <g filter="url(#soft)">
       <rect x="940" y="40" width="120" height="420" rx="24" fill="#f3d9ae" stroke="#5b524b" stroke-width="3"/>
     </g>
@@ -117,7 +117,7 @@
     </g>
     <g transform="translate(1000 165)">
       <use href="#stem-up"/>
-      <ellipse rx="17" ry="13" fill="#fffdf5" transform="rotate(-20)"/><use href="#puff-shine"/>
+      <ellipse rx="17" ry="13" fill="#a07e62" transform="rotate(-20)"/><use href="#puff-shine"/>
       <ellipse rx="17" ry="13" fill="none" stroke="#5b524b" stroke-width="2.5" transform="rotate(-20)"/>
     </g>
 
