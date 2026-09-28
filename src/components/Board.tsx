@@ -438,7 +438,8 @@ export default function Board({
           // 置いた音の続きに、残りのお手本を並べる（のばす音は2列ぶん）
           const col =
             usedColumns(notes) + targets.slice(notes.length, i).reduce((c, g) => c + (g.long ? 2 : 1), 0)
-          if (col >= NOTE_MAX) return null
+          // のばす音は2列とも入らないと出さない（しっぽが五線の外にはみ出す・そこには置けない）
+          if (col + (t.long ? 2 : 1) > NOTE_MAX) return null
           return (
             <g key={`ghost-${i}`} data-testid="guide-ghost" data-col={col} data-long={t.long}>
               {i === notes.length && (

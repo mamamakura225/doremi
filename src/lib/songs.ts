@@ -1,7 +1,7 @@
 // おてほんモードの曲データ（純データ・Vitest対象）。
 // React/Tone.js/SVG に依存しない。
-// 旋律はパブリックドメインのものだけ（作曲者の没年・民謡の根拠は docs/requirements.md）。
-// 歌詞は使わない（曲名だけ）。
+// 旋律はパブリックドメインのものだけ（出どころは docs/requirements.md）。
+// 歌詞は使わない（曲名だけ）——日本語詞には保護期間中のものがあるため。
 import { NOTE_MAX } from './layout'
 import { pitchesOf, type Clef, type Pitch } from './pitch'
 
@@ -25,11 +25,11 @@ export interface Song {
  * どの曲も1ページ（10列）に収める——ページをまたぐお手本は別 issue（docs/architecture.md）。
  */
 const DEFS: { id: SongId; name: string; notes: string }[] = [
-  // きらきらぼし（フランス民謡）第1フレーズ
-  { id: 'twinkle', name: 'きらきらぼし', notes: 'C4 C4 G4 G4 A4 A4 G4' },
-  // かえるのうた（ドイツ民謡）第1フレーズ
+  // きらきらぼし（フランス民謡）第1フレーズ。最後の ソ は二分音符
+  { id: 'twinkle', name: 'きらきらぼし', notes: 'C4 C4 G4 G4 A4 A4 G4~' },
+  // かえるのうた（ドイツ民謡とされる）第1フレーズ
   { id: 'frog', name: 'かえるのうた', notes: 'C4 D4 E4 F4 E4 D4 C4~' },
-  // メリーさんのひつじ（アメリカ民謡）第1フレーズ
+  // メリーさんのひつじ（19世紀アメリカの童謡）第1フレーズ
   { id: 'lamb', name: 'メリーさんのひつじ', notes: 'E4 D4 C4 D4 E4 E4 E4~' },
   // ぶんぶんぶん（ボヘミア民謡）第1フレーズ
   { id: 'bee', name: 'ぶんぶんぶん', notes: 'G4 F4 E4~ D4 E4 F4 D4 C4~' },

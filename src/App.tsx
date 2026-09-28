@@ -210,8 +210,10 @@ export default function App() {
 
   function toggleGuide() {
     resetBoard()
-    // おてほんに入ったら、まず曲をえらぶ（#106）
+    // おてほんに入ったら、まず曲をえらぶ（#106）。切るときは曲えらびも閉じる
+    // （開いたまま曲を選ぶと、pickSong でおてほんに戻ってしまう）
     if (!guide) openPicker()
+    else setPickerOpen(false)
     setGuide((g) => !g)
   }
 

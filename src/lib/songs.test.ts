@@ -26,7 +26,13 @@ describe('songs（#106）', () => {
       const here = songOf(id, clef).notes
       expect(here.map((n) => n.pitch.solfa)).toEqual(treble.map((n) => n.pitch.solfa))
       expect(here.map((n) => n.long)).toEqual(treble.map((n) => n.long))
-      if (clef === 'bass') expect(here[0].pitch.note.endsWith(String(Number(treble[0].pitch.note.slice(-1)) - 1))).toBe(true)
+      if (clef === 'bass') {
+        // 全音が1オクターブ下（音名は同じ・オクターブ番号が1小さい）
+        here.forEach((n, i) => {
+          const t = treble[i].pitch.note
+          expect(n.pitch.note).toBe(t.slice(0, -1) + String(Number(t.slice(-1)) - 1))
+        })
+      }
     }
   })
 
@@ -42,5 +48,6 @@ describe('songs（#106）', () => {
   it('のばす音は2列ぶん（ぶんぶんぶんはちょうど10列）', () => {
     expect(songColumns(songOf('bee', 'treble').notes)).toBe(10)
     expect(songColumns(songOf('frog', 'treble').notes)).toBe(8)
+    expect(songColumns(songOf('twinkle', 'treble').notes)).toBe(8) // 最後の ソ は二分音符
   })
 })

@@ -512,4 +512,18 @@ describe('おてほんのゴースト（#106）', () => {
     )
     expect(cols).toEqual(['0', '1', '2', '4', '5', '6', '7', '8'])
   })
+
+  it('子どもが長さを変えて置いても続きのゴーストはずれ、入りきらないのばす音は出さない', async () => {
+    const { songOf } = await import('../lib/songs')
+    // ぶんぶんぶんの先頭 ソ を「のばす」で置いた（お手本はふつう）
+    const placed: PlacedNote[] = [{ id: 'g', pitch: pitchByNote('G4', 'treble')!, long: true }]
+    const view = render(
+      <Board {...boardProps({ notes: placed, targets: songOf('bee', 'treble').notes })} />,
+    )
+    const cols = [...view.container.querySelectorAll('[data-testid="guide-ghost"]')].map((g) =>
+      g.getAttribute('data-col'),
+    )
+    // ファ=2・ミー=3・レ=5・ミ=6・ファ=7・レ=8、最後の ドー は9列目から2列ぶん入らないので出ない
+    expect(cols).toEqual(['2', '3', '5', '6', '7', '8'])
+  })
 })
