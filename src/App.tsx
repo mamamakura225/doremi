@@ -27,6 +27,7 @@ import {
   loadStickers,
   saveStickers,
 } from './lib/stickers'
+import BookCover from './components/BookCover'
 import Bookshelf from './components/Bookshelf'
 import RotateOverlay from './components/RotateOverlay'
 import { usePortrait } from './hooks/usePortrait'
@@ -72,6 +73,9 @@ const VOICE_ICON: Record<Voice, (p: { width?: string; height?: string }) => Reac
 const KID_BTN =
   'grid shrink-0 place-items-center rounded-full shadow-md transition-transform active:scale-90 motion-reduce:transition-none disabled:opacity-40'
 
+/** ほんだなで選んだ本が開く演出の長さ（ms・CSS の book-open と合わせる） */
+const BOOK_OPEN_MS = 600
+
 /** シールのお知らせを出しておく時間（ms） */
 const STICKER_TOAST_MS = 2000
 
@@ -102,6 +106,9 @@ export default function App() {
   const stickersRef = useRef(stickers)
   const [stickerQueue, setStickerQueue] = useState<StickerId[]>([])
   const [bookOpen, setBookOpen] = useState(false)
+  // ほんだなで選んだ本が開く演出（#109）
+  const [opening, setOpening] = useState<SavedSong | null>(null)
+  const openingTimer = useRef(0)
   const celebratingRef = useRef(false)
   const timers = useRef<number[]>([])
   // 再生の世代。clearTimers のたびに繰り上がる。await をまたいだ継続は
@@ -130,6 +137,7 @@ export default function App() {
     return () => {
       clearTimers()
       window.clearTimeout(saveToast.current)
+      window.clearTimeout(openingTimer.current)
     }
   }, [])
 
@@ -303,6 +311,10 @@ export default function App() {
   // 本棚から選んだ曲を盤面に読み込み、そのまま再生（自由モード扱い）。
   // 保存時の音部記号でしか音名を解決できないので、盤面もその音部記号へ切り替える。
   function handleSelectSong(song: SavedSong) {
+    // 選んだ本が開く演出（#109）。再生はすぐ始める（演出は触れない別の層）
+    setOpening(song)
+    window.clearTimeout(openingTimer.current)
+    openingTimer.current = window.setTimeout(() => setOpening(null), BOOK_OPEN_MS)
     const pgs = song.pages.map((names) =>
       names
         .map(parseNoteName)
@@ -559,6 +571,17 @@ export default function App() {
           targets={targets}
         />
         {celebrating && <Celebration level={celebration} />}
+        {opening && (
+          <div
+            data-testid="book-opening"
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center [perspective:900px]"
+          >
+            <div className="book-open w-1/4 max-w-[180px]">
+              <BookCover pages={opening.pages} clef={opening.clef} />
+            </div>
+          </div>
+        )}
         {!shelfOpen && (
           <div className="pointer-events-none absolute inset-x-0 bottom-3 flex items-center justify-between px-6">
             {showPrev ? (

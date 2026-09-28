@@ -1,8 +1,8 @@
-import { previewCells } from '../lib/preview'
-import { OUTLINE_COLOR } from '../lib/colors'
-import type { Clef } from '../lib/pitch'
+import { useEffect, useRef } from 'react'
 import type { SavedSong } from '../lib/storage'
+import BookCover from './BookCover'
 import { CloseIcon, PlayIcon, ShelfIcon } from './Icons'
+import Mascot from './Mascot'
 
 interface Props {
   songs: SavedSong[]
@@ -10,40 +10,32 @@ interface Props {
   onClose: () => void
 }
 
-/** 各音を音高色の丸で並べたミニプレビュー（読めない子も色で見分けられる）。
- *  のばす音は横長にして、譜面と同じく「長さ＝幅」で見せる。
- *  ページ（フレーズ）ごとに区切って並べる。色の決定には保存時の音部記号が要る。 */
-function Preview({ pages, clef }: { pages: string[][]; clef: Clef }) {
-  return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-      {previewCells(pages, clef).map((cells, pi) => (
-        <div key={pi} className="flex items-center gap-1.5">
-          {cells.map((cell, i) => (
-            <span
-              key={i}
-              className={`inline-block h-5 rounded-full ${cell.long ? 'w-10' : 'w-5'}`}
-              style={{
-                backgroundColor: cell.color,
-                boxShadow: `inset 0 0 0 1.5px ${OUTLINE_COLOR}`,
-              }}
-            />
-          ))}
-        </div>
-      ))}
-    </div>
-  )
-}
-
-/** つくった曲の本棚（端末内 localStorage の一覧）。タップで盤面に読み込み再生。 */
+/**
+ * つくった曲の本棚（端末内 localStorage の一覧・#109）。曲は木の棚に並んだ絵本で、表紙は
+ * 曲の音から自動で描く（同じ曲は同じ表紙）。タップで盤面に読み込み再生。
+ */
 export default function Bookshelf({ songs, onSelect, onClose }: Props) {
+  const closeRef = useRef<HTMLButtonElement>(null)
+  useEffect(() => closeRef.current?.focus(), [])
   return (
-    <div className="absolute inset-0 z-20 flex flex-col bg-black/40 p-4">
-      <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col rounded-3xl bg-[#fdf6e3] p-4 shadow-xl">
+    <div
+      className="absolute inset-0 z-20 flex flex-col bg-[#3d3530]/30 p-3"
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') onClose()
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="ほんだな"
+        className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col rounded-3xl bg-[#fdf6e3] p-4 shadow-xl"
+      >
         <div className="mb-3 flex shrink-0 items-center justify-between">
           <h2 className="flex items-center gap-2 text-2xl font-bold text-[#6b6375]">
             <ShelfIcon className="text-3xl" /> ほんだな
           </h2>
           <button
+            ref={closeRef}
             type="button"
             onClick={onClose}
             aria-label="とじる"
@@ -54,24 +46,36 @@ export default function Bookshelf({ songs, onSelect, onClose }: Props) {
         </div>
 
         {songs.length === 0 ? (
-          <p className="flex flex-1 items-center justify-center text-center text-xl text-[#9a8f80]">
-            まだ なにも ほぞんして いないよ
-          </p>
+          // 空: 空っぽの棚とびっくりしたぴぴ（文字は添えるだけ）
+          <div className="flex flex-1 flex-col items-center justify-center gap-3">
+            <div className="flex items-end gap-2">
+              <div className="w-24">
+                <Mascot mood="surprised" width="100%" height="100%" />
+              </div>
+              <div className="h-16 w-40 rounded-b-lg border-x-4 border-b-8 border-[#c9a878] bg-[#f3d9ae]/50" />
+            </div>
+            <p className="text-center text-xl text-[#9a8f80]">まだ なにも ほぞんして いないよ</p>
+          </div>
         ) : (
-          <div className="grid min-h-0 flex-1 grid-cols-2 gap-3 overflow-y-auto sm:grid-cols-3">
-            {songs.map((song) => (
-              <button
-                key={song.id}
-                type="button"
-                onClick={() => onSelect(song)}
-                className="flex flex-col gap-2 rounded-2xl bg-white p-3 text-left shadow active:scale-95"
-              >
-                <Preview pages={song.pages} clef={song.clef} />
-                <span className="flex items-center gap-1 text-base font-bold text-[#22c55e]">
-                  <PlayIcon /> きく
-                </span>
-              </button>
-            ))}
+          <div className="min-h-0 flex-1 overflow-y-auto rounded-2xl bg-[#f3d9ae] p-3">
+            <ul className="grid grid-cols-3 gap-x-4 gap-y-5 sm:grid-cols-4">
+              {songs.map((song) => (
+                <li key={song.id} className="border-b-8 border-[#c9a878] pb-2">
+                  <button
+                    type="button"
+                    onClick={() => onSelect(song)}
+                    className="flex w-full flex-col items-center gap-1 active:scale-95"
+                  >
+                    <span className="w-full drop-shadow-md">
+                      <BookCover pages={song.pages} clef={song.clef} />
+                    </span>
+                    <span className="flex items-center gap-1 text-base font-bold text-[#22c55e]">
+                      <PlayIcon /> きく
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </div>
