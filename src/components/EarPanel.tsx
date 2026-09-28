@@ -23,7 +23,7 @@ function Arrow({ up }: { up: boolean }) {
 }
 
 /**
- * ききとりあそび（#110）の案内。紙の上には出さず、盤面の上端の外に重ねる。
+ * ききとりあそび（#110）の案内。紙の上端の余白（五線より上）に重ねる（art-direction の禁則1の例外）。
  * 「もういちど きく」でお題をもう一度鳴らす。違ったときは上下の矢印で教える（×・ブブーは無し）
  */
 export default function EarPanel({
@@ -42,12 +42,12 @@ export default function EarPanel({
         type="button"
         onClick={onListen}
         aria-label="もういちど きく"
-        className="pointer-events-auto flex items-center gap-2 rounded-full bg-white px-5 py-2 text-2xl font-bold text-[#6b6375] shadow-lg active:scale-95"
+        className="pointer-events-auto flex items-center gap-2 rounded-full bg-white px-5 py-2 text-2xl font-bold whitespace-nowrap text-[#6b6375] shadow-lg active:scale-95"
       >
         <EarIcon /> もういちど きく
       </button>
       {/* この段階で見つけた数（5つで次の段階へ） */}
-      <span className="flex gap-1" aria-label={`${inStage} こ みつけた`}>
+      <span role="img" className="flex gap-1" aria-label={`${inStage} こ みつけた`}>
         {Array.from({ length: FOUND_PER_STAGE }, (_, i) => (
           <span
             key={i}
@@ -56,7 +56,8 @@ export default function EarPanel({
           />
         ))}
       </span>
-      <span role="status" className="flex items-center gap-1 text-2xl font-bold text-[#6b6375]">
+      {/* 幅を固定して、ヒントが出ても「もういちど きく」が横に動かないようにする */}
+      <span role="status" className="flex w-[12.5rem] items-center gap-1 text-2xl font-bold whitespace-nowrap text-[#6b6375]">
         {hint === 'same' && (
           <span className="flex items-center gap-1">
             <span className="inline-block w-10">

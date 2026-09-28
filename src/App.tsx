@@ -80,6 +80,7 @@ const KID_BTN =
 /** ききとり: 当たりから次のお題まで／違ったときにお題を鳴らすまで／置いた音を片づけるまで（ms） */
 const EAR_NEXT_MS = 1400
 const EAR_COMPARE_MS = 700
+const EAR_COMPARE_LONG_MS = 1250
 const EAR_RETRY_MS = 1900
 
 /** ほんだなで選んだ本が開く演出の長さ（ms・CSS の book-open と合わせる） */
@@ -210,11 +211,11 @@ export default function App() {
 
   function handlePlace(pitch: Pitch, long: boolean) {
     if (playing) return
+    endCelebration()
     if (ear) {
       answerEar(pitch, long)
       return
     }
-    endCelebration()
     const idx = notes.length
     // お手本と一致したら控えめなキラキラ音（不一致でも普通に置ける・×なし）
     if (targets?.[idx]?.pitch.note === pitch.note) playSparkle()
@@ -328,7 +329,8 @@ export default function App() {
       return
     }
     earTimers.current.push(
-      window.setTimeout(() => playNote(target.note), EAR_COMPARE_MS),
+      // のばす音は鳴り終わってからお題を鳴らす（同じ synth で途中で切らない）
+      window.setTimeout(() => playNote(target.note), long ? EAR_COMPARE_LONG_MS : EAR_COMPARE_MS),
       window.setTimeout(() => {
         updateCurrentPage(() => [])
         setEarHint(null)
@@ -342,14 +344,18 @@ export default function App() {
     resetBoard()
     setClefMode(next)
     setClef(next)
-    // ききとり中なら、新しい音部記号でお題を出し直す
+    // ききとり中なら、新しい音部記号でお題を出し直す（お題が新しい音色の試聴を兼ねる。
+    // 試聴音も鳴らすと同じ synth に同時に積まれて例外になる・#116）
     if (ear) {
       clearEarTimers()
       askEar(null, earFound, next)
+      return
     }
     // 地の音色（制作中の音＝playNote 系）を切り替えて、そのまま試聴する。
     // playMelodyNote は再生音色（べる等）なので使わない（#60-3）。
-    void ensureAudio().then(() => playNote(next === 'bass' ? 'C3' : 'C5'))
+    void ensureAudio()
+      .then(() => playNote(next === 'bass' ? 'C3' : 'C5'))
+      .catch(() => {})
   }
 
   function handleUndo() {
@@ -565,7 +571,7 @@ export default function App() {
           <button
             type="button"
             onClick={handlePlay}
-            disabled={empty}
+            disabled={empty || ear}
             aria-label="さいせい"
             className={`${KID_BTN} ${size} bg-[#22c55e] text-white`}
           >
@@ -586,7 +592,7 @@ export default function App() {
         <button
           type="button"
           onClick={withPop(handleUndo)}
-          disabled={busy || notes.length === 0}
+          disabled={busy || ear || notes.length === 0}
           aria-label="ひとつもどる"
           className={`${KID_BTN} ${size} bg-white text-[#6b6375]`}
         >
@@ -595,7 +601,7 @@ export default function App() {
         <button
           type="button"
           onClick={withPop(handleSave)}
-          disabled={busy || empty}
+          disabled={busy || ear || empty}
           aria-label={justSaved ? 'ほぞんした' : 'ほぞん'}
           className={`${KID_BTN} ${size} bg-white text-[#6b6375]`}
         >
@@ -669,6 +675,7 @@ export default function App() {
           playingIndex={playing?.page === currentPage ? playing.index : null}
           playingPage={playing?.page}
           celebrating={celebrating}
+          paused={earHint !== null}
           clef={clef}
           targets={targets}
         />

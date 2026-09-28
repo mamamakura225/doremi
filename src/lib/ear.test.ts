@@ -17,7 +17,8 @@ describe('ききとりあそび（#110）', () => {
 
   it('ヘ音では1オクターブ下・音域に無い音は出さない', () => {
     expect(stagePitches(0, 'bass').map((p) => p.note)).toEqual(['C3', 'E3', 'G3'])
-    for (const p of stagePitches(2, 'bass')) expect(p.clef).toBe('bass')
+    // 段階3（10音）のうち、ヘ音の音域（F2〜A3）にあるのは ド〜ラ の6音
+    expect(stagePitches(2, 'bass').map((p) => p.note)).toEqual(['C3', 'D3', 'E3', 'F3', 'G3', 'A3'])
   })
 
   it('直前と同じ音は続けて出さない', () => {

@@ -691,3 +691,39 @@ test('ききとり: 同じ音を置くと「みつけた」とシール、次の
   expect(asked.length).toBeGreaterThan(0)
   expect(asked.at(-1)).not.toBe('C4') // 直前と同じ音は出さない
 })
+
+test('ききとり中は ▶・ほぞん を押せず、答え合わせ中は次の音を置けない（#110）', async () => {
+  stubSvgGeometry()
+  vi.spyOn(Math, 'random').mockReturnValue(0)
+  vi.useFakeTimers()
+  render(<App />)
+  openAdultMenu()
+  fireEvent.click(screen.getByLabelText('ききとり'))
+  await act(async () => {
+    h.resolveAudio?.()
+  })
+  placeNote(290) // 違う音（ソ）→ 答え合わせ中
+  expect((screen.getByLabelText('さいせい') as HTMLButtonElement).disabled).toBe(true)
+  expect((screen.getByLabelText('ほぞん') as HTMLButtonElement).disabled).toBe(true)
+  placeNote(390) // 答え合わせ中は置けない（盤面が止まっている）
+  expect(document.querySelectorAll('[data-testid^="note-"]').length).toBe(1)
+})
+
+test('ききとり中に音部記号を変えると、試聴音は鳴らさず新しいお題を鳴らす（#110・#116）', async () => {
+  vi.spyOn(Math, 'random').mockReturnValue(0)
+  vi.useFakeTimers()
+  render(<App />)
+  openAdultMenu()
+  fireEvent.click(screen.getByLabelText('ききとり'))
+  await act(async () => {
+    h.resolveAudio?.()
+  })
+  vi.mocked(playNote).mockClear()
+  openAdultMenu()
+  fireEvent.click(screen.getByLabelText('おとの たかさ')) // くま（ヘ音）
+  await act(async () => {
+    h.resolveAudio?.()
+  })
+  const played = vi.mocked(playNote).mock.calls.map((c) => c[0])
+  expect(played).toEqual(['C3']) // お題（ヘ音の ド）だけ。試聴の C3 と重ねて2回鳴らさない
+})
