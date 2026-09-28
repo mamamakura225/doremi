@@ -26,6 +26,14 @@ export const OUTLINE_COLOR = '#5b524b'
 /** 盤面（クリーム地）。符頭・ラベルはこの上に乗る。 */
 export const BOARD_BG = '#fdf6e3'
 
+/**
+ * 五線の紙（ステージ）の色（#99）。背景（空・丘）と分けるため盤面色より明るく、不透明に敷く。
+ * 輪郭色との比 7:1 以上を colors.test.ts で固定する（docs/art-direction.md の禁則3）。
+ */
+export const PAPER = '#fffdf5'
+/** 紙のふち */
+export const PAPER_EDGE = '#efe3c8'
+
 /** 白鍵の地の色。 */
 export const WHITE_KEY_BG = '#fffdf7'
 

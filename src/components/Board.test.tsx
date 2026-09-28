@@ -1,10 +1,18 @@
 import type { ComponentProps } from 'react'
 import { act, cleanup, fireEvent, render } from '@testing-library/react'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
-import { NOTE_HEAD_RX, NOTE_HIT_W, TRASH_CX, TRASH_CY } from '../lib/layout'
+import {
+  NOTE_HEAD_RX,
+  NOTE_HIT_W,
+  STAFF_LAYOUT,
+  STAFF_LEFT,
+  STAFF_RIGHT,
+  TRASH_CX,
+  TRASH_CY,
+} from '../lib/layout'
 import { type Clef, type Pitch, TREBLE_PITCHES, pitchByNote } from '../lib/pitch'
 import type { PlacedNote } from '../lib/notes'
-import { TOOLBOX_NOTE_COLOR } from '../lib/colors'
+import { PAPER, TOOLBOX_NOTE_COLOR } from '../lib/colors'
 import Board from './Board'
 
 vi.mock('../audio/synth', () => ({
@@ -316,5 +324,26 @@ describe('置いた瞬間の演出とお道具箱（#100）', () => {
     const view = render(<Board {...boardProps()} />)
     const head = view.getByTestId('toolbox-normal').querySelector('ellipse')!
     expect(head.getAttribute('fill')).toBe(TOOLBOX_NOTE_COLOR)
+  })
+})
+
+describe('五線の紙（#99）', () => {
+  it('不透明な紙が五線とゴミ箱帯を覆い、五線より先に描かれる', () => {
+    const view = render(<Board {...boardProps()} />)
+    const paper = view.getByTestId('paper')
+    expect(paper.getAttribute('fill')).toBe(PAPER)
+    expect(paper.getAttribute('opacity') ?? '1').toBe('1')
+    const x = Number(paper.getAttribute('x'))
+    const y = Number(paper.getAttribute('y'))
+    const right = x + Number(paper.getAttribute('width'))
+    const bottom = y + Number(paper.getAttribute('height'))
+    expect(x).toBeLessThanOrEqual(STAFF_LEFT)
+    expect(right).toBeGreaterThanOrEqual(STAFF_RIGHT)
+    expect(y).toBeLessThanOrEqual(STAFF_LAYOUT.topLineY)
+    // 掴んだときのゴミ箱アイコン（最大 fontSize 64・中心 TRASH_CY）の下端まで覆う
+    expect(bottom).toBeGreaterThanOrEqual(TRASH_CY + 32)
+    // 紙は下に敷く（五線の線より文書順で前）
+    const firstLine = view.container.querySelector('line')!
+    expect(paper.compareDocumentPosition(firstLine) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 })
