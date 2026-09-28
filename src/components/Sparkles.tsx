@@ -22,7 +22,7 @@ export default function Sparkles({ x, y, color }: Props) {
   return (
     <g transform={`translate(${x} ${y})`} pointerEvents="none" aria-hidden="true">
       {Array.from({ length: COUNT }, (_, i) => {
-        // 真上から少しずらして散らす（真横・真下に飛ぶと五線に沿って見えにくい）
+        // 60°おきに6方向。軸から15°ずらして、真横（五線に沿う）・真下にそろわないようにする
         const a = ((i * 360) / COUNT - 75) * (Math.PI / 180)
         const style = {
           '--dx': `${Math.cos(a) * REACH}px`,

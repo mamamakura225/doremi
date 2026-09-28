@@ -294,10 +294,22 @@ describe('置いた瞬間の演出とお道具箱（#100）', () => {
     }
   })
 
-  it('置けなかったときは演出しない', () => {
-    const view = render(<Board {...boardProps()} />)
-    placeAt(view, 400, 460) // 下の帯（置けない）
+  it('演出の間にページが変わっても、新しいページの音符は跳ねない', () => {
+    const onPlace = vi.fn<(pitch: Pitch, long: boolean) => void>()
+    const page2: PlacedNote[] = [{ id: 'p2', pitch: pitchByNote('C4', 'treble')!, long: false }]
+    const props = boardProps({ notes: page2, onPlace })
+    const view = render(<Board {...props} />)
+    placeAt(view, 400, 290)
+    expect(onPlace).toHaveBeenCalledTimes(1)
+
+    // 置いてすぐ ▶ を押すと、再生が1ページ目へ切り替える（id はページをまたいで一意）
+    const page1: PlacedNote[] = [
+      { id: 'a', pitch: pitchByNote('E4', 'treble')!, long: false },
+      { id: 'b', pitch: pitchByNote('G4', 'treble')!, long: false },
+    ]
+    view.rerender(<Board {...props} notes={page1} />)
     expect(view.container.querySelector('.note-land')).toBeNull()
+    expect(view.container.querySelector('.sparkle')).toBeNull()
   })
 
   it('お道具箱の音符は7色に無いチョコ色（色は置いてから決まる）', () => {

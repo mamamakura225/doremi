@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   COLUMN_PITCH,
-  NOTE_HEAD_RY,
+  NOTE_HEAD_RY_ROTATED,
   NOTE_HIT_H,
   NOTE_HIT_W,
   NOTE_MAX,
@@ -64,10 +64,10 @@ interface DragState {
   long: boolean
 }
 
-/** 配置済み音符を掴んでゴミ箱へ捨てる操作 */
 /** 置いた瞬間の演出（着地＋キラ粒）を出しておく時間。CSS のアニメ（最長 0.6s）より少し長く */
 const LANDING_MS = 700
 
+/** 配置済み音符を掴んでゴミ箱へ捨てる操作 */
 interface DeleteDragState {
   pointerId: number
   id: string
@@ -106,12 +106,16 @@ export default function Board({
   // その <g> が DOM から消えるとポインタキャプチャが暗黙解放され、pointerup は
   // handleNoteUp に届かない＝ゴースト＋ゴミ箱が残り続けるため（#58 症状2）。
   if (del && !notes.some((n) => n.id === del.id)) setDel(null)
-  // 置いた瞬間の演出（#100）。新しい音符は「置く前にあった id の集合に無いもの」で見分ける。
-  // App が id を振るので置いた時点では id が分からず、配列の位置で持つと
-  // タイマーの間に ↩・ページ切替が挟まったとき別の音符を指してしまう。
+  // 置いた瞬間の演出（#100）。置く直前にあった id の集合を持ち、そこへ「ちょうど1つ足された」
+  // ときだけ、その1つを新しい音符とみなす。App が id を振るので置いた時点では id が分からず、
+  // 配列の位置で持つと ↩ で別の音符を指す。集合に無いものを全部とすると、演出の間に
+  // ページが変わったとき（置いてすぐ ▶ で1ページ目へ戻る等）新しいページの音符が全部跳ねる。
   const [landing, setLanding] = useState<Set<string> | null>(null)
   const landTimer = useRef(0)
   useEffect(() => () => window.clearTimeout(landTimer.current), [])
+  const added = landing ? notes.filter((n) => !landing.has(n.id)) : []
+  const freshId =
+    landing && added.length === 1 && notes.length === landing.size + 1 ? added[0].id : null
   const [pressedKey, setPressedKey] = useState<string | null>(null)
   // 鍵盤ハイライトの消灯タイマー。IDを保持しないと、連打時に前の押下の
   // タイマーが後の押下を消してしまう（#60-5）。
@@ -316,7 +320,7 @@ export default function Board({
       {notes.map((n, i) => {
         const matched = targets?.[i]?.note === n.pitch.note
         const dragging = del?.id === n.id
-        const fresh = landing !== null && !landing.has(n.id)
+        const fresh = n.id === freshId
         const cx = columnX(starts[i])
         const cy = pitchToY(n.pitch, STAFF_LAYOUT)
         return (
@@ -346,7 +350,7 @@ export default function Board({
             {/* 置いた瞬間だけ、符頭の下端を支点にぷにっと潰れて戻る（#100） */}
             <g
               className={fresh ? 'note-land' : undefined}
-              style={{ transformBox: 'view-box', transformOrigin: `${cx}px ${cy + NOTE_HEAD_RY}px` }}
+              style={{ transformBox: 'view-box', transformOrigin: `${cx}px ${cy + NOTE_HEAD_RY_ROTATED}px` }}
             >
               <NoteHead
                 x={cx}
