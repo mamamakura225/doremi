@@ -148,6 +148,22 @@ function getSparkle(): Tone.PolySynth {
   return sparkle
 }
 
+// ボタンを押したときの「ぽこっ」（#102）。音の高さの学習と混ざらないよう、
+// 旋律の音色ではなく低い太鼓系（MembraneSynth）で、ごく短く小さく鳴らす。
+let pop: Tone.MembraneSynth | null = null
+
+/** ボタンの押下音。AudioContext が未解錠なら鳴らさない（押下音のために解錠はしない）。 */
+export function playPop(): void {
+  if (!started) return
+  pop ??= new Tone.MembraneSynth({
+    pitchDecay: 0.02,
+    octaves: 3,
+    envelope: { attack: 0.001, decay: 0.12, sustain: 0, release: 0.05 },
+    volume: -16,
+  }).toDestination()
+  pop.triggerAttackRelease('G2', '32n')
+}
+
 /** お手本と一致した時の控えめなキラキラ音。 */
 export function playSparkle(): void {
   getSparkle().triggerAttackRelease(['C6', 'E6', 'G6'], '16n')

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { isShortScreen } from '../lib/orientation'
 
-/** 縦が短い画面か（リサイズ/回転に追従）。ヘッダーを絵文字だけに畳む判定に使う。 */
+/** 縦が短い画面か（リサイズ/回転に追従）。ヘッダーの丸ボタンを小さくする判定に使う。 */
 export function useShortScreen(): boolean {
   const [short, setShort] = useState(() => isShortScreen(window.innerHeight))
 

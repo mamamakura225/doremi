@@ -44,7 +44,7 @@ npm run build     # tsc -b ＋ 本番ビルド（vite build）
 
 ### ③ 横向き前提
 - ランドスケープは技術的に強制不可。**縦向き検知で「よこむきに してね」オーバーレイ**を出す。PWA manifest は `orientation: landscape` を宣言（保証ではない）。
-- **ヘッダーに高さを使わせない**：ボタンは `shrink-0`・入らなければ折り返す・高さ500px未満では絵文字だけにする（`isShortScreen()`）。理由は [docs/architecture.md](./docs/architecture.md)。横向きスマホでは盤面の高さが最も希少な資源。
+- **ヘッダーに高さを使わせない**：ボタンは `shrink-0`・入らなければ折り返す・アイコンだけの丸ボタンで、高さ500px未満では丸を 44px にする（`isShortScreen()`）。子どもに触らせたくない操作は ⚙ 長押しのおとなメニューに置く。理由は [docs/architecture.md](./docs/architecture.md)。横向きスマホでは盤面の高さが最も希少な資源。
 
 ### ④ コミット規約（Vercelデプロイブロック防止）
 - コミット著者メールは **GitHubアカウントに登録済みのもの**（現行 `makura225@gmail.com`）を使う。未登録メールで commit すると Vercel チェックが FAILURE になる → 理由は [docs/architecture.md](./docs/architecture.md) デプロイ節。

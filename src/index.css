@@ -145,6 +145,20 @@ body {
   will-change: transform;
 }
 
+/* おとなメニューの長押し: ⚙ のまわりのリングが 1.5 秒で満ちる（#102・円周 2π×18 ≈ 113.1） */
+@keyframes hold-ring {
+  0% {
+    stroke-dashoffset: 113.1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+.hold-ring {
+  stroke-dasharray: 113.1;
+  animation: hold-ring 1.5s linear forwards;
+}
+
 /*
  * 動きを減らす設定の端末では、動きだけ止めて見え方は残す（#63）。
  * アニメーションを持つクラスを足したら、必ずここにも足す（src/motion.test.ts が検査する）。
@@ -157,6 +171,11 @@ body {
   .note-land,
   .cloud-drift {
     animation: none;
+  }
+  /* 止めると満ちたリングのまま残って「もう開く」と誤解させるので出さない（長押し自体は効く） */
+  .hold-ring {
+    animation: none;
+    display: none;
   }
   /* キラ粒は飾りなので、止めるなら出さない（止めた姿のまま符頭に重なって残るのを避ける） */
   .sparkle {
