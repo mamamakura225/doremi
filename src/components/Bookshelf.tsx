@@ -3,6 +3,10 @@ import type { SavedSong } from '../lib/storage'
 import BookCover from './BookCover'
 import { CloseIcon, PlayIcon, ShelfIcon } from './Icons'
 import Mascot from './Mascot'
+import { WOOD } from '../lib/colors'
+
+/** 棚板の色（木の地 WOOD より濃い） */
+const WOOD_EDGE = '#c9a878'
 
 interface Props {
   songs: SavedSong[]
@@ -52,15 +56,19 @@ export default function Bookshelf({ songs, onSelect, onClose }: Props) {
               <div className="w-24">
                 <Mascot mood="surprised" width="100%" height="100%" />
               </div>
-              <div className="h-16 w-40 rounded-b-lg border-x-4 border-b-8 border-[#c9a878] bg-[#f3d9ae]/50" />
+              <div
+                className="h-16 w-40 rounded-b-lg border-x-4 border-b-8"
+                style={{ borderColor: WOOD_EDGE, background: `${WOOD}80` }}
+              />
             </div>
             <p className="text-center text-xl text-[#9a8f80]">まだ なにも ほぞんして いないよ</p>
           </div>
         ) : (
-          <div className="min-h-0 flex-1 overflow-y-auto rounded-2xl bg-[#f3d9ae] p-3">
-            <ul className="grid grid-cols-3 gap-x-4 gap-y-5 sm:grid-cols-4">
+          // 横向きスマホ（棚の見える高さ ~195px）でも1段が収まるよう、本は小さめに多く並べる
+          <div className="min-h-0 flex-1 overflow-y-auto rounded-2xl p-3" style={{ background: WOOD }}>
+            <ul className="grid grid-cols-4 gap-x-3 gap-y-4 sm:grid-cols-6">
               {songs.map((song) => (
-                <li key={song.id} className="border-b-8 border-[#c9a878] pb-2">
+                <li key={song.id} className="border-b-8 pb-2" style={{ borderColor: WOOD_EDGE }}>
                   <button
                     type="button"
                     onClick={() => onSelect(song)}

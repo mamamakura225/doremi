@@ -604,3 +604,12 @@ test('ほんだなが空なら、空の棚とぴぴ（#109）', () => {
   expect(shelf.textContent).toContain('まだ なにも ほぞんして いないよ')
   expect(shelf.querySelector('svg[viewBox="0 0 200 200"]')).not.toBeNull() // ぴぴ
 })
+
+test('ほんだなは開くと「とじる」にフォーカスし、Escape で閉じる（#109）', () => {
+  render(<App />)
+  fireEvent.click(screen.getByLabelText('ほんだな'))
+  const shelf = screen.getByRole('dialog', { name: 'ほんだな' })
+  expect(document.activeElement).toBe(screen.getByLabelText('とじる'))
+  fireEvent.keyDown(shelf, { key: 'Escape' })
+  expect(screen.queryByRole('dialog', { name: 'ほんだな' })).toBeNull()
+})

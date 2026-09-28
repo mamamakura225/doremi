@@ -107,7 +107,7 @@ export default function App() {
   const [stickerQueue, setStickerQueue] = useState<StickerId[]>([])
   const [bookOpen, setBookOpen] = useState(false)
   // ほんだなで選んだ本が開く演出（#109）
-  const [opening, setOpening] = useState<SavedSong | null>(null)
+  const [opening, setOpening] = useState<{ song: SavedSong; n: number } | null>(null)
   const openingTimer = useRef(0)
   const celebratingRef = useRef(false)
   const timers = useRef<number[]>([])
@@ -312,7 +312,7 @@ export default function App() {
   // 保存時の音部記号でしか音名を解決できないので、盤面もその音部記号へ切り替える。
   function handleSelectSong(song: SavedSong) {
     // 選んだ本が開く演出（#109）。再生はすぐ始める（演出は触れない別の層）
-    setOpening(song)
+    setOpening((o) => ({ song, n: (o?.n ?? 0) + 1 })) // n: 続けて選んでも演出をやり直す
     window.clearTimeout(openingTimer.current)
     openingTimer.current = window.setTimeout(() => setOpening(null), BOOK_OPEN_MS)
     const pgs = song.pages.map((names) =>
@@ -577,8 +577,8 @@ export default function App() {
             aria-hidden="true"
             className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center [perspective:900px]"
           >
-            <div className="book-open w-1/4 max-w-[180px]">
-              <BookCover pages={opening.pages} clef={opening.clef} />
+            <div key={opening.n} className="book-open w-1/4 max-w-[180px]">
+              <BookCover pages={opening.song.pages} clef={opening.song.clef} />
             </div>
           </div>
         )}
