@@ -29,6 +29,7 @@ import {
 } from './lib/stickers'
 import BookCover from './components/BookCover'
 import EarPanel from './components/EarPanel'
+import { type ThemeId, loadTheme, saveTheme } from './lib/themes'
 import { type Judge, judge, nextQuestion, stageOf } from './lib/ear'
 import TitleScreen from './components/TitleScreen'
 import { hasSeenTitle, markTitleSeen } from './lib/firstRun'
@@ -124,6 +125,8 @@ export default function App() {
   const stickersRef = useRef(stickers)
   const [stickerQueue, setStickerQueue] = useState<StickerId[]>([])
   const [bookOpen, setBookOpen] = useState(false)
+  // 背景の着せ替え（#111）。シールの枚数で解放。まだ解放されていないテーマは はらっぱ に戻す
+  const [themeId, setThemeId] = useState<ThemeId>(() => loadTheme(stickers.length))
   // ほんだなで選んだ本が開く演出（#109）
   const [opening, setOpening] = useState<{ song: SavedSong; n: number } | null>(null)
   const openingTimer = useRef(0)
@@ -549,7 +552,7 @@ export default function App() {
   return (
     <div className="relative flex h-full w-full flex-col bg-[#fdf6e3]">
       {/* ページ背景（空・丘）。盤面 SVG の紙の外とヘッダーの後ろに見える（#99） */}
-      <Background />
+      <Background themeId={themeId} />
       {portrait && <RotateOverlay />}
       {/* 子どもの面（#102）: 大きな丸ボタンだけ。消す・音部・モードは ⚙ 長押しのおとなメニューへ。
           ボタンは縮ませない。幅が足りなければ行を折り返す＝はみ出して切れることはない。 */}
@@ -746,7 +749,17 @@ export default function App() {
             )}
           </div>
         )}
-        {bookOpen && <StickerBook earned={stickers} onClose={() => setBookOpen(false)} />}
+        {bookOpen && (
+          <StickerBook
+            earned={stickers}
+            themeId={themeId}
+            onPickTheme={(id) => {
+              setThemeId(id)
+              saveTheme(id)
+            }}
+            onClose={() => setBookOpen(false)}
+          />
+        )}
         {pickerOpen && (
           <SongPicker current={guideSong} onPick={pickSong} onClose={() => setPickerOpen(false)} />
         )}

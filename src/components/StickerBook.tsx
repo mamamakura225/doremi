@@ -1,14 +1,20 @@
 import { useEffect, useRef } from 'react'
 import { STICKERS, type StickerId } from '../lib/stickers'
+import { THEMES, type ThemeId, isUnlocked } from '../lib/themes'
 import { CloseIcon, StickerBookIcon } from './Icons'
 import StickerArt from './StickerArt'
 
 /** もらったシールを並べるシール帳（#105）。まだのシールは「？」で、何枚あるかが見える */
 export function StickerBook({
   earned,
+  themeId,
+  onPickTheme,
   onClose,
 }: {
   earned: readonly StickerId[]
+  /** いまの背景（#111） */
+  themeId: ThemeId
+  onPickTheme: (id: ThemeId) => void
   onClose: () => void
 }) {
   const closeRef = useRef<HTMLButtonElement>(null)
@@ -58,6 +64,34 @@ export function StickerBook({
             )
           })}
         </ul>
+        {/* 背景の着せ替え（#111）: シールを集めると選べる */}
+        <div className="mt-3 flex shrink-0 flex-wrap items-center gap-3 border-t-2 border-[#efe3c8] pt-3">
+          <span className="text-lg font-bold text-[#6b6375]">はいけい</span>
+          {THEMES.map((t) => {
+            const open = isUnlocked(t, earned.length)
+            return (
+              <button
+                key={t.id}
+                type="button"
+                disabled={!open}
+                onClick={() => onPickTheme(t.id)}
+                aria-label={open ? t.name : `${t.name}（シール ${t.need} まいで つかえる）`}
+                aria-pressed={t.id === themeId}
+                className={`flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-base font-bold shadow disabled:opacity-60 ${
+                  t.id === themeId ? 'ring-4 ring-[#5b524b]/40' : ''
+                }`}
+              >
+                <span
+                  className="inline-block h-7 w-7 rounded-full border-2 border-[#5b524b]"
+                  style={{ background: `linear-gradient(${t.sky[0]}, ${t.sky[1]} 55%, ${t.hills[1]} 56%)` }}
+                />
+                <span className={open ? 'text-[#6b6375]' : 'text-[#cfc6b8]'}>
+                  {open ? t.name : `あと ${t.need - earned.length}`}
+                </span>
+              </button>
+            )
+          })}
+        </div>
       </div>
     </div>
   )
