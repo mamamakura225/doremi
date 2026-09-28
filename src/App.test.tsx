@@ -727,3 +727,18 @@ test('ききとり中に音部記号を変えると、試聴音は鳴らさず�
   const played = vi.mocked(playNote).mock.calls.map((c) => c[0])
   expect(played).toEqual(['C3']) // お題（ヘ音の ド）だけ。試聴の C3 と重ねて2回鳴らさない
 })
+
+test('シールを集めると背景を着せ替えられ、選んだ背景を覚える（#111）', () => {
+  localStorage.setItem('doremi.stickers.v1', JSON.stringify(['first-note', 'save', 'bass']))
+  const first = render(<App />)
+  expect(screen.getByTestId('page-background').getAttribute('data-theme')).toBe('meadow')
+  fireEvent.click(screen.getByLabelText('シールちょう'))
+  expect((screen.getByLabelText('さくら') as HTMLButtonElement).disabled).toBe(false)
+  expect((screen.getByLabelText('よぞら あと 6（シール 9 まいで つかえる）') as HTMLButtonElement).disabled).toBe(true)
+  fireEvent.click(screen.getByLabelText('さくら'))
+  expect(screen.getByTestId('page-background').getAttribute('data-theme')).toBe('sakura')
+  first.unmount()
+
+  render(<App />)
+  expect(screen.getByTestId('page-background').getAttribute('data-theme')).toBe('sakura')
+})

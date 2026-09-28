@@ -47,7 +47,7 @@ export function AdultMenuButton({ onOpen, sizeClass }: ButtonProps) {
       onClick={(e) => {
         if (e.detail === 0) onOpen()
       }}
-      className={`relative ml-auto grid shrink-0 place-items-center rounded-full bg-white/70 text-[#9a8f80] shadow ${sizeClass}`}
+      className={`relative ml-auto grid shrink-0 place-items-center rounded-full bg-white/90 text-[#9a8f80] shadow ${sizeClass}`}
     >
       <GearIcon width="62%" height="62%" />
       {holding && (
