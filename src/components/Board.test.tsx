@@ -57,9 +57,8 @@ function note(id: string): PlacedNote {
 // このファイルが通しているのは「clef prop 変化 → レンダー中に drag を捨てる」経路。
 // もう一方の防御（handlePointerUp の canPlace による音部一致チェック＝ブラウザで
 // リセットが1フレーム遅れる窓を塞ぐ）は純関数として notes.test.ts で固定している。
-// 鍵盤タップの tracking ガード（handleKeyPress）は、useFitsKeyboard が jsdom の
-// getBoundingClientRect（全0）で常に false になり Keyboard が描画されないため、
-// ここでは固定できない（#70 の E2E の領分）。
+// 鍵盤は useFitsKeyboard が jsdom で常に false なので、このファイルでは描かれない。
+// 鍵盤が要るテスト（handleKeyPress の tracking ガードなど）は Board.keyboard.test.tsx（#107）。
 describe('音部切替とドラッグ', () => {
   it('掴んでいる最中に音部が変わったら、配置エリアで離しても置かない（#56）', () => {
     const onPlace = vi.fn()

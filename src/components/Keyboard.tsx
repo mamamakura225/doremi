@@ -12,11 +12,16 @@ import { OUTLINE_COLOR, WHITE_KEY_BG, colorOf } from '../lib/colors'
 interface Props {
   clef: Clef
   onPress: (pitch: Pitch) => void
-  /** 押している鍵（発音中の見た目） */
+  /**
+   * 光らせる鍵（押している・五線で鳴っている・掴んでいる音・#107）。
+   * 同じ色で塗り、少し沈める
+   */
   pressed?: string | null
 }
 
 const BLACK_H = KEYBOARD_H * 0.58
+/** 光っている白鍵が沈む量（押したように見せる） */
+const SINK = 3
 const LABEL_Y = KEYBOARD_TOP + KEYBOARD_H - 22
 
 /**
@@ -34,12 +39,18 @@ export default function Keyboard({ clef, onPress, pressed }: Props) {
         const x = whiteKeyX(i, whites.length)
         const on = pressed === p.note
         return (
-          <g key={p.note} onPointerDown={() => onPress(p)} style={{ cursor: 'pointer' }}>
+          <g
+            key={p.note}
+            data-testid={`key-${p.note}`}
+            data-lit={on}
+            onPointerDown={() => onPress(p)}
+            style={{ cursor: 'pointer' }}
+          >
             <rect
               x={x}
-              y={KEYBOARD_TOP}
+              y={KEYBOARD_TOP + (on ? SINK : 0)}
               width={w}
-              height={KEYBOARD_H}
+              height={KEYBOARD_H - (on ? SINK : 0)}
               rx={6}
               fill={on ? colorOf(p) : WHITE_KEY_BG}
               opacity={on ? 0.75 : 1}
