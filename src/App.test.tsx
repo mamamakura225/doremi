@@ -24,6 +24,7 @@ vi.mock('./audio/synth', () => ({
   ),
   playMelodyNote: vi.fn(),
   playNote: vi.fn(),
+  playPop: vi.fn(),
   playSparkle: vi.fn(),
   setClef: vi.fn(),
   setPlaybackVoice: vi.fn(),
@@ -43,6 +44,14 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
+/** ⚙ を長押ししておとなメニューを開く（フェイクタイマー前提） */
+function openAdultMenu() {
+  fireEvent.pointerDown(screen.getByLabelText('おとなの メニュー（ながおし）'), { pointerId: 1 })
+  act(() => {
+    vi.advanceTimersByTime(1500)
+  })
+}
+
 test('再生開始直後にクリアしても、止めた再生のtickが盤面を壊さない', async () => {
   // 2ページの曲を本棚に用意する
   localStorage.setItem(
@@ -59,8 +68,9 @@ test('再生開始直後にクリアしても、止めた再生のtickが盤面�
   fireEvent.click(screen.getByText('▶ きく'))
   expect(ensureAudio).toHaveBeenCalled()
 
-  // 音が鳴る前に ↺ クリア
-  fireEvent.click(screen.getByLabelText('クリア'))
+  // 音が鳴る前に、おとなメニューの「ぜんぶけす」
+  openAdultMenu()
+  fireEvent.click(screen.getByLabelText('ぜんぶけす'))
 
   // ここで割り込み窓を閉じる。古い2ページ分の tick が積まれてはいけない。
   await act(async () => {
@@ -124,12 +134,15 @@ test('ほぞん直後に別操作しても「✓ほぞんした」が固着し�
   })
 
   // 専用タイマーなので clearTimers に巻き込まれず、ラベルが戻っている
-  expect(screen.getByLabelText('ほぞん').textContent).toContain('ほぞん')
+  // （#102 でヘッダーはアイコンだけになった。戻ったかは 💾 に戻ったかで見る）
+  expect(screen.getByLabelText('ほぞん').textContent).toContain('💾')
   expect(screen.getByLabelText('ほぞん').textContent).not.toContain('した')
 })
 
 test('音部切替の試聴は「地の音色」で鳴らす（再生音色ではない・#60-3）', async () => {
+  vi.useFakeTimers()
   render(<App />)
+  openAdultMenu()
   fireEvent.click(screen.getByLabelText('おとの たかさ')) // 🐤→🐻
 
   await act(async () => {
@@ -178,7 +191,7 @@ test('再生中は音色ボタンが disabled（#60-2）', async () => {
     await vi.advanceTimersByTimeAsync(1)
   })
 
-  expect((screen.getByLabelText('ベル') as HTMLButtonElement).disabled).toBe(true)
+  expect((screen.getByLabelText('おといろ') as HTMLButtonElement).disabled).toBe(true)
 })
 
 test('盤面の外にページ背景（おんぷのもり）を敷き、操作の邪魔をしない（#99）', () => {
@@ -192,4 +205,51 @@ test('盤面の外にページ背景（おんぷのもり）を敷き、操作�
   // absolute の背景より上に描くには、ヘッダーも positioned である必要がある
   // （DOM 順だけでは absolute と static の重なりは決まらない。jsdom は CSS を計算しないのでクラスで見る）
   expect(screen.getByRole('banner').className).toContain('relative')
+})
+
+test('おとなメニューは短いタップでは開かず、1.5秒の長押しで開く（#102）', () => {
+  vi.useFakeTimers()
+  render(<App />)
+  const gear = screen.getByLabelText('おとなの メニュー（ながおし）')
+
+  fireEvent.click(gear)
+  fireEvent.pointerDown(gear, { pointerId: 1 })
+  act(() => {
+    vi.advanceTimersByTime(1000)
+  })
+  fireEvent.pointerUp(gear, { pointerId: 1 }) // 途中で離す
+  act(() => {
+    vi.advanceTimersByTime(1000)
+  })
+  expect(screen.queryByRole('dialog', { name: 'おとなの メニュー' })).toBeNull()
+  // 子どもの面には、消す・音部・モードのボタンが無い
+  expect(screen.queryByLabelText('ぜんぶけす')).toBeNull()
+  expect(screen.queryByLabelText('おとの たかさ')).toBeNull()
+
+  openAdultMenu()
+  expect(screen.getByRole('dialog', { name: 'おとなの メニュー' })).toBeTruthy()
+  fireEvent.click(screen.getByLabelText('とじる'))
+  expect(screen.queryByRole('dialog', { name: 'おとなの メニュー' })).toBeNull()
+})
+
+test('再生中は ▶ が ⏹ とめる になり、曲を消さずに止める（#102）', async () => {
+  localStorage.setItem('doremi.songs.v1', SONG_2P)
+  vi.useFakeTimers()
+  render(<App />)
+  fireEvent.click(screen.getByLabelText('ほんだな'))
+  fireEvent.click(screen.getByText('▶ きく'))
+  await act(async () => {
+    h.resolveAudio?.()
+    await vi.advanceTimersByTimeAsync(1)
+  })
+  vi.mocked(playMelodyNote).mockClear()
+
+  fireEvent.click(screen.getByLabelText('とめる'))
+  await act(async () => {
+    await vi.runAllTimersAsync()
+  })
+
+  expect(playMelodyNote).not.toHaveBeenCalled() // 残りの tick は捨てられた
+  expect(screen.getByLabelText('さいせい')).toBeTruthy()
+  expect(screen.getByLabelText(/ぜんぶで2ページ/)).toBeTruthy() // 曲は残っている
 })

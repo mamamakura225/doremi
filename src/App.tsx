@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import AdultMenu, { AdultMenuButton } from './components/AdultMenu'
 import Background from './components/Background'
 import Board from './components/Board'
 import Bookshelf from './components/Bookshelf'
@@ -17,11 +18,16 @@ import {
   ensureAudio,
   playMelodyNote,
   playNote,
+  playPop,
   playSparkle,
   setClef,
   setPlaybackVoice,
   stopMelody,
 } from './audio/synth'
+
+/** 子どもの面の丸ボタン（押すと沈む） */
+const KID_BTN =
+  'grid shrink-0 place-items-center rounded-full shadow-md transition-transform active:scale-90 motion-reduce:transition-none disabled:opacity-40'
 
 interface Playing {
   page: number
@@ -39,6 +45,7 @@ export default function App() {
   const [justSaved, setJustSaved] = useState(false)
   const [voice, setVoice] = useState<Voice>('piano')
   const [clef, setClefMode] = useState<Clef>('treble')
+  const [adultOpen, setAdultOpen] = useState(false)
   const timers = useRef<number[]>([])
   // 再生の世代。clearTimers のたびに繰り上がる。await をまたいだ継続は
   // 自分の世代が最新かを確認してからスケジュールする（タイマー削除だけでは
@@ -50,9 +57,9 @@ export default function App() {
   const portrait = usePortrait()
   // 縦が短い画面（横向きスマホ）ではヘッダーを絵文字だけに畳む。
   // 文字を並べるとボタンが潰れてラベルが縦に折り返し、ヘッダーが画面の6割を食う。
+  // 丸ボタンの大きさ。横向きスマホでも 44px（タップ的の下限）は割らない。
   const compact = useShortScreen()
-  const pad = compact ? 'px-3 py-2' : 'px-6 py-3'
-  const label = (icon: string, text: string) => (compact ? icon : `${icon} ${text}`)
+  const size = compact ? 'h-11 w-11 text-2xl' : 'h-16 w-16 text-3xl'
 
   function clearTimers() {
     gen.current += 1
@@ -231,6 +238,25 @@ export default function App() {
     void playSequence(pages)
   }
 
+  /** 再生・お祝いを止める。盤面（曲）はそのまま（#102） */
+  function handleStop() {
+    clearTimers()
+    setPlaying(null)
+    setCelebrating(false)
+  }
+
+  /** 押下音を添える（ボタンが働いた手応え・#102） */
+  const withPop = (fn: () => void) => () => {
+    playPop()
+    fn()
+  }
+
+  const currentVoice = VOICES.find((v) => v.id === voice) ?? VOICES[0]
+  function handleNextVoice() {
+    const i = VOICES.findIndex((v) => v.id === voice)
+    handleSelectVoice(VOICES[(i + 1) % VOICES.length].id)
+  }
+
   // 再生音色を選ぶ。選んだ瞬間にその音色で試聴（タップ＝AudioContext起動も兼ねる）。
   function handleSelectVoice(v: Voice) {
     if (busy) return
@@ -244,104 +270,85 @@ export default function App() {
       {/* ページ背景（空・丘）。盤面 SVG の紙の外とヘッダーの後ろに見える（#99） */}
       <Background />
       {portrait && <RotateOverlay />}
-      {/* ボタンは縮ませない（潰れるとラベルが縦に折り返してヘッダーが伸びる）。
-          幅が足りなければ行を折り返す＝はみ出して切れることはない。 */}
+      {/* 子どもの面（#102）: 大きな丸ボタンだけ。消す・音部・モードは ⚙ 長押しのおとなメニューへ。
+          ボタンは縮ませない。幅が足りなければ行を折り返す＝はみ出して切れることはない。 */}
       <header
         className={`relative flex shrink-0 flex-wrap items-center ${compact ? 'gap-2 p-2' : 'gap-3 p-3'}`}
       >
+        {/* 再生中は ⏹。曲を消さずに止める（これまで止める手段はクリア＝曲ごと消す だけだった） */}
+        {busy ? (
+          <button
+            type="button"
+            onClick={handleStop}
+            aria-label="とめる"
+            className={`${KID_BTN} ${size} bg-[#6b6375] text-white`}
+          >
+            ⏹
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handlePlay}
+            disabled={empty}
+            aria-label="さいせい"
+            className={`${KID_BTN} ${size} bg-[#22c55e] text-white`}
+          >
+            ▶
+          </button>
+        )}
+        {/* 音色は1つのボタンで順に巡る（4つ並べると、子どもには何のボタンか分からない） */}
         <button
           type="button"
-          onClick={handlePlay}
-          disabled={busy || empty}
-          aria-label="さいせい"
-          className={`shrink-0 rounded-2xl bg-[#22c55e] ${pad} text-xl font-bold text-white shadow disabled:opacity-40`}
+          onClick={handleNextVoice}
+          disabled={busy}
+          aria-label="おといろ"
+          title={currentVoice.name}
+          className={`${KID_BTN} ${size} bg-white`}
         >
-          {label('▶', 'さいせい')}
+          {currentVoice.label}
         </button>
-        <div
-          className={`flex shrink-0 items-center gap-1 rounded-2xl bg-white shadow ${
-            compact ? 'px-1' : 'px-2 py-1'
-          }`}
-          role="group"
-          aria-label="さいせいの おと"
-        >
-          {VOICES.map((v) => (
-            <button
-              key={v.id}
-              type="button"
-              onClick={() => handleSelectVoice(v.id)}
-              disabled={busy}
-              aria-label={v.name}
-              aria-pressed={voice === v.id}
-              className={`rounded-xl ${compact ? 'px-2 py-1.5 text-2xl' : 'px-3 py-2 text-2xl'} disabled:opacity-40 ${
-                voice === v.id ? 'bg-[#f59e0b]' : 'bg-transparent'
-              }`}
-            >
-              {v.label}
-            </button>
-          ))}
-        </div>
         <button
           type="button"
-          onClick={handleUndo}
+          onClick={withPop(handleUndo)}
           disabled={busy || notes.length === 0}
           aria-label="ひとつもどる"
-          className={`shrink-0 rounded-2xl bg-white ${pad} text-xl font-bold text-[#6b6375] shadow disabled:opacity-40`}
+          className={`${KID_BTN} ${size} bg-white text-[#6b6375]`}
         >
-          {label('↩', 'ひとつもどる')}
+          ↩
         </button>
         <button
           type="button"
-          onClick={handleClear}
-          disabled={empty}
-          aria-label="クリア"
-          className={`shrink-0 rounded-2xl bg-white ${pad} text-xl font-bold text-[#6b6375] shadow disabled:opacity-40`}
-        >
-          {label('↺', 'クリア')}
-        </button>
-        <button
-          type="button"
-          onClick={handleSave}
+          onClick={withPop(handleSave)}
           disabled={busy || empty}
           aria-label="ほぞん"
-          className={`shrink-0 rounded-2xl bg-white ${pad} text-xl font-bold text-[#6b6375] shadow disabled:opacity-40`}
+          className={`${KID_BTN} ${size} bg-white text-[#6b6375]`}
         >
-          {justSaved ? label('✓', 'ほぞんした') : label('💾', 'ほぞん')}
+          {justSaved ? '✓' : '💾'}
+          {justSaved && <span className="sr-only">ほぞんした</span>}
         </button>
         <button
           type="button"
-          onClick={() => setShelfOpen(true)}
+          onClick={withPop(() => setShelfOpen(true))}
           disabled={busy}
           aria-label="ほんだな"
-          className={`shrink-0 rounded-2xl bg-white ${pad} text-xl font-bold text-[#6b6375] shadow disabled:opacity-40`}
+          className={`${KID_BTN} ${size} bg-white`}
         >
-          {label('📚', 'ほんだな')}
+          📚
         </button>
-        {/* 音部記号の切替。「ト音／ヘ音」は5歳児に通じないので、
-            高さのイメージ（ことり＝高い／くま＝低い）で見せる。 */}
-        <button
-          type="button"
-          onClick={toggleClef}
-          disabled={busy}
-          aria-label="おとの たかさ"
-          className={`ml-auto shrink-0 rounded-2xl ${pad} text-xl font-bold shadow disabled:opacity-40 ${
-            clef === 'bass' ? 'bg-[#8b5cf6] text-white' : 'bg-white text-[#6b6375]'
-          }`}
-        >
-          {clef === 'bass' ? label('🐻', 'くま') : label('🐤', 'ことり')}
-        </button>
-        <button
-          type="button"
-          onClick={toggleGuide}
-          disabled={busy}
-          aria-label={guide ? 'おてほん' : 'じゆう'}
-          className={`shrink-0 rounded-2xl ${pad} text-xl font-bold shadow disabled:opacity-40 ${
-            guide ? 'bg-[#f59e0b] text-white' : 'bg-white text-[#6b6375]'
-          }`}
-        >
-          {guide ? label('🎵', 'おてほん') : label('✏️', 'じゆう')}
-        </button>
+        <AdultMenuButton onOpen={() => setAdultOpen(true)} sizeClass={`${size} text-2xl`} />
       </header>
+      {adultOpen && (
+        <AdultMenu
+          clef={clef}
+          guide={guide}
+          busy={busy}
+          empty={empty}
+          onClear={handleClear}
+          onToggleClef={toggleClef}
+          onToggleGuide={toggleGuide}
+          onClose={() => setAdultOpen(false)}
+        />
+      )}
       <main className="relative min-h-0 flex-1">
         <Board
           notes={notes}
