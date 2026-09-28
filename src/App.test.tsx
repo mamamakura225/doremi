@@ -479,7 +479,7 @@ test('はじめて音符を置くとシールがもらえ、シール帳に入�
 
   fireEvent.click(screen.getByLabelText('シールちょう'))
   const book = screen.getByRole('dialog', { name: 'シールちょう' })
-  expect(book.textContent).toContain('1 / 10')
+  expect(book.textContent).toContain('1 / 11')
 })
 
 test('localStorage が使えなくても、シールで白画面にならない（#105・#57 と同じ方針）', () => {
@@ -638,4 +638,56 @@ test('はじめて開いたときだけタイトルが出て、はじめるで�
   // 2回目に開いたときは出さない
   render(<App />)
   expect(screen.queryByRole('dialog', { name: 'どれみ' })).toBeNull()
+})
+
+test('ききとり: 違う音を置くと、お題を鳴らして上下で教え、置いた音は片づく（#110）', async () => {
+  stubSvgGeometry()
+  vi.spyOn(Math, 'random').mockReturnValue(0) // 最初のお題は ド（C4）
+  vi.useFakeTimers()
+  render(<App />)
+  openAdultMenu()
+  vi.mocked(playNote).mockClear()
+  fireEvent.click(screen.getByLabelText('ききとり'))
+  await act(async () => {
+    h.resolveAudio?.()
+  })
+  expect(playNote).toHaveBeenCalledWith('C4')
+  expect(screen.getByLabelText('もういちど きく')).toBeTruthy()
+
+  placeNote(290) // ソ を置く（お題の ド はもっと低い）
+  expect(screen.getByText('もっと ひくい')).toBeTruthy()
+  vi.mocked(playNote).mockClear()
+  act(() => {
+    vi.advanceTimersByTime(700)
+  })
+  expect(playNote).toHaveBeenCalledWith('C4') // 比べるためにお題を鳴らす
+  act(() => {
+    vi.advanceTimersByTime(1300)
+  })
+  expect(document.querySelectorAll('[data-testid^="note-"]').length).toBe(0) // 片づいた
+  expect(screen.queryByText('もっと ひくい')).toBeNull()
+})
+
+test('ききとり: 同じ音を置くと「みつけた」とシール、次のお題は別の音（#110）', async () => {
+  stubSvgGeometry()
+  vi.spyOn(Math, 'random').mockReturnValue(0)
+  vi.useFakeTimers()
+  render(<App />)
+  openAdultMenu()
+  fireEvent.click(screen.getByLabelText('ききとり'))
+  await act(async () => {
+    h.resolveAudio?.()
+  })
+  placeNote(390) // ド
+  expect(screen.getByText('みつけた！')).toBeTruthy()
+  expect(JSON.parse(localStorage.getItem('doremi.stickers.v1') ?? '[]')).toContain('ear-found')
+
+  vi.mocked(playNote).mockClear()
+  await act(async () => {
+    vi.advanceTimersByTime(1400)
+    h.resolveAudio?.()
+  })
+  const asked = vi.mocked(playNote).mock.calls.map((c) => c[0])
+  expect(asked.length).toBeGreaterThan(0)
+  expect(asked.at(-1)).not.toBe('C4') // 直前と同じ音は出さない
 })

@@ -18,6 +18,7 @@ const BADGE: Record<StickerId, string> = {
   'long-song': '#d9ecff',
   'all-colors': '#fffdf5',
   'guide-complete': '#fff3b0',
+  'ear-found': '#d9ecff',
 }
 
 /** 符頭＋符幹（チョコ色の音符） */
@@ -52,6 +53,13 @@ const ART: Record<StickerId, ReactNode> = {
         <path key={c} d={`M${10 + i * 1.6} 32 A${14 - i * 1.6} ${14 - i * 1.6} 0 0 1 ${38 - i * 1.6} 32`} stroke={c} />
       ))}
       <path d="M8.5 32 A15.5 15.5 0 0 1 39.5 32" stroke={O} strokeWidth={1.2} />
+    </g>
+  ),
+  'ear-found': (
+    <g stroke={O} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" fill="none">
+      <path d="M16 21 A8.5 8.5 0 0 1 33 21 C33 26.5 28.4 27.6 27.8 31.6 A5.2 5.2 0 0 1 18 33" fill="#ffe8d6" />
+      <path d="M21 21.6 A3.4 3.4 0 0 1 27.6 22 C27.6 24 25.5 24.6 24.6 26" />
+      <path d="M36 14 Q39 21 36 28" />
     </g>
   ),
   'guide-complete': (

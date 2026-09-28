@@ -13,6 +13,7 @@ export type StickerId =
   | 'save'
   | 'shelf-listen'
   | 'guide-complete'
+  | 'ear-found'
 
 export interface Sticker {
   id: StickerId
@@ -32,6 +33,7 @@ export const STICKERS: Sticker[] = [
   { id: 'long-song', name: 'ながい うた' },
   { id: 'all-colors', name: 'にじいろ' },
   { id: 'guide-complete', name: 'おてほん できた' },
+  { id: 'ear-found', name: 'ききとり みつけた' },
 ]
 
 const IDS = new Set<string>(STICKERS.map((s) => s.id))
