@@ -63,13 +63,14 @@ export function StickerBook({
   )
 }
 
-/** シールをもらったときのお知らせ（触れない・読み上げ用に role=status） */
+/** シールをもらったときのお知らせ（触れない。読み上げは App 側の role=status の入れ物で） */
 export function StickerToast({ id, name }: { id: StickerId; name: string }) {
   return (
-    // 中央寄せ（translate）と登場の動き（transform）がぶつからないよう、外と内に分ける
-    <div role="status" className="pointer-events-none absolute top-3 left-1/2 z-30 -translate-x-1/2">
-      <div className="sticker-pop flex items-center gap-3 rounded-3xl bg-white/95 px-5 py-3 shadow-xl">
-        <div className="h-14 w-14 shrink-0">
+    // ヘッダーの右寄り（⚙ の左の空き）に出す——紙の上（五線の上端）にかぶせない。
+    // 位置（外）と登場の動き（内・transform）を分ける
+    <div className="pointer-events-none fixed top-2 right-[4.5rem] z-30">
+      <div className="sticker-pop flex items-center gap-2 rounded-3xl bg-white/95 px-4 py-2 shadow-xl">
+        <div className="h-11 w-11 shrink-0">
           <StickerArt id={id} earned />
         </div>
         <div className="text-left">

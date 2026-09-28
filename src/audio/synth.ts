@@ -181,6 +181,22 @@ export function playFanfare(level: 'small' | 'big' | 'special'): void {
   })
 }
 
+// シールをもらったときの「ぴんぽん」（#105）。キラキラ音（おてほんの一致）とは別の音色にする
+let chime: Tone.FMSynth | null = null
+
+/** シールのお知らせの音。2音を 120ms ずらして鳴らす */
+export function playChime(): void {
+  chime ??= new Tone.FMSynth({
+    harmonicity: 2,
+    modulationIndex: 3,
+    envelope: { attack: 0.005, decay: 0.3, sustain: 0, release: 0.3 },
+    volume: -14,
+  }).toDestination()
+  const now = Tone.now()
+  chime.triggerAttackRelease('E6', '16n', now)
+  chime.triggerAttackRelease('A6', '16n', now + 0.12)
+}
+
 /** お手本と一致した時の控えめなキラキラ音。 */
 export function playSparkle(): void {
   getSparkle().triggerAttackRelease(['C6', 'E6', 'G6'], '16n')

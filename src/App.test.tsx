@@ -25,6 +25,7 @@ vi.mock('./audio/synth', () => ({
   ),
   playMelodyNote: vi.fn(),
   playFanfare: vi.fn(),
+  playChime: vi.fn(),
   playNote: vi.fn(),
   playPop: vi.fn(),
   playSparkle: vi.fn(),
@@ -44,6 +45,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup()
   vi.useRealTimers()
+  vi.restoreAllMocks() // localStorage を塞ぐ spyOn を後のテストに漏らさない
 })
 
 /** ⚙ を長押ししておとなメニューを開く（フェイクタイマー前提） */
@@ -297,6 +299,10 @@ test('画面に絵文字を出さない（OS ごとに絵柄が変わる・#101�
   fireEvent.click(screen.getByLabelText('ほんだな'))
   expect(screen.getByText('きく')).toBeTruthy()
   expect(document.body.textContent ?? '').not.toMatch(emoji)
+  // シール帳
+  fireEvent.click(screen.getByLabelText('シールちょう'))
+  expect(screen.getByRole('dialog', { name: 'シールちょう' })).toBeTruthy()
+  expect(document.body.textContent ?? '').not.toMatch(emoji)
   cleanup()
   // 回転の案内
   render(<RotateOverlay />)
@@ -466,7 +472,7 @@ test('はじめて音符を置くとシールがもらえ、シール帳に入�
     vi.advanceTimersByTime(3000)
   })
   placeNote(290)
-  expect(screen.queryByRole('status')).toBeNull()
+  expect(screen.getByRole('status').textContent).toBe('')
 
   fireEvent.click(screen.getByLabelText('シールちょう'))
   const book = screen.getByRole('dialog', { name: 'シールちょう' })
@@ -485,7 +491,6 @@ test('localStorage が使えなくても、シールで白画面にならない�
   render(<App />)
   placeNote(390)
   expect(screen.getByRole('status').textContent).toContain('はじめての おんぷ') // このセッション中はもらえる
-  vi.restoreAllMocks()
 })
 
 test('一度に何枚かもらったら、お知らせは1枚ずつ順番に出る（#105）', () => {
@@ -504,5 +509,32 @@ test('一度に何枚かもらったら、お知らせは1枚ずつ順番に出�
   act(() => {
     vi.advanceTimersByTime(2300)
   })
-  expect(screen.queryByRole('status')).toBeNull()
+  expect(screen.getByRole('status').textContent).toBe('')
+  // 同じハンドラで続けてもらっても、2枚とも保存される（state を待たずに ref で判定する理由）
+  expect(JSON.parse(localStorage.getItem('doremi.stickers.v1') ?? '[]')).toEqual(['first-note', 'bass'])
+})
+
+test('最後まで聞くと「さいごまで きいた」、途中で止めたらもらえない（#105）', async () => {
+  localStorage.setItem('doremi.songs.v1', SONG_2P)
+  vi.useFakeTimers()
+  render(<App />)
+  fireEvent.click(screen.getByLabelText('ほんだな'))
+  fireEvent.click(screen.getByText('きく'))
+  await act(async () => {
+    h.resolveAudio?.()
+    await vi.advanceTimersByTimeAsync(700)
+  })
+  fireEvent.click(screen.getByLabelText('とめる'))
+  await act(async () => {
+    await vi.runAllTimersAsync()
+  })
+  const stored = () => JSON.parse(localStorage.getItem('doremi.stickers.v1') ?? '[]') as string[]
+  expect(stored()).not.toContain('play-end')
+
+  fireEvent.click(screen.getByLabelText('さいせい'))
+  await act(async () => {
+    h.resolveAudio?.()
+    await vi.advanceTimersByTimeAsync(600 * 5)
+  })
+  expect(stored()).toEqual(expect.arrayContaining(['shelf-listen', 'play-end', 'long-song']))
 })
