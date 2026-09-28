@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
+import { SwirlIcon } from './Icons'
 
 interface Props {
   children: ReactNode
@@ -26,7 +27,7 @@ export default class ErrorBoundary extends Component<Props, State> {
     if (!this.state.crashed) return this.props.children
     return (
       <div className="flex h-full w-full flex-col items-center justify-center gap-8 bg-[#fdf6e3] p-8 text-center">
-        <p className="text-7xl">🌀</p>
+        <SwirlIcon className="text-8xl" />
         <button
           type="button"
           onClick={() => window.location.reload()}

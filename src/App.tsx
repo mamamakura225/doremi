@@ -1,6 +1,20 @@
-import { useEffect, useRef, useState } from 'react'
+import { type ReactElement, useEffect, useRef, useState } from 'react'
 import AdultMenu, { AdultMenuButton } from './components/AdultMenu'
 import Background from './components/Background'
+import {
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  BellIcon,
+  PianoIcon,
+  PicoIcon,
+  PlayIcon,
+  SavedIcon,
+  SaveIcon,
+  ShelfIcon,
+  SingIcon,
+  StopIcon,
+  UndoIcon,
+} from './components/Icons'
 import Board from './components/Board'
 import Bookshelf from './components/Bookshelf'
 import RotateOverlay from './components/RotateOverlay'
@@ -24,6 +38,14 @@ import {
   setPlaybackVoice,
   stopMelody,
 } from './audio/synth'
+
+/** おといろのアイコン（絵文字は OS ごとに絵柄が変わるので自前の SVG・#101） */
+const VOICE_ICON: Record<Voice, (p: { width?: string; height?: string }) => ReactElement> = {
+  piano: PianoIcon,
+  bell: BellIcon,
+  pico: PicoIcon,
+  sing: SingIcon,
+}
 
 /** 子どもの面の丸ボタン（押すと沈む） */
 const KID_BTN =
@@ -267,6 +289,7 @@ export default function App() {
   }
 
   const currentVoice = VOICES.find((v) => v.id === voice) ?? VOICES[0]
+  const VoiceIcon = VOICE_ICON[currentVoice.id]
   function handleNextVoice() {
     const i = VOICES.findIndex((v) => v.id === voice)
     handleSelectVoice(VOICES[(i + 1) % VOICES.length].id)
@@ -298,7 +321,7 @@ export default function App() {
             aria-label="とめる"
             className={`${KID_BTN} ${size} bg-[#6b6375] text-white`}
           >
-            ⏹
+            <StopIcon width="62%" height="62%" />
           </button>
         ) : (
           <button
@@ -308,7 +331,7 @@ export default function App() {
             aria-label="さいせい"
             className={`${KID_BTN} ${size} bg-[#22c55e] text-white`}
           >
-            ▶
+            <PlayIcon width="62%" height="62%" />
           </button>
         )}
         {/* 音色は1つのボタンで順に巡る（4つ並べると、子どもには何のボタンか分からない） */}
@@ -320,7 +343,7 @@ export default function App() {
           title={currentVoice.name}
           className={`${KID_BTN} ${size} bg-white`}
         >
-          {currentVoice.label}
+          <VoiceIcon width="62%" height="62%" />
         </button>
         <button
           type="button"
@@ -329,7 +352,7 @@ export default function App() {
           aria-label="ひとつもどる"
           className={`${KID_BTN} ${size} bg-white text-[#6b6375]`}
         >
-          ↩
+          <UndoIcon width="58%" height="58%" />
         </button>
         <button
           type="button"
@@ -338,7 +361,7 @@ export default function App() {
           aria-label={justSaved ? 'ほぞんした' : 'ほぞん'}
           className={`${KID_BTN} ${size} bg-white text-[#6b6375]`}
         >
-          {justSaved ? '✓' : '💾'}
+          {justSaved ? <SavedIcon width="62%" height="62%" /> : <SaveIcon width="62%" height="62%" />}
         </button>
         <button
           type="button"
@@ -347,7 +370,7 @@ export default function App() {
           aria-label="ほんだな"
           className={`${KID_BTN} ${size} bg-white`}
         >
-          📚
+          <ShelfIcon width="62%" height="62%" />
         </button>
         <AdultMenuButton onOpen={() => setAdultOpen(true)} sizeClass={`${size} text-2xl`} />
       </header>
@@ -379,9 +402,9 @@ export default function App() {
               <button
                 type="button"
                 onClick={handlePrev}
-                className="pointer-events-auto rounded-2xl bg-white px-7 py-4 text-2xl font-bold text-[#6b6375] shadow-lg active:scale-95"
+                className="pointer-events-auto flex items-center gap-2 rounded-2xl bg-white px-7 py-4 text-2xl font-bold text-[#6b6375] shadow-lg active:scale-95"
               >
-                ⬅ まえ
+                <ArrowLeftIcon /> まえ
               </button>
             ) : (
               <span />
@@ -395,7 +418,7 @@ export default function App() {
                   <span
                     key={i}
                     className={`h-3.5 w-3.5 rounded-full ${
-                      i === currentPage ? 'bg-[#f59e0b]' : 'bg-[#d8c9a6]'
+                      i === currentPage ? 'bg-[#5b524b]' : 'bg-[#d8c9a6]'
                     }`}
                   />
                 ))}
@@ -405,9 +428,9 @@ export default function App() {
               <button
                 type="button"
                 onClick={handleNext}
-                className="pointer-events-auto rounded-2xl bg-[#38bdf8] px-7 py-4 text-2xl font-bold text-white shadow-lg active:scale-95"
+                className="pointer-events-auto flex items-center gap-2 rounded-2xl bg-[#dff3ea] px-7 py-4 text-2xl font-bold text-[#5b524b] shadow-lg active:scale-95"
               >
-                {canCreatePage && !hasNextPage ? 'つぎのうた ➔' : 'つぎ ➔'}
+                {canCreatePage && !hasNextPage ? 'つぎのうた' : 'つぎ'} <ArrowRightIcon />
               </button>
             ) : (
               <span />

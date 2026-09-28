@@ -2,6 +2,7 @@ import { previewCells } from '../lib/preview'
 import { OUTLINE_COLOR } from '../lib/colors'
 import type { Clef } from '../lib/pitch'
 import type { SavedSong } from '../lib/storage'
+import { CloseIcon, PlayIcon, ShelfIcon } from './Icons'
 
 interface Props {
   songs: SavedSong[]
@@ -39,14 +40,16 @@ export default function Bookshelf({ songs, onSelect, onClose }: Props) {
     <div className="absolute inset-0 z-20 flex flex-col bg-black/40 p-4">
       <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col rounded-3xl bg-[#fdf6e3] p-4 shadow-xl">
         <div className="mb-3 flex shrink-0 items-center justify-between">
-          <h2 className="text-2xl font-bold text-[#6b6375]">📚 ほんだな</h2>
+          <h2 className="flex items-center gap-2 text-2xl font-bold text-[#6b6375]">
+            <ShelfIcon className="text-3xl" /> ほんだな
+          </h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="とじる"
-            className="rounded-2xl bg-white px-5 py-2 text-xl font-bold text-[#6b6375] shadow"
+            className="flex items-center gap-2 rounded-2xl bg-white px-5 py-2 text-xl font-bold text-[#6b6375] shadow"
           >
-            ✕ とじる
+            <CloseIcon /> とじる
           </button>
         </div>
 
@@ -64,7 +67,9 @@ export default function Bookshelf({ songs, onSelect, onClose }: Props) {
                 className="flex flex-col gap-2 rounded-2xl bg-white p-3 text-left shadow active:scale-95"
               >
                 <Preview pages={song.pages} clef={song.clef} />
-                <span className="text-base font-bold text-[#22c55e]">▶ きく</span>
+                <span className="flex items-center gap-1 text-base font-bold text-[#22c55e]">
+                  <PlayIcon /> きく
+                </span>
               </button>
             ))}
           </div>

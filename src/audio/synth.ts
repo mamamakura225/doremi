@@ -47,11 +47,12 @@ export function playNote(note: string, duration: Tone.Unit.Time = '8n'): void {
 
 // 再生時のみ切り替えられる音色（制作中の音は通常音のまま＝学習を妨げない）。
 export type Voice = 'piano' | 'bell' | 'pico' | 'sing'
-export const VOICES: { id: Voice; label: string; name: string }[] = [
-  { id: 'piano', label: '🎹', name: 'ぴあの' },
-  { id: 'bell', label: '🔔', name: 'べる' },
-  { id: 'pico', label: '🎵', name: 'ぴこぴこ' },
-  { id: 'sing', label: '🎤', name: 'うた（ドレミ）' },
+// 絵は App の VOICE_ICON（自前の SVG・#101）。ここには音の情報だけを置く。
+export const VOICES: { id: Voice; name: string }[] = [
+  { id: 'piano', name: 'ぴあの' },
+  { id: 'bell', name: 'べる' },
+  { id: 'pico', name: 'ぴこぴこ' },
+  { id: 'sing', name: 'うた（ドレミ）' },
 ]
 
 type AnySynth = Tone.Synth | Tone.FMSynth

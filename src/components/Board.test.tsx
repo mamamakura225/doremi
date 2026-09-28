@@ -190,12 +190,12 @@ describe('単一ポインタ追跡（#58）', () => {
       clientX: 300,
       clientY: 300,
     })
-    expect(view.queryByText('🗑️')).not.toBeNull() // 掴めている
+    expect(view.queryByTestId('trash')).not.toBeNull() // 掴めている
 
     // 別の指で ↩ / ページ切替 → その音符が notes から消える
     view.rerender(<Board {...boardProps({ notes: [], onPlace: props.onPlace })} />)
 
-    expect(view.queryByText('🗑️')).toBeNull()
+    expect(view.queryByTestId('trash')).toBeNull()
 
     // 掴みが解けている＝盤面が生きている（お道具箱から普通に置ける）
     fireEvent.pointerDown(view.getByTestId('toolbox-normal'), {
@@ -345,5 +345,13 @@ describe('五線の紙（#99）', () => {
     // 紙は下に敷く（五線の線より文書順で前）
     const firstLine = view.container.querySelector('line')!
     expect(paper.compareDocumentPosition(firstLine) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+})
+
+describe('起動ヒント（#101）', () => {
+  it('指と「さわってね」はポインタを受けない（下のお道具箱を掴める）', () => {
+    const view = render(<Board {...boardProps()} />)
+    const hint = view.getByText('さわってね').closest('g[aria-hidden="true"]')!
+    expect(hint.getAttribute('pointer-events')).toBe('none')
   })
 })

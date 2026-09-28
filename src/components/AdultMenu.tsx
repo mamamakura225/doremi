@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Clef } from '../lib/pitch'
+import { BearIcon, BirdIcon, ClearIcon, CloseIcon, FreeIcon, GearIcon, GuideIcon } from './Icons'
 
 /** ⚙ を押し続けてメニューが開くまでの時間（短いタップでは開かない＝子どもの誤操作よけ） */
 export const HOLD_MS = 1500
@@ -48,10 +49,10 @@ export function AdultMenuButton({ onOpen, sizeClass }: ButtonProps) {
       }}
       className={`relative ml-auto grid shrink-0 place-items-center rounded-full bg-white/70 text-[#9a8f80] shadow ${sizeClass}`}
     >
-      <span aria-hidden="true">⚙</span>
+      <GearIcon width="62%" height="62%" />
       {holding && (
         <svg className="pointer-events-none absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 40 40" aria-hidden="true">
-          <circle cx={20} cy={20} r={18} fill="none" stroke="#f59e0b" strokeWidth={3} className="hold-ring" />
+          <circle cx={20} cy={20} r={18} fill="none" stroke="#5b524b" strokeWidth={3} className="hold-ring" />
         </svg>
       )}
     </button>
@@ -110,18 +111,18 @@ export default function AdultMenu({
             type="button"
             onClick={onClose}
             aria-label="とじる"
-            className="rounded-2xl bg-white px-5 py-2 text-xl font-bold text-[#6b6375] shadow"
+            className="flex items-center gap-2 rounded-2xl bg-white px-5 py-2 text-xl font-bold text-[#6b6375] shadow"
           >
-            ✕ とじる
+            <CloseIcon /> とじる
           </button>
         </div>
         {/* ↺ は再生中も押せる（非常停止を兼ねて曲ごと消す）。止めるだけなら ⏹ */}
         <button type="button" aria-label="ぜんぶけす" disabled={empty} onClick={act(onClear)} className={ROW}>
-          <span aria-hidden="true">↺</span> ぜんぶ けす
+          <ClearIcon className="shrink-0 text-3xl" /> ぜんぶ けす
         </button>
         {/* 「ト音／ヘ音」は子どもに通じないので、ことり＝高い／くま＝低い で見せる */}
         <button type="button" aria-label="おとの たかさ" disabled={busy} onClick={act(onToggleClef)} className={ROW}>
-          <span aria-hidden="true">{clef === 'bass' ? '🐻' : '🐤'}</span>
+          {clef === 'bass' ? <BearIcon className="shrink-0 text-3xl" /> : <BirdIcon className="shrink-0 text-3xl" />}
           {clef === 'bass' ? 'くま（ヘ音）→ ことりに する' : 'ことり（ト音）→ くまに する'}
         </button>
         <button
@@ -131,7 +132,7 @@ export default function AdultMenu({
           onClick={act(onToggleGuide)}
           className={ROW}
         >
-          <span aria-hidden="true">{guide ? '🎵' : '✏️'}</span>
+          {guide ? <GuideIcon className="shrink-0 text-3xl" /> : <FreeIcon className="shrink-0 text-3xl" />}
           {guide ? 'おてほん → じゆうに する' : 'じゆう → おてほんに する'}
         </button>
       </div>
