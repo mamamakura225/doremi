@@ -1,12 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 620" width="1100" height="620">
-  <!-- 世界観「おんぷのもり」のムードボード（#96）。
-       森のひらけた原っぱで開く小さな音楽会。五線譜は原っぱに広げた紙（ステージ）。
-       実装時の見本であって、そのまま画面に貼る素材ではない。規則は docs/art-direction.md -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 768" width="1024" height="768">
+  <!-- 世界観「おんぷのもり」のムードボード（#96）。タブレット横 1024×768 の1画面。
+       盤面は実物のジオメトリ（src/lib/layout.ts の viewBox 1100×620）を 0.9309 倍で置いている。
+       - ページ全体（HTML 側）: 空・雲・太陽・丘・白い花 … 盤面 SVG の外に敷く背景
+       - 盤面 SVG の中: 紙（五線・ゴミ箱帯）・木のかご・鍵盤。紙の外は透明で背景を透かす
+       実装の見本であって、そのまま画面に貼る素材ではない。規則は docs/art-direction.md -->
   <defs>
     <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#cdeeff"/>
-      <stop offset="0.45" stop-color="#eaf8ff"/>
-      <stop offset="0.8" stop-color="#fdf6e3"/>
+      <stop offset="0.5" stop-color="#eaf8ff"/>
+      <stop offset="0.85" stop-color="#fdf6e3"/>
     </linearGradient>
     <radialGradient id="sun" cx="0.5" cy="0.5" r="0.5">
       <stop offset="0.55" stop-color="#fff1a8"/>
@@ -15,112 +17,145 @@
     <filter id="soft" x="-10%" y="-10%" width="120%" height="130%">
       <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#8a7a5c" flood-opacity="0.18"/>
     </filter>
-    <!-- ぷっくり符頭: 上からのハイライト＋下の沈み -->
     <radialGradient id="puff" cx="0.35" cy="0.3" r="0.8">
       <stop offset="0" stop-color="#fff" stop-opacity="0.75"/>
       <stop offset="0.45" stop-color="#fff" stop-opacity="0"/>
       <stop offset="1" stop-color="#000" stop-opacity="0.12"/>
     </radialGradient>
+    <radialGradient id="pp-body" cx="0.38" cy="0.32" r="0.75">
+      <stop offset="0" stop-color="#fff6cf"/>
+      <stop offset="0.65" stop-color="#ffe38f"/>
+      <stop offset="1" stop-color="#ffd166"/>
+    </radialGradient>
     <g id="cloud">
       <path d="M20 40 Q0 40 4 26 Q8 12 26 16 Q32 0 52 4 Q70 -4 80 14 Q100 10 102 28 Q104 42 86 42 Z" fill="#fff"/>
       <path d="M12 38 Q50 46 96 38" fill="none" stroke="#dcebf6" stroke-width="4" stroke-linecap="round"/>
     </g>
-    <g id="flower">
+    <!-- 背景の花は7色を使わない（音高の色と混ざらない・鍵盤の色と並ばない） -->
+    <g id="flower" fill="#fffdf5" stroke="#5b524b" stroke-width="2">
       <circle cx="0" cy="-7" r="5.5"/><circle cx="6.7" cy="-2.2" r="5.5"/><circle cx="4.1" cy="5.7" r="5.5"/>
       <circle cx="-4.1" cy="5.7" r="5.5"/><circle cx="-6.7" cy="-2.2" r="5.5"/>
-      <circle r="3.6" fill="#fff6cf"/>
+      <circle r="3.6" fill="#ffe38f"/>
     </g>
+    <!-- 符頭（ぷっくり）: 塗り → ハイライト重ね → 輪郭 -->
+    <g id="stem-up"><line x1="15" y1="-2" x2="15" y2="-70" stroke="#5b524b" stroke-width="4" stroke-linecap="round"/></g>
+    <g id="stem-down"><line x1="-15" y1="2" x2="-15" y2="70" stroke="#5b524b" stroke-width="4" stroke-linecap="round"/></g>
+    <ellipse id="puff-shine" rx="17" ry="13" fill="url(#puff)" transform="rotate(-20)"/>
   </defs>
 
-  <!-- 空・太陽・雲 -->
-  <rect width="1100" height="620" fill="url(#sky)"/>
-  <circle cx="990" cy="60" r="90" fill="url(#sun)"/>
-  <circle cx="990" cy="60" r="36" fill="#ffe680"/>
-  <use href="#cloud" transform="translate(120 40) scale(1.2)"/>
-  <use href="#cloud" transform="translate(470 22) scale(0.8)"/>
-  <use href="#cloud" transform="translate(760 70)"/>
+  <!-- ===== ページ背景（HTML 側） ===== -->
+  <rect width="1024" height="768" fill="url(#sky)"/>
+  <circle cx="960" cy="40" r="80" fill="url(#sun)"/>
+  <circle cx="960" cy="40" r="30" fill="#ffe680"/>
+  <use href="#cloud" transform="translate(330 20) scale(0.8)"/>
+  <use href="#cloud" transform="translate(640 34) scale(0.65)"/>
+  <path d="M0 690 Q170 640 360 680 T740 668 T1024 676 V768 H0 Z" fill="#d6efc8"/>
+  <path d="M0 720 Q230 690 500 716 T1024 708 V768 H0 Z" fill="#bfe3a8"/>
+  <use href="#flower" transform="translate(40 742)"/>
+  <use href="#flower" transform="translate(300 754)"/>
+  <use href="#flower" transform="translate(560 740)"/>
+  <use href="#flower" transform="translate(820 752)"/>
 
-  <!-- 遠くの丘・近くの丘・花（ドレミ7色） -->
-  <path d="M0 520 Q180 450 380 505 T780 490 T1100 500 V620 H0 Z" fill="#d6efc8"/>
-  <path d="M0 560 Q240 515 520 555 T1100 545 V620 H0 Z" fill="#bfe3a8"/>
-  <g stroke="#5b524b" stroke-width="2">
-    <use href="#flower" transform="translate(70 580)" fill="#e23b3b"/>
-    <use href="#flower" transform="translate(210 596)" fill="#f59e0b"/>
-    <use href="#flower" transform="translate(360 578)" fill="#facc15"/>
-    <use href="#flower" transform="translate(540 598)" fill="#22c55e"/>
-    <use href="#flower" transform="translate(700 580)" fill="#38bdf8"/>
-    <use href="#flower" transform="translate(850 597)" fill="#a78bfa"/>
-    <use href="#flower" transform="translate(1010 582)" fill="#f472b6"/>
-  </g>
-
-  <!-- ヘッダー（ボタンは白い丸・影つき） -->
+  <!-- ヘッダー（#102 で1段・大きな丸ボタンにする想定）: 白地＋輪郭色のアイコン -->
   <g filter="url(#soft)">
-    <circle cx="60" cy="52" r="34" fill="#22c55e"/>
-    <path d="M50 36 L76 52 L50 68 Z" fill="#fff" stroke="#fff" stroke-width="4" stroke-linejoin="round"/>
-    <circle cx="140" cy="52" r="30" fill="#fff"/>
-    <circle cx="210" cy="52" r="30" fill="#fff"/>
+    <circle cx="52" cy="48" r="34" fill="#22c55e"/>
+    <circle cx="132" cy="48" r="30" fill="#fff"/>
+    <circle cx="202" cy="48" r="30" fill="#fff"/>
+  </g>
+  <path d="M42 32 L68 48 L42 64 Z" fill="#fff" stroke="#fff" stroke-width="4" stroke-linejoin="round"/>
+
+  <!-- ===== 盤面 SVG（viewBox 1100×620 を 0.9309 倍） ===== -->
+  <g transform="translate(0 96) scale(0.9309)">
+    <!-- 紙（ステージ）: 五線とゴミ箱帯を載せる。不透明 -->
+    <rect x="20" y="20" width="905" height="472" rx="36" fill="#fffdf5" stroke="#efe3c8" stroke-width="2" filter="url(#soft)"/>
+    <!-- 紙を留めるマスキングテープ（五線にかからない角だけ・7色以外） -->
+    <rect x="6" y="18" width="84" height="26" rx="4" fill="#ffe4cc" opacity="0.85" transform="rotate(-24 48 31)"/>
+    <rect x="852" y="18" width="84" height="26" rx="4" fill="#dff3ea" opacity="0.85" transform="rotate(22 894 31)"/>
+
+    <!-- 五線（y140〜340）と C4 の足場ガイド（y390） -->
+    <g stroke="#5b524b" stroke-width="3" stroke-linecap="round">
+      <line x1="60" y1="140" x2="910" y2="140"/><line x1="60" y1="190" x2="910" y2="190"/>
+      <line x1="60" y1="240" x2="910" y2="240"/><line x1="60" y1="290" x2="910" y2="290"/>
+      <line x1="60" y1="340" x2="910" y2="340"/>
+    </g>
+    <line x1="215" y1="390" x2="880" y2="390" stroke="#e23b3b" stroke-width="3" stroke-dasharray="8 10" opacity="0.45"/>
+
+    <!-- 音符（ド・ミ・ソ・シ・高いレ）: 列 0〜4 の実座標 -->
+    <g transform="translate(243.5 390)">
+      <line x1="-30" y1="0" x2="30" y2="0" stroke="#5b524b" stroke-width="3" stroke-linecap="round"/>
+      <use href="#stem-up"/>
+      <ellipse rx="17" ry="13" fill="#e23b3b" transform="rotate(-20)"/><use href="#puff-shine"/>
+      <ellipse rx="17" ry="13" fill="none" stroke="#5b524b" stroke-width="2.5" transform="rotate(-20)"/>
+    </g>
+    <g transform="translate(310.5 340)">
+      <use href="#stem-up"/>
+      <ellipse rx="17" ry="13" fill="#facc15" transform="rotate(-20)"/><use href="#puff-shine"/>
+      <ellipse rx="17" ry="13" fill="none" stroke="#5b524b" stroke-width="2.5" transform="rotate(-20)"/>
+    </g>
+    <g transform="translate(377.5 290)">
+      <use href="#stem-up"/>
+      <ellipse rx="17" ry="13" fill="#38bdf8" transform="rotate(-20)"/><use href="#puff-shine"/>
+      <ellipse rx="17" ry="13" fill="none" stroke="#5b524b" stroke-width="2.5" transform="rotate(-20)"/>
+    </g>
+    <g transform="translate(444.5 240)">
+      <use href="#stem-down"/>
+      <ellipse rx="17" ry="13" fill="#f472b6" transform="rotate(-20)"/><use href="#puff-shine"/>
+      <ellipse rx="17" ry="13" fill="none" stroke="#5b524b" stroke-width="2.5" transform="rotate(-20)"/>
+    </g>
+    <g transform="translate(511.5 190)">
+      <use href="#stem-down"/>
+      <ellipse rx="17" ry="13" fill="#f59e0b" transform="rotate(-20)"/><use href="#puff-shine"/>
+      <ellipse rx="17" ry="13" fill="none" stroke="#5b524b" stroke-width="2.5" transform="rotate(-20)"/>
+    </g>
+
+    <!-- お道具箱（木のかご・x940〜1060）。中の音符は無彩色のクリーム（色は置いてから決まる） -->
+    <g filter="url(#soft)">
+      <rect x="940" y="40" width="120" height="420" rx="24" fill="#f3d9ae" stroke="#5b524b" stroke-width="3"/>
+    </g>
+    <g stroke="#e0bd85" stroke-width="3" stroke-linecap="round">
+      <line x1="954" y1="145" x2="1046" y2="145"/><line x1="954" y1="250" x2="1046" y2="250"/><line x1="954" y1="355" x2="1046" y2="355"/>
+    </g>
+    <g transform="translate(1000 165)">
+      <use href="#stem-up"/>
+      <ellipse rx="17" ry="13" fill="#fffdf5" transform="rotate(-20)"/><use href="#puff-shine"/>
+      <ellipse rx="17" ry="13" fill="none" stroke="#5b524b" stroke-width="2.5" transform="rotate(-20)"/>
+    </g>
+
+    <!-- 鍵盤（y500〜620）: 実物どおり白鍵＋ドレミ色の帯。紙の外なので周りは背景が透ける -->
+    <g filter="url(#soft)">
+      <rect x="60" y="500" width="850" height="120" rx="10" fill="#fffdf7" stroke="#5b524b" stroke-width="3"/>
+    </g>
+    <g stroke="#d8c9a6" stroke-width="2">
+      <line x1="145" y1="500" x2="145" y2="620"/><line x1="230" y1="500" x2="230" y2="620"/><line x1="315" y1="500" x2="315" y2="620"/>
+      <line x1="400" y1="500" x2="400" y2="620"/><line x1="485" y1="500" x2="485" y2="620"/><line x1="570" y1="500" x2="570" y2="620"/>
+      <line x1="655" y1="500" x2="655" y2="620"/><line x1="740" y1="500" x2="740" y2="620"/><line x1="825" y1="500" x2="825" y2="620"/>
+    </g>
+    <g>
+      <rect x="66" y="604" width="73" height="8" rx="3.5" fill="#e23b3b"/><rect x="151" y="604" width="73" height="8" rx="3.5" fill="#f59e0b"/>
+      <rect x="236" y="604" width="73" height="8" rx="3.5" fill="#facc15"/><rect x="321" y="604" width="73" height="8" rx="3.5" fill="#22c55e"/>
+      <rect x="406" y="604" width="73" height="8" rx="3.5" fill="#38bdf8"/><rect x="491" y="604" width="73" height="8" rx="3.5" fill="#a78bfa"/>
+      <rect x="576" y="604" width="73" height="8" rx="3.5" fill="#f472b6"/><rect x="661" y="604" width="73" height="8" rx="3.5" fill="#e23b3b"/>
+      <rect x="746" y="604" width="73" height="8" rx="3.5" fill="#f59e0b"/><rect x="831" y="604" width="73" height="8" rx="3.5" fill="#facc15"/>
+    </g>
+    <g fill="#4b4038">
+      <rect x="118" y="500" width="50" height="70" rx="5"/><rect x="203" y="500" width="50" height="70" rx="5"/>
+      <rect x="373" y="500" width="50" height="70" rx="5"/><rect x="458" y="500" width="50" height="70" rx="5"/><rect x="543" y="500" width="50" height="70" rx="5"/>
+      <rect x="713" y="500" width="50" height="70" rx="5"/><rect x="798" y="500" width="50" height="70" rx="5"/>
+    </g>
   </g>
 
-  <!-- ステージ（原っぱに広げた紙）: 五線はこの上。低彩度・高明度で静かに -->
-  <rect x="30" y="112" width="900" height="400" rx="36" fill="#fffdf5" opacity="0.94" filter="url(#soft)"/>
-  <g stroke="#5b524b" stroke-width="3">
-    <line x1="60" y1="222" x2="900" y2="222"/><line x1="60" y1="272" x2="900" y2="272"/>
-    <line x1="60" y1="322" x2="900" y2="322"/><line x1="60" y1="372" x2="900" y2="372"/>
-    <line x1="60" y1="422" x2="900" y2="422"/>
-  </g>
-
-  <!-- ぷっくり音符（ド・ミ・ソ・シ） -->
-  <g stroke="#5b524b">
-    <g transform="translate(280 472)">
-      <line x1="-30" y1="0" x2="30" y2="0" stroke-width="3"/>
-      <line x1="15" y1="-2" x2="15" y2="-70" stroke-width="4" stroke-linecap="round"/>
-      <ellipse rx="17" ry="13" fill="#e23b3b" stroke-width="2.5" transform="rotate(-20)"/>
-      <ellipse rx="17" ry="13" fill="url(#puff)" stroke="none" transform="rotate(-20)"/>
-    </g>
-    <g transform="translate(380 422)">
-      <line x1="15" y1="-2" x2="15" y2="-70" stroke-width="4" stroke-linecap="round"/>
-      <ellipse rx="17" ry="13" fill="#facc15" stroke-width="2.5" transform="rotate(-20)"/>
-      <ellipse rx="17" ry="13" fill="url(#puff)" stroke="none" transform="rotate(-20)"/>
-    </g>
-    <g transform="translate(480 372)">
-      <line x1="15" y1="-2" x2="15" y2="-70" stroke-width="4" stroke-linecap="round"/>
-      <ellipse rx="17" ry="13" fill="#38bdf8" stroke-width="2.5" transform="rotate(-20)"/>
-      <ellipse rx="17" ry="13" fill="url(#puff)" stroke="none" transform="rotate(-20)"/>
-    </g>
-    <g transform="translate(580 322)">
-      <line x1="-15" y1="2" x2="-15" y2="70" stroke-width="4" stroke-linecap="round"/>
-      <ellipse rx="17" ry="13" fill="#f472b6" stroke-width="2.5" transform="rotate(-20)"/>
-      <ellipse rx="17" ry="13" fill="url(#puff)" stroke="none" transform="rotate(-20)"/>
-    </g>
-  </g>
-
-  <!-- お道具箱（木のかご） -->
-  <g filter="url(#soft)">
-    <rect x="950" y="150" width="120" height="340" rx="22" fill="#f3d9ae" stroke="#5b524b" stroke-width="3"/>
-    <g stroke="#e0bd85" stroke-width="3">
-      <line x1="962" y1="235" x2="1058" y2="235"/><line x1="962" y1="320" x2="1058" y2="320"/><line x1="962" y1="405" x2="1058" y2="405"/>
-    </g>
-  </g>
-  <g stroke="#5b524b">
-    <g transform="translate(1004 260)">
-      <line x1="15" y1="-2" x2="15" y2="-70" stroke-width="4" stroke-linecap="round"/>
-      <ellipse rx="17" ry="13" fill="#ffd9e8" stroke-width="2.5" transform="rotate(-20)"/>
-      <ellipse rx="17" ry="13" fill="url(#puff)" stroke="none" transform="rotate(-20)"/>
-    </g>
-  </g>
-
-  <!-- マスコット「ぴぴ」（art/mascot.svg のにっこり）-->
-  <g transform="translate(900 470) scale(0.62)">
+  <!-- マスコット「ぴぴ」（紙の外・丘の上。art/mascot.svg の にっこり） -->
+  <g transform="translate(900 664) scale(0.48)">
     <ellipse cx="100" cy="190" rx="50" ry="7" fill="#5b524b" opacity="0.12"/>
     <ellipse cx="84" cy="180" rx="11" ry="6" fill="#ffa94d" stroke="#5b524b" stroke-width="4"/>
     <ellipse cx="116" cy="180" rx="11" ry="6" fill="#ffa94d" stroke="#5b524b" stroke-width="4"/>
-    <ellipse cx="100" cy="113" rx="66" ry="64" fill="#ffe38f" stroke="#5b524b" stroke-width="5"/>
+    <ellipse cx="100" cy="113" rx="66" ry="64" fill="url(#pp-body)" stroke="#5b524b" stroke-width="5"/>
     <ellipse cx="100" cy="140" rx="36" ry="26" fill="#fffbee" opacity="0.75"/>
     <path d="M90 52 C84 34 98 28 101 42 C104 28 120 32 110 52" fill="#ffe38f" stroke="#5b524b" stroke-width="4" stroke-linejoin="round"/>
     <g transform="translate(133 58) rotate(18)">
-      <path d="M0 0 L-17 -11 Q-22 0 -17 11 Z" fill="#f472b6" stroke="#5b524b" stroke-width="3.5" stroke-linejoin="round"/>
-      <path d="M0 0 L17 -11 Q22 0 17 11 Z" fill="#f472b6" stroke="#5b524b" stroke-width="3.5" stroke-linejoin="round"/>
-      <circle r="5" fill="#f9a8d4" stroke="#5b524b" stroke-width="3.5"/>
+      <path d="M0 0 L-17 -11 Q-22 0 -17 11 Z" fill="#ffc9dc" stroke="#5b524b" stroke-width="4" stroke-linejoin="round"/>
+      <path d="M0 0 L17 -11 Q22 0 17 11 Z" fill="#ffc9dc" stroke="#5b524b" stroke-width="4" stroke-linejoin="round"/>
+      <circle r="5" fill="#fff0f6" stroke="#5b524b" stroke-width="4"/>
     </g>
     <ellipse cx="62" cy="130" rx="12" ry="7.5" fill="#ff8fab" opacity="0.6"/>
     <ellipse cx="138" cy="130" rx="12" ry="7.5" fill="#ff8fab" opacity="0.6"/>
@@ -131,7 +166,7 @@
     <g fill="none" stroke="#3d3530" stroke-width="5" stroke-linecap="round">
       <path d="M68 111 Q78 98 88 111"/><path d="M112 111 Q122 98 132 111"/>
     </g>
-    <path d="M88 121 Q100 110 112 121 Q100 126 88 121 Z" fill="#ffa94d" stroke="#5b524b" stroke-width="3.5" stroke-linejoin="round"/>
-    <path d="M93 125 Q100 138 107 125 Q100 127 93 125 Z" fill="#ff7a59" stroke="#5b524b" stroke-width="3.5" stroke-linejoin="round"/>
+    <path d="M88 121 Q100 110 112 121 Q100 126 88 121 Z" fill="#ffa94d" stroke="#5b524b" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M93 125 Q100 138 107 125 Q100 127 93 125 Z" fill="#ff7a59" stroke="#5b524b" stroke-width="4" stroke-linejoin="round"/>
   </g>
 </svg>
