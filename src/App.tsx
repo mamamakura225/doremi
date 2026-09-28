@@ -28,6 +28,8 @@ import {
   saveStickers,
 } from './lib/stickers'
 import BookCover from './components/BookCover'
+import TitleScreen from './components/TitleScreen'
+import { hasSeenTitle, markTitleSeen } from './lib/firstRun'
 import Bookshelf from './components/Bookshelf'
 import RotateOverlay from './components/RotateOverlay'
 import { usePortrait } from './hooks/usePortrait'
@@ -100,6 +102,8 @@ export default function App() {
   const [voice, setVoice] = useState<Voice>('piano')
   const [clef, setClefMode] = useState<Clef>('treble')
   const [adultOpen, setAdultOpen] = useState(false)
+  // はじめて開いたときだけタイトル（#112）。2回目からは出さない（毎回挟むと邪魔）
+  const [showTitle, setShowTitle] = useState(() => !hasSeenTitle())
   // シール帳（#105）。一覧は ref にも持つ——同じハンドラで2枚続けてもらっても、
   // state の更新を待たずに「もう持っているか」を判定できるように
   const [stickers, setStickers] = useState<readonly StickerId[]>(() => loadStickers())
@@ -450,6 +454,7 @@ export default function App() {
       {/* 子どもの面（#102）: 大きな丸ボタンだけ。消す・音部・モードは ⚙ 長押しのおとなメニューへ。
           ボタンは縮ませない。幅が足りなければ行を折り返す＝はみ出して切れることはない。 */}
       <header
+        inert={showTitle}
         className={`relative flex shrink-0 flex-wrap items-center ${compact ? 'gap-2 p-2' : 'gap-3 p-3'}`}
       >
         {/* 再生中は ⏹。曲を消さずに止める（これまで止める手段はクリア＝曲ごと消す だけだった） */}
@@ -558,7 +563,8 @@ export default function App() {
           onClose={() => setAdultOpen(false)}
         />
       )}
-      <main className="relative min-h-0 flex-1">
+      {/* タイトル中は裏のヘッダー・盤面に触れない（キーボードやフォーカスも届かない） */}
+      <main className="relative min-h-0 flex-1" inert={showTitle}>
         <Board
           notes={notes}
           onPlace={handlePlace}
@@ -645,6 +651,18 @@ export default function App() {
           />
         )}
       </main>
+      {showTitle && (
+        <TitleScreen
+          onStart={() => {
+            markTitleSeen()
+            setShowTitle(false)
+            // このタップが音の解錠を兼ねる（最初の音から確実に鳴る）
+            ensureAudio()
+              .then(() => playSparkle())
+              .catch(() => {})
+          }}
+        />
+      )}
     </div>
   )
 }

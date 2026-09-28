@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import App from './App'
 import RotateOverlay from './components/RotateOverlay'
-import { ensureAudio, playFanfare, playMelodyNote, playNote, playPop } from './audio/synth'
+import { ensureAudio, playFanfare, playMelodyNote, playNote, playPop, playSparkle } from './audio/synth'
 
 const SONG_2P = JSON.stringify([
   { id: 'x', createdAt: 1, clef: 'treble', pages: [['C4', 'D4'], ['E4']] },
@@ -36,6 +36,9 @@ vi.mock('./audio/synth', () => ({
 
 beforeEach(() => {
   localStorage.clear()
+  // タイトル（#112）は見たことにしておく——出たままだと、実際には触れないヘッダーや盤面を
+  // テストだけが操作することになる。タイトルのテストでは消してから描く
+  localStorage.setItem('doremi.titleSeen.v1', '1')
   h.resolveAudio = null
   vi.mocked(ensureAudio).mockClear()
   vi.mocked(playMelodyNote).mockClear()
@@ -612,4 +615,27 @@ test('ほんだなは開くと「とじる」にフォーカスし、Escape で�
   expect(document.activeElement).toBe(screen.getByLabelText('とじる'))
   fireEvent.keyDown(shelf, { key: 'Escape' })
   expect(screen.queryByRole('dialog', { name: 'ほんだな' })).toBeNull()
+})
+
+test('はじめて開いたときだけタイトルが出て、はじめるで音を解錠する（#112）', async () => {
+  localStorage.removeItem('doremi.titleSeen.v1')
+  const first = render(<App />)
+  expect(screen.getByRole('banner').hasAttribute('inert')).toBe(true) // 裏には触れない
+  const title = screen.getByRole('dialog', { name: 'どれみ' })
+  expect(title.textContent).toContain('はじめる')
+  vi.mocked(ensureAudio).mockClear()
+  fireEvent.click(screen.getByLabelText('はじめる'))
+  expect(ensureAudio).toHaveBeenCalled()
+  expect(screen.queryByRole('dialog', { name: 'どれみ' })).toBeNull()
+  expect(screen.getByRole('banner').hasAttribute('inert')).toBe(false)
+  vi.mocked(playSparkle).mockClear()
+  await act(async () => {
+    h.resolveAudio?.()
+  })
+  expect(playSparkle).toHaveBeenCalled() // 解錠できたら最初の音を鳴らす
+  first.unmount()
+
+  // 2回目に開いたときは出さない
+  render(<App />)
+  expect(screen.queryByRole('dialog', { name: 'どれみ' })).toBeNull()
 })

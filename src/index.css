@@ -251,6 +251,39 @@ body {
   animation: book-open 0.6s ease-in both;
 }
 
+/* タイトル（#112）: 「ど・れ・み」が順にぴょんと出る */
+@keyframes title-letter {
+  0% {
+    transform: translateY(24px) scale(0.6);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(-8px) scale(1.08);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+.title-letter {
+  display: inline-block;
+  animation: title-letter 0.5s ease-out both;
+}
+/* タイトルのぴぴが、ゆっくり上下にゆれる */
+@keyframes title-pipi {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+.title-pipi {
+  animation: title-pipi 1.6s ease-in-out infinite;
+}
+
 /* シールをもらったお知らせが、ぽんっと出る（#105） */
 @keyframes sticker-pop {
   0% {
@@ -312,6 +345,8 @@ body {
   .note-wiggle,
   .pipi-land,
   .pipi-sway,
+  .title-letter,
+  .title-pipi,
   .sticker-pop,
   .celebrate-pipi,
   .cloud-drift {
