@@ -41,6 +41,7 @@ import { ensureAudio, playNote } from '../audio/synth'
 import { useFitsKeyboard } from '../hooks/useFitsKeyboard'
 import Keyboard from './Keyboard'
 import { HandIcon, StarIcon, TrashIcon } from './Icons'
+import Mascot from './Mascot'
 import NoteHead from './NoteHead'
 import Sparkles from './Sparkles'
 import Staff from './Staff'
@@ -76,6 +77,10 @@ const PAPER_X = 20
 const PAPER_Y = 16
 const PAPER_W = 905
 const PAPER_H = 476
+
+// 再生中に渡り歩くぴぴ（#104）。符頭の高さ（26）の2倍以上で、足もとは最上線（y140）の少し上
+const WALKER_SIZE = 64
+const WALKER_Y = STAFF_LAYOUT.topLineY - 6 - WALKER_SIZE
 
 /** 配置済み音符を掴んでゴミ箱へ捨てる操作 */
 interface DeleteDragState {
@@ -440,6 +445,39 @@ export default function Board({
           </g>
         )
       })}
+
+      {/* 再生中、ぴぴが鳴っている音の列の真上へ渡り歩く（#104）。五線の上の余白だけを使い、
+          符頭・五線・ドレミラベルを隠さない（docs/art-direction.md）。列が変わる＝発音の瞬間に
+          短く移って着地の潰れを見せるので、着地と発音が同じ再生の時計でそろう */}
+      {playingIndex !== null && playingIndex < notes.length && (
+        <g
+          data-testid="walker"
+          data-x={columnX(starts[playingIndex])}
+          className="pipi-walk"
+          pointerEvents="none"
+          aria-hidden="true"
+          style={{ transform: `translateX(${columnX(starts[playingIndex]) - WALKER_SIZE / 2}px)` }}
+        >
+          <g
+            key={playingIndex}
+            className="pipi-land"
+            style={{
+              transformBox: 'view-box',
+              transformOrigin: `${WALKER_SIZE / 2}px ${WALKER_Y + WALKER_SIZE}px`,
+            }}
+          >
+            <g
+              className={notes[playingIndex].long ? 'pipi-sway' : undefined}
+              style={{
+                transformBox: 'view-box',
+                transformOrigin: `${WALKER_SIZE / 2}px ${WALKER_Y + WALKER_SIZE}px`,
+              }}
+            >
+              <Mascot mood="happy" x={0} y={WALKER_Y} width={WALKER_SIZE} height={WALKER_SIZE} />
+            </g>
+          </g>
+        </g>
+      )}
 
       {/* お道具箱（右側・木のかご）: 「ふつうの音」と「のばす音」が常駐 */}
       <rect

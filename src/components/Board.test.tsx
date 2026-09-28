@@ -9,6 +9,7 @@ import {
   STAFF_RIGHT,
   TRASH_CX,
   TRASH_CY,
+  columnX,
 } from '../lib/layout'
 import { type Clef, type Pitch, TREBLE_PITCHES, pitchByNote } from '../lib/pitch'
 import type { PlacedNote } from '../lib/notes'
@@ -447,5 +448,37 @@ describe('タップと掴みの境界（#108）', () => {
     expect(first).not.toBeNull()
     expect(second).not.toBeNull()
     expect(second).not.toBe(first) // 作り直された＝CSS アニメが再始動する
+  })
+})
+
+describe('再生中にぴぴが音符の上を渡り歩く（#104）', () => {
+  const notes: PlacedNote[] = [
+    { id: 'a', pitch: pitchByNote('C4', 'treble')!, long: false },
+    { id: 'b', pitch: pitchByNote('E5', 'treble')!, long: true },
+    { id: 'c', pitch: pitchByNote('G4', 'treble')!, long: false },
+  ]
+
+  it('再生していないときは出ない', () => {
+    const view = render(<Board {...boardProps({ notes })} />)
+    expect(view.queryByTestId('walker')).toBeNull()
+  })
+
+  it('鳴っている音の列の真上、五線より上にいる（符頭・五線を隠さない）', () => {
+    const view = render(<Board {...boardProps({ notes, playingIndex: 2 })} />)
+    const walker = view.getByTestId('walker')
+    // のばす音（b）が2列ぶん占めるので、c は3列目（columnX(3)）
+    const x = Number(walker.getAttribute('data-x'))
+    expect(x).toBeCloseTo(columnX(3))
+    const pipi = walker.querySelector('svg')!
+    const bottom = Number(pipi.getAttribute('y')) + Number(pipi.getAttribute('height'))
+    expect(bottom).toBeLessThan(STAFF_LAYOUT.topLineY)
+    expect(Number(pipi.getAttribute('height'))).toBeGreaterThanOrEqual(26 * 2) // 符頭の高さの2倍以上
+  })
+
+  it('のばす音では着地したまま揺れる', () => {
+    const view = render(<Board {...boardProps({ notes, playingIndex: 1 })} />)
+    expect(view.getByTestId('walker').querySelector('.pipi-sway')).not.toBeNull()
+    view.rerender(<Board {...boardProps({ notes, playingIndex: 0 })} />)
+    expect(view.getByTestId('walker').querySelector('.pipi-sway')).toBeNull()
   })
 })
