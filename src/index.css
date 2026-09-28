@@ -141,6 +141,8 @@ body {
 }
 .cloud-drift {
   animation: cloud-drift 40s ease-in-out infinite alternate;
+  /* 盤面の紙の影ごと描き直さないよう、別レイヤーに切り出す */
+  will-change: transform;
 }
 
 /*

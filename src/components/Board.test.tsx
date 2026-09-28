@@ -340,7 +340,8 @@ describe('五線の紙（#99）', () => {
     expect(x).toBeLessThanOrEqual(STAFF_LEFT)
     expect(right).toBeGreaterThanOrEqual(STAFF_RIGHT)
     expect(y).toBeLessThanOrEqual(STAFF_LAYOUT.topLineY)
-    expect(bottom).toBeGreaterThanOrEqual(TRASH_CY)
+    // 掴んだときのゴミ箱アイコン（最大 fontSize 64・中心 TRASH_CY）の下端まで覆う
+    expect(bottom).toBeGreaterThanOrEqual(TRASH_CY + 32)
     // 紙は下に敷く（五線の線より文書順で前）
     const firstLine = view.container.querySelector('line')!
     expect(paper.compareDocumentPosition(firstLine) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()

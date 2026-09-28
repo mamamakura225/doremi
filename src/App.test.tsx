@@ -189,4 +189,7 @@ test('盤面の外にページ背景（おんぷのもり）を敷き、操作�
   // 背景は盤面より先（下）に描かれる
   const board = screen.getByLabelText('五線譜ボード')
   expect(bg.compareDocumentPosition(board) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  // absolute の背景より上に描くには、ヘッダーも positioned である必要がある
+  // （DOM 順だけでは absolute と static の重なりは決まらない。jsdom は CSS を計算しないのでクラスで見る）
+  expect(screen.getByRole('banner').className).toContain('relative')
 })
