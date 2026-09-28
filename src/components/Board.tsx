@@ -41,6 +41,7 @@ import { ensureAudio, playNote } from '../audio/synth'
 import { useFitsKeyboard } from '../hooks/useFitsKeyboard'
 import Keyboard from './Keyboard'
 import { HandIcon, StarIcon, TrashIcon } from './Icons'
+import Mascot from './Mascot'
 import NoteHead from './NoteHead'
 import Sparkles from './Sparkles'
 import Staff from './Staff'
@@ -50,6 +51,8 @@ interface Props {
   onPlace: (pitch: Pitch, long: boolean) => void
   onRemove: (id: string) => void
   playingIndex: number | null
+  /** 鳴っている音のページ（ページが変わったら渡り歩くぴぴを作り直す） */
+  playingPage?: number
   celebrating: boolean
   /** 音部記号（譜面・スナップ先の音がまるごと変わる） */
   clef: Clef
@@ -76,6 +79,17 @@ const PAPER_X = 20
 const PAPER_Y = 16
 const PAPER_W = 905
 const PAPER_H = 476
+
+// 再生中に渡り歩くぴぴ（#104）。符頭の高さ（26）の2倍以上
+const WALKER_SIZE = 64
+/**
+ * ぴぴの足もとの y。ふだんは最上線の少し上。鳴っている符頭がそれより上に出る音（ヘ音の ラ は
+ * 最上線の上・ト音の 高いミ は再生リングが y133 まで届く）では、その符頭の再生リング（r30）と
+ * おてほんの星（中心 cy-36・半径13）より上に上げる——ぴぴがいまの音の手がかりを隠さないように。
+ */
+function walkerFootY(noteY: number): number {
+  return Math.min(STAFF_LAYOUT.topLineY - 6, noteY - 49 - 4)
+}
 
 /** 配置済み音符を掴んでゴミ箱へ捨てる操作 */
 interface DeleteDragState {
@@ -106,6 +120,7 @@ export default function Board({
   onPlace,
   onRemove,
   playingIndex,
+  playingPage,
   celebrating,
   clef,
   targets,
@@ -440,6 +455,40 @@ export default function Board({
           </g>
         )
       })}
+
+      {/* 再生中、ぴぴが鳴っている音の列の真上へ渡り歩く（#104）。五線の上の余白だけを使い、
+          符頭・五線・ドレミラベルを隠さない（docs/art-direction.md）。列が変わる＝発音の瞬間に
+          短く移って着地の潰れを見せるので、着地と発音が同じ再生の時計でそろう。
+          ページが変わったら作り直す（前のページの右端から左端へ滑って戻る動きを見せない） */}
+      {playingIndex !== null && playingIndex < notes.length && (() => {
+        const n = notes[playingIndex]
+        const x = columnX(starts[playingIndex]) - WALKER_SIZE / 2
+        const y = walkerFootY(pitchToY(n.pitch, STAFF_LAYOUT)) - WALKER_SIZE
+        const origin = `${WALKER_SIZE / 2}px ${WALKER_SIZE}px`
+        return (
+          <g
+            key={`page-${playingPage ?? 0}`}
+            data-testid="walker"
+            className="pipi-walk"
+            pointerEvents="none"
+            aria-hidden="true"
+            style={{ transform: `translate(${x}px, ${y}px)` }}
+          >
+            <g
+              key={`${playingPage ?? 0}-${playingIndex}`}
+              className="pipi-land"
+              style={{ transformBox: 'view-box', transformOrigin: origin }}
+            >
+              <g
+                className={n.long ? 'pipi-sway' : undefined}
+                style={{ transformBox: 'view-box', transformOrigin: origin }}
+              >
+                <Mascot mood="happy" x={0} y={0} width={WALKER_SIZE} height={WALKER_SIZE} />
+              </g>
+            </g>
+          </g>
+        )
+      })()}
 
       {/* お道具箱（右側・木のかご）: 「ふつうの音」と「のばす音」が常駐 */}
       <rect

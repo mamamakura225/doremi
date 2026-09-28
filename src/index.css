@@ -192,6 +192,45 @@ body {
   animation: pipi-pop 0.9s ease-out both;
 }
 
+/* 再生中のぴぴ（#104）: 次の音の列へ短く移る（移動は発音の瞬間に始まる） */
+.pipi-walk {
+  transition: transform 0.12s ease-out;
+}
+/* 着地したら、ぷにっと潰れて戻る（着地＝発音） */
+@keyframes pipi-land {
+  0% {
+    transform: translateY(-14px) scale(0.95, 1.05);
+  }
+  35% {
+    transform: translateY(0) scale(1.15, 0.85);
+  }
+  70% {
+    transform: translateY(0) scale(0.96, 1.04);
+  }
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+}
+.pipi-land {
+  animation: pipi-land 0.32s ease-out;
+}
+/* のばす音: 着地したまま、ゆらゆら */
+@keyframes pipi-sway {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-6deg);
+  }
+  75% {
+    transform: rotate(6deg);
+  }
+}
+.pipi-sway {
+  animation: pipi-sway 0.6s ease-in-out 0.3s infinite;
+}
+
 /* ページ背景の雲がゆっくり流れる（#99） */
 @keyframes cloud-drift {
   0% {
@@ -232,9 +271,15 @@ body {
   .match-pop,
   .note-land,
   .note-wiggle,
+  .pipi-land,
+  .pipi-sway,
   .celebrate-pipi,
   .cloud-drift {
     animation: none;
+  }
+  /* 再生中のぴぴは、跳ばずに今の音の上へそのまま移る */
+  .pipi-walk {
+    transition: none;
   }
   /* 紙吹雪は飾りなので、止めるなら出さない（止めた姿で画面の上端に並ぶのを避ける） */
   .confetti {
