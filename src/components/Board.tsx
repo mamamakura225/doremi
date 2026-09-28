@@ -22,7 +22,7 @@ import {
   isOverTrash,
 } from '../lib/layout'
 import { STAFF_LAYOUT } from '../lib/layout'
-import { type Clef, type Pitch, pitchToY, snapYToPitch } from '../lib/pitch'
+import { type Clef, type Pitch, pitchToY, snapYToPitch, stemDown } from '../lib/pitch'
 import type { PlacedNote } from '../lib/notes'
 import { canAddNote, columnStarts, usedColumns } from '../lib/notes'
 import { noteDuration } from '../lib/playback'
@@ -276,6 +276,7 @@ export default function Board({
               y={pitchToY(t, STAFF_LAYOUT)}
               fill={colorOf(t)}
               opacity={0.28}
+              stemDown={stemDown(t)}
             />
           </g>
         )
@@ -316,6 +317,7 @@ export default function Board({
               highlight={i === playingIndex}
               opacity={dragging ? 0.25 : 1}
               tail={n.long ? COLUMN_PITCH : 0}
+              stemDown={stemDown(n.pitch)}
             />
             {matched && (
               <text
@@ -427,6 +429,7 @@ export default function Board({
               scale={1.4}
               shadow
               tail={drag.long ? COLUMN_PITCH : 0}
+              stemDown={placeable && stemDown(drag.pitch)}
             />
           )
         })()}
@@ -462,6 +465,7 @@ export default function Board({
           scale={1.3}
           shadow
           tail={del.long ? COLUMN_PITCH : 0}
+          stemDown={stemDown(del.pitch)}
         />
       )}
     </svg>

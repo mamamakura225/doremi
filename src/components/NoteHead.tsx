@@ -17,6 +17,8 @@ interface Props {
   shadow?: boolean
   /** のばす音の「のばしバー」の長さ（0＝ふつうの音） */
   tail?: number
+  /** 符尾を下向き・符頭の左側に描く（第3線以上の音・#97） */
+  stemDown?: boolean
 }
 
 /** 四分音符（符頭＋符幹）を描く（SVG内の <g>）。中心(x,y)基準。 */
@@ -29,6 +31,7 @@ export default function NoteHead({
   scale = 1,
   shadow = false,
   tail = 0,
+  stemDown = false,
 }: Props) {
   return (
     <g
@@ -62,10 +65,10 @@ export default function NoteHead({
         />
       )}
       <line
-        x1={15}
-        y1={-2}
-        x2={15}
-        y2={-70}
+        x1={stemDown ? -15 : 15}
+        y1={stemDown ? 2 : -2}
+        x2={stemDown ? -15 : 15}
+        y2={stemDown ? 70 : -70}
         stroke={OUTLINE_COLOR}
         strokeWidth={4}
         strokeLinecap="round"

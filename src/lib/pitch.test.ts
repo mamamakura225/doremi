@@ -4,6 +4,7 @@ import {
   MIDDLE_C,
   TREBLE_PITCHES,
   hasSharpAbove,
+  stemDown,
   pitchByNote,
   pitchToY,
   pitchesOf,
@@ -145,5 +146,22 @@ describe('音部記号ごとの解決', () => {
     expect(BASS_PITCHES.every((p) => p.clef === 'bass')).toBe(true)
     expect(snapYToPitch(stepToY(2, layout), layout, 'bass').clef).toBe('bass')
     expect(pitchByNote('C3', 'bass')!.clef).toBe('bass')
+  })
+})
+
+describe('stemDown（符尾の向き・#97）', () => {
+  // 記譜の慣習: 第3線（中央線）とそれより上は下向き、それより下は上向き
+  it.each([
+    ['C4', false], ['D4', false], ['E4', false], ['F4', false], ['G4', false], ['A4', false],
+    ['B4', true], ['C5', true], ['D5', true], ['E5', true],
+  ])('ト音 %s → 下向き=%s', (note, down) => {
+    expect(stemDown(pitchByNote(note, 'treble')!)).toBe(down)
+  })
+
+  it.each([
+    ['F2', false], ['G2', false], ['A2', false], ['B2', false], ['C3', false],
+    ['D3', true], ['E3', true], ['F3', true], ['G3', true], ['A3', true],
+  ])('ヘ音 %s → 下向き=%s', (note, down) => {
+    expect(stemDown(pitchByNote(note, 'bass')!)).toBe(down)
   })
 })
