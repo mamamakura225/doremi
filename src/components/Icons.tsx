@@ -250,6 +250,55 @@ export const FreeIcon = (p: IconProps) => (
   </Icon>
 )
 
+/** シール帳（星の付いた本・#105）。曲の「きらきらぼし」の星と見分けられるよう、本の形にする */
+export const StickerBookIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x={4.5} y={3.5} width={15} height={17} rx={2.2} fill={PEACH} />
+    <path d="M7.5 3.5 V20.5" strokeWidth={1.8} />
+    <path d="M13.5 7.6 Q14.2 10.6 17 11.3 Q14.2 12 13.5 15 Q12.8 12 10 11.3 Q12.8 10.6 13.5 7.6 Z" fill="#fff3b0" strokeWidth={1.8} />
+  </Icon>
+)
+
+/** 曲: かえるのうた（#106） */
+export const FrogIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx={7.5} cy={7.5} r={3.2} fill={MINT} />
+    <circle cx={16.5} cy={7.5} r={3.2} fill={MINT} />
+    <ellipse cx={12} cy={14.5} rx={9} ry={6.8} fill={MINT} />
+    <circle cx={7.5} cy={7.3} r={1.2} fill="#3d3530" stroke="none" />
+    <circle cx={16.5} cy={7.3} r={1.2} fill="#3d3530" stroke="none" />
+    <path d="M8 15.5 Q12 18.6 16 15.5" strokeWidth={1.8} />
+    <ellipse cx={6.3} cy={15} rx={1.5} ry={0.9} fill={PINK} stroke="none" />
+    <ellipse cx={17.7} cy={15} rx={1.5} ry={0.9} fill={PINK} stroke="none" />
+  </Icon>
+)
+
+/** 曲: メリーさんのひつじ（#106） */
+export const SheepIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path
+      d="M6 9.5 A3 3 0 0 1 9.5 5.6 A3 3 0 0 1 14.5 5.6 A3 3 0 0 1 18 9.5 A3 3 0 0 1 18.4 14.8 A3 3 0 0 1 14.8 18.6 A3 3 0 0 1 9.2 18.6 A3 3 0 0 1 5.6 14.8 A3 3 0 0 1 6 9.5 Z"
+      fill={CREAM}
+    />
+    <ellipse cx={12} cy={12.8} rx={3.8} ry={4.4} fill={PEACH} />
+    <circle cx={10.6} cy={12.2} r={0.9} fill="#3d3530" stroke="none" />
+    <circle cx={13.4} cy={12.2} r={0.9} fill="#3d3530" stroke="none" />
+    <path d="M11.2 14.8 Q12 15.5 12.8 14.8" strokeWidth={1.8} />
+  </Icon>
+)
+
+/** 曲: ぶんぶんぶん（#106） */
+export const BeeIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <ellipse cx={9} cy={7.5} rx={3.6} ry={2.6} fill="#fff" transform="rotate(-25 9 7.5)" />
+    <ellipse cx={15} cy={7.5} rx={3.6} ry={2.6} fill="#fff" transform="rotate(25 15 7.5)" />
+    <ellipse cx={12} cy={14} rx={7.5} ry={6} fill={CHICK} />
+    <path d="M10 8.6 Q9.2 14 10 19.6 M14 8.6 Q14.8 14 14 19.6" strokeWidth={2.2} />
+    <circle cx={6.8} cy={13} r={0.9} fill="#3d3530" stroke="none" />
+    <path d="M5.8 15.6 Q6.9 16.4 8 15.6" strokeWidth={1.8} />
+  </Icon>
+)
+
 /** とじる */
 export const CloseIcon = (p: IconProps) => (
   <Icon {...p}>

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { STICKERS, type StickerId } from '../lib/stickers'
-import { CloseIcon, StarIcon } from './Icons'
+import { CloseIcon, StickerBookIcon } from './Icons'
 import StickerArt from './StickerArt'
 
 /** もらったシールを並べるシール帳（#105）。まだのシールは「？」で、何枚あるかが見える */
@@ -28,7 +28,7 @@ export function StickerBook({
       >
         <div className="mb-3 flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-2xl font-bold text-[#6b6375]">
-            <StarIcon className="text-3xl" /> シールちょう
+            <StickerBookIcon className="text-3xl" /> シールちょう
             <span className="text-lg">
               {earned.length} / {STICKERS.length}
             </span>
