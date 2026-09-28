@@ -190,6 +190,8 @@ describe('単一ポインタ追跡（#58）', () => {
       clientX: 300,
       clientY: 300,
     })
+    // タップと区別するため、少し動かしてから「掴んだ」になる（#108）
+    fireEvent.pointerMove(view.getByTestId('note-n1'), { pointerId: 1, clientX: 300, clientY: 360 })
     expect(view.queryByTestId('trash')).not.toBeNull() // 掴めている
 
     // 別の指で ↩ / ページ切替 → その音符が notes から消える
@@ -353,5 +355,48 @@ describe('起動ヒント（#101）', () => {
     const view = render(<Board {...boardProps()} />)
     const hint = view.getByText('さわってね').closest('g[aria-hidden="true"]')!
     expect(hint.getAttribute('pointer-events')).toBe('none')
+  })
+})
+
+describe('置いた音符をタップすると鳴って揺れる（#108）', () => {
+  it('動かさずに離すと、その音が鳴って揺れる（捨てない・ゴミ箱も出ない）', async () => {
+    const { playNote } = await import('../audio/synth')
+    vi.mocked(playNote).mockClear()
+    const n: PlacedNote = { id: 't1', pitch: pitchByNote('G4', 'treble')!, long: false }
+    const onRemove = vi.fn()
+    const view = render(<Board {...boardProps({ notes: [n], onRemove })} />)
+    const g = view.getByTestId('note-t1')
+
+    fireEvent.pointerDown(g, { pointerId: 1, clientX: 300, clientY: 290 })
+    expect(view.queryByTestId('trash')).toBeNull() // 押しただけではゴミ箱を出さない
+    fireEvent.pointerMove(g, { pointerId: 1, clientX: 305, clientY: 293 }) // 指のぶれ（あそびの内）
+    expect(view.queryByTestId('trash')).toBeNull()
+    fireEvent.pointerUp(g, { pointerId: 1, clientX: 305, clientY: 293 })
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+    expect(playNote).toHaveBeenCalledWith('G4', expect.anything())
+    expect(g.querySelector('.note-wiggle')).not.toBeNull()
+    expect(onRemove).not.toHaveBeenCalled()
+  })
+
+  it('あそびより大きく動かすと掴んだことになり、離しても鳴らさない', async () => {
+    const { playNote } = await import('../audio/synth')
+    const n: PlacedNote = { id: 't2', pitch: pitchByNote('G4', 'treble')!, long: false }
+    const view = render(<Board {...boardProps({ notes: [n] })} />)
+    const g = view.getByTestId('note-t2')
+
+    fireEvent.pointerDown(g, { pointerId: 1, clientX: 300, clientY: 290 })
+    fireEvent.pointerMove(g, { pointerId: 1, clientX: 300, clientY: 340 })
+    expect(view.queryByTestId('trash')).not.toBeNull()
+    vi.mocked(playNote).mockClear()
+    fireEvent.pointerMove(g, { pointerId: 1, clientX: 300, clientY: 292 }) // 戻ってきても掴んだまま
+    fireEvent.pointerUp(g, { pointerId: 1, clientX: 300, clientY: 292 })
+    await act(async () => {
+      await Promise.resolve()
+    })
+    expect(playNote).not.toHaveBeenCalled()
+    expect(g.querySelector('.note-wiggle')).toBeNull()
   })
 })

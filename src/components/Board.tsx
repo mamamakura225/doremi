@@ -85,7 +85,21 @@ interface DeleteDragState {
   long: boolean
   x: number
   y: number
+  /** 押した位置（タップと掴みの区別に使う） */
+  startX: number
+  startY: number
+  /** あそび（TAP_SLOP）より大きく動いたか。動くまではタップ扱いで、ゴミ箱もゴーストも出さない */
+  moved: boolean
 }
+
+/**
+ * タップと掴みを分けるあそび（viewBox 単位・#108）。横向きスマホ（倍率 ~0.63）で約 11 CSS px、
+ * タブレット横（~0.93）で約 17 CSS px。5歳児の指のぶれ（押している間に数 px 動く）を吸収しつつ、
+ * 列間隔（67）より十分小さいので「隣へ動かしたつもり」はタップにならない。
+ */
+const TAP_SLOP = 18
+/** タップで揺れている時間（CSS の note-wiggle 0.45s より少し長く） */
+const WIGGLE_MS = 500
 
 export default function Board({
   notes,
@@ -126,6 +140,10 @@ export default function Board({
   const added = landing ? notes.filter((n) => !landing.has(n.id)) : []
   const freshId =
     landing && added.length === 1 && notes.length === landing.size + 1 ? added[0].id : null
+  // タップで揺れている音符（id で持つ。位置で持つと ↩ で別の音符が揺れる）
+  const [wiggle, setWiggle] = useState<string | null>(null)
+  const wiggleTimer = useRef(0)
+  useEffect(() => () => window.clearTimeout(wiggleTimer.current), [])
   const [pressedKey, setPressedKey] = useState<string | null>(null)
   // 鍵盤ハイライトの消灯タイマー。IDを保持しないと、連打時に前の押下の
   // タイマーが後の押下を消してしまう（#60-5）。
@@ -228,6 +246,9 @@ export default function Board({
       long: !!note.long,
       x: p.x,
       y: p.y,
+      startX: p.x,
+      startY: p.y,
+      moved: false,
     })
   }
 
@@ -235,13 +256,24 @@ export default function Board({
     if (!del || e.pointerId !== del.pointerId || !svgRef.current) return
     const p = clientToSvgPoint(svgRef.current, e.clientX, e.clientY)
     if (!p) return
-    setDel({ ...del, x: p.x, y: p.y })
+    // 一度あそびを越えたら、戻ってきても掴んだまま（途中でタップに戻ると、捨てるつもりの音が鳴る）
+    const moved = del.moved || Math.hypot(p.x - del.startX, p.y - del.startY) > TAP_SLOP
+    setDel({ ...del, x: p.x, y: p.y, moved })
   }
 
   function handleNoteUp(e: React.PointerEvent) {
     if (!del || e.pointerId !== del.pointerId) return
-    // drag 側と同じく、音部が変わっていたら何もしない（対称にしておく）。
-    if (del.pitch.clef === clef && isOverTrash(del.x, del.y)) onRemove(del.id)
+    if (!del.moved) {
+      // タップ: その音を鳴らして揺らす（音高は変えない・捨てない・#108）
+      const { id, pitch, long } = del
+      setWiggle(id)
+      window.clearTimeout(wiggleTimer.current)
+      wiggleTimer.current = window.setTimeout(() => setWiggle(null), WIGGLE_MS)
+      void ensureAudio().then(() => previewNote(pitch.note, long))
+    } else if (del.pitch.clef === clef && isOverTrash(del.x, del.y)) {
+      // drag 側と同じく、音部が変わっていたら何もしない（対称にしておく）。
+      onRemove(del.id)
+    }
     setDel(null)
   }
 
@@ -348,7 +380,7 @@ export default function Board({
       {/* 配置済み音符（置いた順に左→右へ等間隔）。掴んでゴミ箱へ捨てられる。 */}
       {notes.map((n, i) => {
         const matched = targets?.[i]?.note === n.pitch.note
-        const dragging = del?.id === n.id
+        const dragging = del?.id === n.id && del.moved
         const fresh = n.id === freshId
         const cx = columnX(starts[i])
         const cy = pitchToY(n.pitch, STAFF_LAYOUT)
@@ -378,7 +410,7 @@ export default function Board({
             />
             {/* 置いた瞬間だけ、符頭の下端を支点にぷにっと潰れて戻る（#100） */}
             <g
-              className={fresh ? 'note-land' : undefined}
+              className={fresh ? 'note-land' : wiggle === n.id ? 'note-wiggle' : undefined}
               style={{ transformBox: 'view-box', transformOrigin: `${cx}px ${cy + NOTE_HEAD_RY_ROTATED}px` }}
             >
               <NoteHead
@@ -505,7 +537,7 @@ export default function Board({
         })()}
 
       {/* 音符を掴んでいる間だけゴミ箱を表示（捨て先を明示）。重なると拡大して反応。 */}
-      {del && (
+      {del?.moved && (
         <g aria-hidden="true">
           {(() => {
             const over = isOverTrash(del.x, del.y)
@@ -525,7 +557,7 @@ export default function Board({
       )}
 
       {/* 捨てるために掴んだ音符のゴースト（指に追従） */}
-      {del && (
+      {del?.moved && (
         <NoteHead
           x={del.x}
           y={del.y}
