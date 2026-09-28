@@ -130,6 +130,29 @@ body {
   animation: sparkle 0.6s ease-out forwards;
 }
 
+/* 置いた音符をタップすると、符頭の下端を支点にぷるんと揺れる（#108・transform-origin は Board が指定） */
+@keyframes note-wiggle {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  20% {
+    transform: rotate(-9deg);
+  }
+  45% {
+    transform: rotate(7deg);
+  }
+  70% {
+    transform: rotate(-4deg);
+  }
+  85% {
+    transform: rotate(2deg);
+  }
+}
+.note-wiggle {
+  animation: note-wiggle 0.45s ease-out;
+}
+
 /* ページ背景の雲がゆっくり流れる（#99） */
 @keyframes cloud-drift {
   0% {
@@ -169,6 +192,7 @@ body {
   .finger-poke,
   .match-pop,
   .note-land,
+  .note-wiggle,
   .cloud-drift {
     animation: none;
   }
