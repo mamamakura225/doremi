@@ -140,8 +140,9 @@ export default function Board({
   const added = landing ? notes.filter((n) => !landing.has(n.id)) : []
   const freshId =
     landing && added.length === 1 && notes.length === landing.size + 1 ? added[0].id : null
-  // タップで揺れている音符（id で持つ。位置で持つと ↩ で別の音符が揺れる）
-  const [wiggle, setWiggle] = useState<string | null>(null)
+  // タップで揺れている音符（id で持つ。位置で持つと ↩ で別の音符が揺れる）。
+  // n はタップの回数。同じ音符の連打でもアニメを最初からやり直すため、内側の <g> の key に使う
+  const [wiggle, setWiggle] = useState<{ id: string; n: number } | null>(null)
   const wiggleTimer = useRef(0)
   useEffect(() => () => window.clearTimeout(wiggleTimer.current), [])
   const [pressedKey, setPressedKey] = useState<string | null>(null)
@@ -264,12 +265,18 @@ export default function Board({
   function handleNoteUp(e: React.PointerEvent) {
     if (!del || e.pointerId !== del.pointerId) return
     if (!del.moved) {
-      // タップ: その音を鳴らして揺らす（音高は変えない・捨てない・#108）
-      const { id, pitch, long } = del
-      setWiggle(id)
-      window.clearTimeout(wiggleTimer.current)
-      wiggleTimer.current = window.setTimeout(() => setWiggle(null), WIGGLE_MS)
-      void ensureAudio().then(() => previewNote(pitch.note, long))
+      // タップ: その音を鳴らして揺らす（音高は変えない・捨てない・#108）。
+      // 押している間に再生が始まっていたら（別の指で ▶）何もしない
+      if (editable) {
+        const { id, pitch, long } = del
+        setWiggle((w) => ({ id, n: (w?.n ?? 0) + 1 }))
+        setLanding(null) // 置いた直後の着地より、いまのタップの揺れを見せる
+        window.clearTimeout(wiggleTimer.current)
+        wiggleTimer.current = window.setTimeout(() => setWiggle(null), WIGGLE_MS)
+        ensureAudio()
+          .then(() => previewNote(pitch.note, long))
+          .catch(() => {}) // 鳴らなくても揺れは見せる（#116）
+      }
     } else if (del.pitch.clef === clef && isOverTrash(del.x, del.y)) {
       // drag 側と同じく、音部が変わっていたら何もしない（対称にしておく）。
       onRemove(del.id)
@@ -410,7 +417,8 @@ export default function Board({
             />
             {/* 置いた瞬間だけ、符頭の下端を支点にぷにっと潰れて戻る（#100） */}
             <g
-              className={fresh ? 'note-land' : wiggle === n.id ? 'note-wiggle' : undefined}
+              key={wiggle?.id === n.id ? `w${wiggle.n}` : 'still'}
+              className={wiggle?.id === n.id ? 'note-wiggle' : fresh ? 'note-land' : undefined}
               style={{ transformBox: 'view-box', transformOrigin: `${cx}px ${cy + NOTE_HEAD_RY_ROTATED}px` }}
             >
               <NoteHead

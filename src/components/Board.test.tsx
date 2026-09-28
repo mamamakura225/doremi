@@ -400,3 +400,52 @@ describe('置いた音符をタップすると鳴って揺れる（#108）', () 
     expect(g.querySelector('.note-wiggle')).toBeNull()
   })
 })
+
+describe('タップと掴みの境界（#108）', () => {
+  function pressMove(view: ReturnType<typeof render>, id: string, dy: number) {
+    const g = view.getByTestId(`note-${id}`)
+    fireEvent.pointerDown(g, { pointerId: 1, clientX: 300, clientY: 290 })
+    fireEvent.pointerMove(g, { pointerId: 1, clientX: 300, clientY: 290 + dy })
+    return g
+  }
+  const one = (id: string): PlacedNote[] => [{ id, pitch: pitchByNote('G4', 'treble')!, long: false }]
+
+  it('あそび（18）の内側で動いてもタップのまま、外側に出たら掴み', () => {
+    const inside = render(<Board {...boardProps({ notes: one('in') })} />)
+    pressMove(inside, 'in', 17)
+    expect(inside.queryByTestId('trash')).toBeNull()
+    cleanup()
+    const outside = render(<Board {...boardProps({ notes: one('out') })} />)
+    pressMove(outside, 'out', 19)
+    expect(outside.queryByTestId('trash')).not.toBeNull()
+  })
+
+  it('押したあと pointercancel したら鳴らさない（#58 と両立）', async () => {
+    const { playNote } = await import('../audio/synth')
+    vi.mocked(playNote).mockClear()
+    const view = render(<Board {...boardProps({ notes: one('c') })} />)
+    const g = view.getByTestId('note-c')
+    fireEvent.pointerDown(g, { pointerId: 1, clientX: 300, clientY: 290 })
+    fireEvent.pointerCancel(g, { pointerId: 1, clientX: 300, clientY: 290 })
+    fireEvent.pointerUp(g, { pointerId: 1, clientX: 300, clientY: 290 })
+    await act(async () => {
+      await Promise.resolve()
+    })
+    expect(playNote).not.toHaveBeenCalled()
+  })
+
+  it('同じ音符を続けてタップすると、揺れを最初からやり直す', () => {
+    const view = render(<Board {...boardProps({ notes: one('r') })} />)
+    const tap = () => {
+      const g = view.getByTestId('note-r')
+      fireEvent.pointerDown(g, { pointerId: 1, clientX: 300, clientY: 290 })
+      fireEvent.pointerUp(g, { pointerId: 1, clientX: 300, clientY: 290 })
+      return view.getByTestId('note-r').querySelector('.note-wiggle')
+    }
+    const first = tap()
+    const second = tap()
+    expect(first).not.toBeNull()
+    expect(second).not.toBeNull()
+    expect(second).not.toBe(first) // 作り直された＝CSS アニメが再始動する
+  })
+})
