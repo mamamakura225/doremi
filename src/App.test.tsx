@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import App from './App'
 import RotateOverlay from './components/RotateOverlay'
-import { ensureAudio, playMelodyNote, playNote, playPop } from './audio/synth'
+import { ensureAudio, playFanfare, playMelodyNote, playNote, playPop } from './audio/synth'
 
 const SONG_2P = JSON.stringify([
   { id: 'x', createdAt: 1, clef: 'treble', pages: [['C4', 'D4'], ['E4']] },
@@ -24,6 +24,7 @@ vi.mock('./audio/synth', () => ({
       }),
   ),
   playMelodyNote: vi.fn(),
+  playFanfare: vi.fn(),
   playNote: vi.fn(),
   playPop: vi.fn(),
   playSparkle: vi.fn(),
@@ -300,4 +301,137 @@ test('画面に絵文字を出さない（OS ごとに絵柄が変わる・#101�
   // 回転の案内
   render(<RotateOverlay />)
   expect(document.body.textContent ?? '').not.toMatch(emoji)
+})
+
+test('複数ページの曲を最後まで聞くと「大」のお祝いが出て、しばらくで消える（#103）', async () => {
+  localStorage.setItem('doremi.songs.v1', SONG_2P)
+  vi.useFakeTimers()
+  render(<App />)
+  fireEvent.click(screen.getByLabelText('ほんだな'))
+  fireEvent.click(screen.getByText('きく'))
+  expect(screen.queryByTestId('celebration')).toBeNull()
+
+  // 3音＋ページ境界の小休符ぶん進めて、最後まで聞き終える
+  await act(async () => {
+    h.resolveAudio?.()
+    await vi.advanceTimersByTimeAsync(600 * 5)
+  })
+  const c = screen.getByTestId('celebration')
+  expect(c.getAttribute('data-level')).toBe('big')
+  expect(playFanfare).toHaveBeenCalledWith('big')
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1800)
+  })
+  expect(screen.queryByTestId('celebration')).toBeNull()
+})
+
+test('おてほんどおりに置いて聞くと「特別」のお祝い（#103）', async () => {
+  // jsdom には SVG の座標変換が無いので、client 座標＝viewBox 座標にする（Board.test と同じ）
+  const proto = SVGSVGElement.prototype as unknown as Record<string, unknown>
+  const identity = { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }
+  proto.getScreenCTM = () => ({ inverse: () => identity })
+  ;(SVGElement.prototype as unknown as Record<string, unknown>).setPointerCapture = () => {}
+
+  vi.useFakeTimers()
+  render(<App />)
+  openAdultMenu()
+  fireEvent.click(screen.getByLabelText('じゆう')) // → おてほん
+
+  // きらきらぼし: ド ド ソ ソ ラ ラ ソ（ト音の y: ド=390・ソ=290・ラ=265）
+  const toolbox = screen.getByTestId('toolbox-normal')
+  for (const y of [390, 390, 290, 290, 265, 265, 290]) {
+    fireEvent.pointerDown(toolbox, { pointerId: 1, clientX: 1000, clientY: 165 })
+    fireEvent.pointerMove(toolbox, { pointerId: 1, clientX: 400, clientY: y })
+    fireEvent.pointerUp(toolbox, { pointerId: 1, clientX: 400, clientY: y })
+  }
+
+  fireEvent.click(screen.getByLabelText('さいせい'))
+  await act(async () => {
+    h.resolveAudio?.()
+    await vi.advanceTimersByTimeAsync(600 * 8)
+  })
+  expect(screen.getByTestId('celebration').getAttribute('data-level')).toBe('special')
+})
+
+test('おてほんモード中に本棚の曲を聞いても、おてほん完成とは数えない（#103）', async () => {
+  const twinkle = ['C4', 'C4', 'G4', 'G4', 'A4', 'A4', 'G4']
+  localStorage.setItem(
+    'doremi.songs.v1',
+    JSON.stringify([{ id: 't', createdAt: 1, clef: 'treble', pages: [twinkle] }]),
+  )
+  vi.useFakeTimers()
+  render(<App />)
+  openAdultMenu()
+  fireEvent.click(screen.getByLabelText('じゆう')) // → おてほん
+  fireEvent.click(screen.getByLabelText('ほんだな'))
+  fireEvent.click(screen.getByText('きく')) // 選ぶと同じハンドラでおてほんが切れる
+
+  await act(async () => {
+    h.resolveAudio?.()
+    await vi.advanceTimersByTimeAsync(600 * 9)
+  })
+  expect(screen.getByTestId('celebration').getAttribute('data-level')).toBe('small')
+})
+
+test('1ページの曲は「小」のお祝いで、1.4秒で消える（#103）', async () => {
+  localStorage.setItem(
+    'doremi.songs.v1',
+    JSON.stringify([{ id: 's', createdAt: 1, clef: 'treble', pages: [['C4']] }]),
+  )
+  vi.useFakeTimers()
+  render(<App />)
+  fireEvent.click(screen.getByLabelText('ほんだな'))
+  fireEvent.click(screen.getByText('きく'))
+  // 1音を聞き終えるまで進める（終わった瞬間にお祝いが始まる）
+  await act(async () => {
+    h.resolveAudio?.()
+    await vi.advanceTimersByTimeAsync(1)
+  })
+  let t = 1
+  while (!screen.queryByTestId('celebration') && t < 5000) {
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10)
+    })
+    t += 10
+  }
+  expect(screen.getByTestId('celebration').getAttribute('data-level')).toBe('small')
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1390)
+  })
+  expect(screen.queryByTestId('celebration')).not.toBeNull() // まだ出ている
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(20)
+  })
+  expect(screen.queryByTestId('celebration')).toBeNull()
+})
+
+test('お祝いの途中で次の音符を置くと、お祝いが終わって置ける（ふさぎすぎない・#103）', async () => {
+  const proto = SVGSVGElement.prototype as unknown as Record<string, unknown>
+  const identity = { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }
+  proto.getScreenCTM = () => ({ inverse: () => identity })
+  ;(SVGElement.prototype as unknown as Record<string, unknown>).setPointerCapture = () => {}
+
+  localStorage.setItem(
+    'doremi.songs.v1',
+    JSON.stringify([{ id: 's', createdAt: 1, clef: 'treble', pages: [['C4']] }]),
+  )
+  vi.useFakeTimers()
+  render(<App />)
+  fireEvent.click(screen.getByLabelText('ほんだな'))
+  fireEvent.click(screen.getByText('きく'))
+  await act(async () => {
+    h.resolveAudio?.()
+    await vi.advanceTimersByTimeAsync(1200)
+  })
+  expect(screen.getByTestId('celebration')).toBeTruthy()
+
+  const toolbox = screen.getByTestId('toolbox-normal')
+  fireEvent.pointerDown(toolbox, { pointerId: 1, clientX: 1000, clientY: 165 })
+  fireEvent.pointerMove(toolbox, { pointerId: 1, clientX: 400, clientY: 290 })
+  fireEvent.pointerUp(toolbox, { pointerId: 1, clientX: 400, clientY: 290 })
+
+  expect(screen.queryByTestId('celebration')).toBeNull()
+  expect(screen.getByLabelText('さいせい')).toBeTruthy() // ⏹ ではなく ▶ に戻っている
+  expect(document.querySelectorAll('[data-testid^="note-"]').length).toBe(2)
 })

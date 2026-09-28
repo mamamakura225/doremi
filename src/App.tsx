@@ -16,6 +16,7 @@ import {
   UndoIcon,
 } from './components/Icons'
 import Board from './components/Board'
+import Celebration from './components/Celebration'
 import Bookshelf from './components/Bookshelf'
 import RotateOverlay from './components/RotateOverlay'
 import { usePortrait } from './hooks/usePortrait'
@@ -23,7 +24,13 @@ import { useShortScreen } from './hooks/useShortScreen'
 import { type PlacedNote, addNote, noteWidth, removeById, removeLast } from './lib/notes'
 import { canAddPage, collapseEmptyPages, parseNoteName, toNoteNames } from './lib/pages'
 import { type Clef, type Pitch, pitchByNote } from './lib/pitch'
-import { CELEBRATE_MS, STEP_MS, noteDuration, playbackSchedule } from './lib/playback'
+import { STEP_MS, noteDuration, playbackSchedule } from './lib/playback'
+import {
+  CELEBRATION_MS,
+  type CelebrationLevel,
+  celebrationLevel,
+  isGuideComplete,
+} from './lib/celebration'
 import { TWINKLE } from './lib/songs'
 import { type SavedSong, loadSongs, saveSong } from './lib/storage'
 import {
@@ -31,6 +38,7 @@ import {
   VOICES,
   ensureAudio,
   playMelodyNote,
+  playFanfare,
   playNote,
   playPop,
   playSparkle,
@@ -61,6 +69,7 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState(0)
   const [playing, setPlaying] = useState<Playing | null>(null)
   const [celebrating, setCelebrating] = useState(false)
+  const [celebration, setCelebration] = useState<CelebrationLevel>('small')
   const [guide, setGuide] = useState(false)
   const [savedSongs, setSavedSongs] = useState<SavedSong[]>(() => loadSongs())
   const [shelfOpen, setShelfOpen] = useState(false)
@@ -108,8 +117,16 @@ export default function App() {
     setPages((prev) => prev.map((pg, i) => (i === currentPage ? fn(pg) : pg)))
   }
 
+  /** お祝いの途中で盤面を触ったら、お祝いを終えて次の操作に移る（ふさぎすぎない・#103） */
+  function endCelebration() {
+    if (!celebrating) return
+    clearTimers()
+    setCelebrating(false)
+  }
+
   function handlePlace(pitch: Pitch, long: boolean) {
-    if (busy) return
+    if (playing) return
+    endCelebration()
     const idx = notes.length
     // お手本と一致したら控えめなキラキラ音（不一致でも普通に置ける・×なし）
     if (targets?.[idx]?.note === pitch.note) playSparkle()
@@ -156,7 +173,8 @@ export default function App() {
   }
 
   function handleRemove(id: string) {
-    if (busy) return
+    if (playing) return
+    endCelebration()
     updateCurrentPage((pg) => removeById(pg, id))
   }
 
@@ -221,13 +239,27 @@ export default function App() {
     void playSequence(loaded)
   }
 
-  async function playSequence(pgs: PlacedNote[][]) {
+  /**
+   * @param guideTargets おてほんの完成を判定するお手本。呼び出し側が渡す——本棚から選んだときは
+   *   同じハンドラでおてほんを切るので、描画時点の `targets` を閉包で読むと古い値になる（#103）
+   */
+  async function playSequence(pgs: PlacedNote[][], guideTargets?: Pitch[]) {
     // 中断（世代繰り上げ）は常に成立させる。空スケジュールでの early return を
     // clearTimers より前に置くと、進行中の別の playSequence が生き残る。
     clearTimers()
     const my = gen.current
     const pageSteps = pgs.map((p) => p.map(noteWidth))
     if (pageSteps.every((s) => s.length === 0)) return
+    // お祝いの強さは再生を始めた時点の曲とモードで決める（#103）
+    const level = celebrationLevel({
+      pages: pgs.filter((p) => p.length > 0).length,
+      guideComplete:
+        guideTargets !== undefined &&
+        isGuideComplete(
+          (pgs[0] ?? []).map((n) => n.pitch.note),
+          guideTargets.map((t) => t.note),
+        ),
+    })
     await ensureAudio()
     // await 中にクリア・音部切替・曲選択などの中断が入っていたら何も積まない。
     if (my !== gen.current) return
@@ -248,9 +280,15 @@ export default function App() {
     timers.current.push(
       window.setTimeout(() => {
         setPlaying(null)
+        setCelebration(level)
         setCelebrating(true)
+        try {
+          playFanfare(level)
+        } catch {
+          // ファンファーレは飾り。鳴らなくてもお祝いの絵は出す（#116）
+        }
         timers.current.push(
-          window.setTimeout(() => setCelebrating(false), CELEBRATE_MS),
+          window.setTimeout(() => setCelebrating(false), CELEBRATION_MS[level]),
         )
       }, endAt),
     )
@@ -260,7 +298,8 @@ export default function App() {
 
   function handlePlay() {
     if (busy || empty) return
-    void playSequence(pages)
+    // おてほんの完成は、いま表示しているページに関係なく1ページ目で判定する
+    void playSequence(pages, guide ? TWINKLE[clef].pitches : undefined)
   }
 
   /**
@@ -396,6 +435,7 @@ export default function App() {
           clef={clef}
           targets={targets}
         />
+        {celebrating && <Celebration level={celebration} />}
         {!shelfOpen && (
           <div className="pointer-events-none absolute inset-x-0 bottom-3 flex items-center justify-between px-6">
             {showPrev ? (

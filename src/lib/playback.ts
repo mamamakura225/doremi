@@ -12,8 +12,6 @@ export interface Tick {
 
 /** 1音あたりの間隔(ms) */
 export const STEP_MS = 600
-/** お祝い演出の表示時間(ms) */
-export const CELEBRATE_MS = 1400
 /** 音と音の間に空ける間(ms)。のばす音が次の音に食い込まないための余白。 */
 const GAP_MS = 100
 

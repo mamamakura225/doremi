@@ -165,6 +165,22 @@ export function playPop(): void {
   pop.triggerAttackRelease('G2', '32n')
 }
 
+// 最後まで聞いたときのファンファーレ（#103）。段階が上がるほど音が増える。
+// 旋律の学習とは別の、決まった明るい上行音型（キラキラ音と同じ系統の synth）。
+const FANFARE: Record<'small' | 'big' | 'special', string[]> = {
+  small: ['C6', 'E6', 'G6'],
+  big: ['C6', 'E6', 'G6', 'C7'],
+  special: ['G5', 'C6', 'E6', 'G6', 'C7'],
+}
+
+/** お祝いのファンファーレ。音と音は 90ms ずつずらす（同じ時刻に積まない） */
+export function playFanfare(level: 'small' | 'big' | 'special'): void {
+  const now = Tone.now()
+  FANFARE[level].forEach((note, i) => {
+    getSparkle().triggerAttackRelease(note, '16n', now + i * 0.09)
+  })
+}
+
 /** お手本と一致した時の控えめなキラキラ音。 */
 export function playSparkle(): void {
   getSparkle().triggerAttackRelease(['C6', 'E6', 'G6'], '16n')
