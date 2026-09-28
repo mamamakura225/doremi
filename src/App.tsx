@@ -28,6 +28,8 @@ import {
   saveStickers,
 } from './lib/stickers'
 import BookCover from './components/BookCover'
+import EarPanel from './components/EarPanel'
+import { type Judge, judge, nextQuestion, stageOf } from './lib/ear'
 import TitleScreen from './components/TitleScreen'
 import { hasSeenTitle, markTitleSeen } from './lib/firstRun'
 import Bookshelf from './components/Bookshelf'
@@ -75,6 +77,12 @@ const VOICE_ICON: Record<Voice, (p: { width?: string; height?: string }) => Reac
 const KID_BTN =
   'grid shrink-0 place-items-center rounded-full shadow-md transition-transform active:scale-90 motion-reduce:transition-none disabled:opacity-40'
 
+/** ききとり: 当たりから次のお題まで／違ったときにお題を鳴らすまで／置いた音を片づけるまで（ms） */
+const EAR_NEXT_MS = 1400
+const EAR_COMPARE_MS = 700
+const EAR_COMPARE_LONG_MS = 1250
+const EAR_RETRY_MS = 1900
+
 /** ほんだなで選んだ本が開く演出の長さ（ms・CSS の book-open と合わせる） */
 const BOOK_OPEN_MS = 600
 
@@ -93,6 +101,12 @@ export default function App() {
   const [celebrating, setCelebrating] = useState(false)
   const [celebration, setCelebration] = useState<CelebrationLevel>('small')
   const [guide, setGuide] = useState(false)
+  // ききとりあそび（#110）: お題の音・見つけた回数・違ったときのヒント
+  const [ear, setEar] = useState(false)
+  const [earTarget, setEarTarget] = useState<Pitch | null>(null)
+  const [earFound, setEarFound] = useState(0)
+  const [earHint, setEarHint] = useState<Judge | null>(null)
+  const earTimers = useRef<number[]>([])
   // おてほんの曲（#106）と、曲えらびを開いているか
   const [guideSong, setGuideSong] = useState<SongId>('twinkle')
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -142,6 +156,7 @@ export default function App() {
       clearTimers()
       window.clearTimeout(saveToast.current)
       window.clearTimeout(openingTimer.current)
+      earTimers.current.forEach((t) => window.clearTimeout(t))
     }
   }, [])
 
@@ -197,6 +212,10 @@ export default function App() {
   function handlePlace(pitch: Pitch, long: boolean) {
     if (playing) return
     endCelebration()
+    if (ear) {
+      answerEar(pitch, long)
+      return
+    }
     const idx = notes.length
     // お手本と一致したら控えめなキラキラ音（不一致でも普通に置ける・×なし）
     if (targets?.[idx]?.pitch.note === pitch.note) playSparkle()
@@ -222,6 +241,7 @@ export default function App() {
 
   function toggleGuide() {
     resetBoard()
+    leaveEar()
     // おてほんに入ったら、まず曲をえらぶ（#106）。切るときは曲えらびも閉じる
     // （開いたまま曲を選ぶと、pickSong でおてほんに戻ってしまう）
     if (!guide) openPicker()
@@ -248,15 +268,94 @@ export default function App() {
    * 音部記号を切り替える。置いてある音符は今の音部記号の高さで解決されているので、
    * 盤面ごとリセットする（切替のたびに音符が別の音に化けるのを避ける）。
    */
+  // ---- ききとりあそび（#110） ----
+  function clearEarTimers() {
+    earTimers.current.forEach((t) => window.clearTimeout(t))
+    earTimers.current = []
+  }
+
+  /** 次のお題を出して鳴らす（直前と同じ音は出さない） */
+  function askEar(prev: Pitch | null, found: number, forClef: Clef) {
+    const q = nextQuestion(stageOf(found), forClef, prev, Math.random)
+    setEarTarget(q)
+    setEarHint(null)
+    void ensureAudio()
+      .then(() => playNote(q.note))
+      .catch(() => {})
+  }
+
+  /** ききとりを終える（ほかのモードに移るとき） */
+  function leaveEar() {
+    clearEarTimers()
+    setEar(false)
+    setEarTarget(null)
+    setEarHint(null)
+  }
+
+  function toggleEar() {
+    resetBoard()
+    setGuide(false)
+    setPickerOpen(false)
+    if (ear) {
+      leaveEar()
+      return
+    }
+    clearEarTimers()
+    setEar(true)
+    askEar(null, earFound, clef)
+  }
+
+  /**
+   * 置いた音をお題と比べる。当たり: みつけた＋シール→次のお題。違う: 置いた音（置いたとき鳴る）の
+   * あとにお題を鳴らして比べ、上下の矢印で教えてから置いた音を片づける。×・ブブーは無し
+   */
+  function answerEar(pitch: Pitch, long: boolean) {
+    if (!earTarget || earHint !== null) return
+    updateCurrentPage((pg) => addNote(pg, pitch, long))
+    const res = judge(pitch, earTarget)
+    setEarHint(res)
+    const target = earTarget
+    if (res === 'same') {
+      const found = earFound + 1
+      setEarFound(found)
+      giveSticker('ear-found')
+      playSparkle()
+      earTimers.current.push(
+        window.setTimeout(() => {
+          updateCurrentPage(() => [])
+          askEar(target, found, clef)
+        }, EAR_NEXT_MS),
+      )
+      return
+    }
+    earTimers.current.push(
+      // のばす音は鳴り終わってからお題を鳴らす（同じ synth で途中で切らない）
+      window.setTimeout(() => playNote(target.note), long ? EAR_COMPARE_LONG_MS : EAR_COMPARE_MS),
+      window.setTimeout(() => {
+        updateCurrentPage(() => [])
+        setEarHint(null)
+      }, EAR_RETRY_MS),
+    )
+  }
+
   function toggleClef() {
     if (busy) return
     const next: Clef = clef === 'treble' ? 'bass' : 'treble'
     resetBoard()
     setClefMode(next)
     setClef(next)
+    // ききとり中なら、新しい音部記号でお題を出し直す（お題が新しい音色の試聴を兼ねる。
+    // 試聴音も鳴らすと同じ synth に同時に積まれて例外になる・#116）
+    if (ear) {
+      clearEarTimers()
+      askEar(null, earFound, next)
+      return
+    }
     // 地の音色（制作中の音＝playNote 系）を切り替えて、そのまま試聴する。
     // playMelodyNote は再生音色（べる等）なので使わない（#60-3）。
-    void ensureAudio().then(() => playNote(next === 'bass' ? 'C3' : 'C5'))
+    void ensureAudio()
+      .then(() => playNote(next === 'bass' ? 'C3' : 'C5'))
+      .catch(() => {})
   }
 
   function handleUndo() {
@@ -315,6 +414,7 @@ export default function App() {
   // 本棚から選んだ曲を盤面に読み込み、そのまま再生（自由モード扱い）。
   // 保存時の音部記号でしか音名を解決できないので、盤面もその音部記号へ切り替える。
   function handleSelectSong(song: SavedSong) {
+    leaveEar()
     // 選んだ本が開く演出（#109）。再生はすぐ始める（演出は触れない別の層）
     setOpening((o) => ({ song, n: (o?.n ?? 0) + 1 })) // n: 続けて選んでも演出をやり直す
     window.clearTimeout(openingTimer.current)
@@ -471,7 +571,7 @@ export default function App() {
           <button
             type="button"
             onClick={handlePlay}
-            disabled={empty}
+            disabled={empty || ear}
             aria-label="さいせい"
             className={`${KID_BTN} ${size} bg-[#22c55e] text-white`}
           >
@@ -492,7 +592,7 @@ export default function App() {
         <button
           type="button"
           onClick={withPop(handleUndo)}
-          disabled={busy || notes.length === 0}
+          disabled={busy || ear || notes.length === 0}
           aria-label="ひとつもどる"
           className={`${KID_BTN} ${size} bg-white text-[#6b6375]`}
         >
@@ -501,7 +601,7 @@ export default function App() {
         <button
           type="button"
           onClick={withPop(handleSave)}
-          disabled={busy || empty}
+          disabled={busy || ear || empty}
           aria-label={justSaved ? 'ほぞんした' : 'ほぞん'}
           className={`${KID_BTN} ${size} bg-white text-[#6b6375]`}
         >
@@ -555,11 +655,13 @@ export default function App() {
         <AdultMenu
           clef={clef}
           guide={guide}
+          ear={ear}
           busy={busy}
           empty={empty}
           onClear={handleClear}
           onToggleClef={toggleClef}
           onToggleGuide={toggleGuide}
+          onToggleEar={toggleEar}
           onClose={() => setAdultOpen(false)}
         />
       )}
@@ -573,10 +675,25 @@ export default function App() {
           playingIndex={playing?.page === currentPage ? playing.index : null}
           playingPage={playing?.page}
           celebrating={celebrating}
+          paused={earHint !== null}
           clef={clef}
           targets={targets}
         />
         {celebrating && <Celebration level={celebration} />}
+        {ear && (
+          <EarPanel
+            found={earFound}
+            hint={earHint}
+            onListen={() => {
+              if (earTarget) {
+                const note = earTarget.note
+                void ensureAudio()
+                  .then(() => playNote(note))
+                  .catch(() => {})
+              }
+            }}
+          />
+        )}
         {opening && (
           <div
             data-testid="book-opening"

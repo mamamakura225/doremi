@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Clef } from '../lib/pitch'
-import { BearIcon, BirdIcon, ClearIcon, CloseIcon, FreeIcon, GearIcon, GuideIcon } from './Icons'
+import { BearIcon, BellIcon, BirdIcon, ClearIcon, CloseIcon, FreeIcon, GearIcon, GuideIcon } from './Icons'
 
 /** ⚙ を押し続けてメニューが開くまでの時間（短いタップでは開かない＝子どもの誤操作よけ） */
 export const HOLD_MS = 1500
@@ -62,11 +62,14 @@ export function AdultMenuButton({ onOpen, sizeClass }: ButtonProps) {
 interface MenuProps {
   clef: Clef
   guide: boolean
+  /** ききとりあそび中か（#110） */
+  ear: boolean
   busy: boolean
   empty: boolean
   onClear: () => void
   onToggleClef: () => void
   onToggleGuide: () => void
+  onToggleEar: () => void
   onClose: () => void
 }
 
@@ -77,11 +80,13 @@ const ROW =
 export default function AdultMenu({
   clef,
   guide,
+  ear,
   busy,
   empty,
   onClear,
   onToggleClef,
   onToggleGuide,
+  onToggleEar,
   onClose,
 }: MenuProps) {
   const act = (fn: () => void) => () => {
@@ -134,6 +139,11 @@ export default function AdultMenu({
         >
           {guide ? <GuideIcon className="shrink-0 text-3xl" /> : <FreeIcon className="shrink-0 text-3xl" />}
           {guide ? 'おてほん → じゆうに する' : 'じゆう → おてほんに する'}
+        </button>
+        {/* ききとりあそび（#110）: 鳴った音を五線で探す。採点しない */}
+        <button type="button" aria-label="ききとり" disabled={busy} onClick={act(onToggleEar)} className={ROW}>
+          <BellIcon className="shrink-0 text-3xl" />
+          {ear ? 'ききとり → じゆうに する' : 'ききとり あそび（なった おとを さがす）'}
         </button>
       </div>
     </div>

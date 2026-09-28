@@ -57,6 +57,8 @@ interface Props {
   /** 鳴っている音のページ（ページが変わったら渡り歩くぴぴを作り直す） */
   playingPage?: number
   celebrating: boolean
+  /** 盤面を一時的に止める（ききとりの答え合わせ中・#110）。置く・捨てるを受け付けない */
+  paused?: boolean
   /** 音部記号（譜面・スナップ先の音がまるごと変わる） */
   clef: Clef
   /** おてほんモードのお手本（のばす音つき・未指定＝自由制作） */
@@ -129,6 +131,7 @@ export default function Board({
   playingIndex,
   playingPage,
   celebrating,
+  paused = false,
   clef,
   targets,
 }: Props) {
@@ -192,7 +195,7 @@ export default function Board({
   const playing = playingIndex !== null
   // お祝い中は盤面を止めない（次の音符を持ってきたら、そこでお祝いが終わる・#103）。
   // 止めるのは再生中だけ
-  const busy = playing
+  const busy = playing || paused
   const canNormal = canAddNote(notes, false) && !busy
   const canLong = canAddNote(notes, true) && !busy
   // 配置済み音符の編集（捨てる）は満杯でも可。再生・演出中のみ不可。
