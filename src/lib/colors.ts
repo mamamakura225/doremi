@@ -28,3 +28,14 @@ export const BOARD_BG = '#fdf6e3'
 
 /** 白鍵の地の色。 */
 export const WHITE_KEY_BG = '#fffdf7'
+
+/**
+ * お道具箱の音符の色（#100）。色は置いてから音高で決まるので、7色に無い暖色の中間色
+ * （ミルクチョコ）にする。白っぽくすると符尾つきの白玉＝二分音符に見え、
+ * 黒いままだと「こわい」（5歳ペルソナ）。桃や黄に寄せるとシ・ミに見える。
+ */
+export const TOOLBOX_NOTE_COLOR = '#a07e62'
+
+/** お道具箱（木のかご）の地と木目 */
+export const WOOD = '#f3d9ae'
+export const WOOD_GRAIN = '#e0bd85'

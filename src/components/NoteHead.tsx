@@ -83,6 +83,17 @@ export default function NoteHead({
         strokeWidth={2}
         transform={`rotate(-${NOTE_HEAD_ROTATION_DEG})`}
       />
+      {/* ぷっくり（#100）: 上からのハイライトと下の沈みを重ねる。輪郭に掛からないよう一回り小さく、
+          当たり判定は持たせない。グラデーションは Board の <defs> の #note-puff */}
+      <ellipse
+        cx={0}
+        cy={0}
+        rx={NOTE_HEAD_RX - 1}
+        ry={NOTE_HEAD_RY - 1}
+        fill="url(#note-puff)"
+        pointerEvents="none"
+        transform={`rotate(-${NOTE_HEAD_ROTATION_DEG})`}
+      />
     </g>
   )
 }

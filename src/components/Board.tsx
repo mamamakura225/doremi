@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   COLUMN_PITCH,
+  NOTE_HEAD_RY,
   NOTE_HIT_H,
   NOTE_HIT_W,
   NOTE_MAX,
@@ -26,12 +27,19 @@ import { type Clef, type Pitch, pitchToY, snapYToPitch, stemDown } from '../lib/
 import type { PlacedNote } from '../lib/notes'
 import { canAddNote, columnStarts, usedColumns } from '../lib/notes'
 import { noteDuration } from '../lib/playback'
-import { colorOf } from '../lib/colors'
+import {
+  OUTLINE_COLOR,
+  TOOLBOX_NOTE_COLOR,
+  WOOD,
+  WOOD_GRAIN,
+  colorOf,
+} from '../lib/colors'
 import { clientToSvgPoint } from '../lib/svgPoint'
 import { ensureAudio, playNote } from '../audio/synth'
 import { useFitsKeyboard } from '../hooks/useFitsKeyboard'
 import Keyboard from './Keyboard'
 import NoteHead from './NoteHead'
+import Sparkles from './Sparkles'
 import Staff from './Staff'
 
 interface Props {
@@ -57,6 +65,9 @@ interface DragState {
 }
 
 /** 配置済み音符を掴んでゴミ箱へ捨てる操作 */
+/** 置いた瞬間の演出（着地＋キラ粒）を出しておく時間。CSS のアニメ（最長 0.6s）より少し長く */
+const LANDING_MS = 700
+
 interface DeleteDragState {
   pointerId: number
   id: string
@@ -95,6 +106,12 @@ export default function Board({
   // その <g> が DOM から消えるとポインタキャプチャが暗黙解放され、pointerup は
   // handleNoteUp に届かない＝ゴースト＋ゴミ箱が残り続けるため（#58 症状2）。
   if (del && !notes.some((n) => n.id === del.id)) setDel(null)
+  // 置いた瞬間の演出（#100）。新しい音符は「置く前にあった id の集合に無いもの」で見分ける。
+  // App が id を振るので置いた時点では id が分からず、配列の位置で持つと
+  // タイマーの間に ↩・ページ切替が挟まったとき別の音符を指してしまう。
+  const [landing, setLanding] = useState<Set<string> | null>(null)
+  const landTimer = useRef(0)
+  useEffect(() => () => window.clearTimeout(landTimer.current), [])
   const [pressedKey, setPressedKey] = useState<string | null>(null)
   // 鍵盤ハイライトの消灯タイマー。IDを保持しないと、連打時に前の押下の
   // タイマーが後の押下を消してしまう（#60-5）。
@@ -164,6 +181,9 @@ export default function Board({
     if (canPlace(drag.pitch.clef, clef, drag.x, drag.y)) {
       onPlace(drag.pitch, drag.long)
       previewNote(drag.pitch.note, drag.long)
+      setLanding(new Set(notes.map((n) => n.id)))
+      window.clearTimeout(landTimer.current)
+      landTimer.current = window.setTimeout(() => setLanding(null), LANDING_MS)
     }
     setDrag(null)
   }
@@ -224,6 +244,16 @@ export default function Board({
       onPointerCancel={endTracking}
     >
       <defs>
+        {/* 符頭のぷっくり（#100）: 左上のハイライト→下の沈み（docs/art-direction.md の線と塗り） */}
+        <radialGradient id="note-puff" cx="0.35" cy="0.3" r="0.8">
+          <stop offset="0" stopColor="#fff" stopOpacity="0.75" />
+          <stop offset="0.45" stopColor="#fff" stopOpacity="0" />
+          <stop offset="1" stopColor="#000" stopOpacity="0.12" />
+        </radialGradient>
+        {/* 置き物のやわらかい落ち影（輪郭色系の半透明・ぼかしのみ） */}
+        <filter id="note-shadow-soft" x="-20%" y="-10%" width="140%" height="130%">
+          <feDropShadow dx="0" dy="6" stdDeviation="7" floodColor="#8a7a5c" floodOpacity="0.18" />
+        </filter>
         <filter id="note-shadow" x="-50%" y="-50%" width="200%" height="200%">
           <feDropShadow
             dx="0"
@@ -286,6 +316,9 @@ export default function Board({
       {notes.map((n, i) => {
         const matched = targets?.[i]?.note === n.pitch.note
         const dragging = del?.id === n.id
+        const fresh = landing !== null && !landing.has(n.id)
+        const cx = columnX(starts[i])
+        const cy = pitchToY(n.pitch, STAFF_LAYOUT)
         return (
           <g
             key={n.id}
@@ -310,15 +343,22 @@ export default function Board({
               height={NOTE_HIT_H}
               fill="transparent"
             />
-            <NoteHead
-              x={columnX(starts[i])}
-              y={pitchToY(n.pitch, STAFF_LAYOUT)}
-              fill={colorOf(n.pitch)}
-              highlight={i === playingIndex}
-              opacity={dragging ? 0.25 : 1}
-              tail={n.long ? COLUMN_PITCH : 0}
-              stemDown={stemDown(n.pitch)}
-            />
+            {/* 置いた瞬間だけ、符頭の下端を支点にぷにっと潰れて戻る（#100） */}
+            <g
+              className={fresh ? 'note-land' : undefined}
+              style={{ transformBox: 'view-box', transformOrigin: `${cx}px ${cy + NOTE_HEAD_RY}px` }}
+            >
+              <NoteHead
+                x={cx}
+                y={cy}
+                fill={colorOf(n.pitch)}
+                highlight={i === playingIndex}
+                opacity={dragging ? 0.25 : 1}
+                tail={n.long ? COLUMN_PITCH : 0}
+                stemDown={stemDown(n.pitch)}
+              />
+            </g>
+            {fresh && <Sparkles x={cx} y={cy} color={colorOf(n.pitch)} />}
             {matched && (
               <text
                 x={columnX(starts[i]) + 20}
@@ -333,17 +373,23 @@ export default function Board({
         )
       })}
 
-      {/* お道具箱（右側）: 「ふつうの音」と「のばす音」が常駐 */}
+      {/* お道具箱（右側・木のかご）: 「ふつうの音」と「のばす音」が常駐 */}
       <rect
         x={TOOLBOX_X}
         y={40}
         width={TOOLBOX_W}
         height={VIEW_H - 80}
-        rx={16}
-        fill="#f0e6cf"
-        stroke="#d8c9a6"
-        strokeWidth={2}
+        rx={24}
+        fill={WOOD}
+        stroke={OUTLINE_COLOR}
+        strokeWidth={3}
+        filter="url(#note-shadow-soft)"
       />
+      <g stroke={WOOD_GRAIN} strokeWidth={3} strokeLinecap="round" aria-hidden="true">
+        {[145, 250, 355].map((y) => (
+          <line key={y} x1={TOOLBOX_X + 14} y1={y} x2={TOOLBOX_X + TOOLBOX_W - 14} y2={y} />
+        ))}
+      </g>
       {/* 掴む的は符頭だけでなく箱の上下半分ぜんぶ（指1本で外しにくくする） */}
       <g
         data-testid="toolbox-normal"
@@ -363,6 +409,7 @@ export default function Board({
           <NoteHead
             x={TOOLBOX_CX}
             y={TOOLBOX_NORMAL_CY}
+            fill={TOOLBOX_NOTE_COLOR}
             opacity={canNormal ? 1 : 0.3}
           />
         </g>
@@ -384,6 +431,7 @@ export default function Board({
         <NoteHead
           x={TOOLBOX_CX - 22}
           y={TOOLBOX_LONG_CY}
+          fill={TOOLBOX_NOTE_COLOR}
           opacity={canLong ? 1 : 0.3}
           tail={44}
         />

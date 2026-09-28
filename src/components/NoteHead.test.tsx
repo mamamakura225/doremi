@@ -57,3 +57,13 @@ describe('NoteHead の符尾の向き（#97）', () => {
     expect(Number(line.getAttribute('y2'))).toBeGreaterThan(0)
   })
 })
+
+describe('NoteHead のぷっくり（#100）', () => {
+  it('輪郭つきの符頭の上に、ハイライトの楕円を重ねる', () => {
+    const [head, shine] = draw().querySelectorAll('ellipse')
+    expect(head.getAttribute('stroke')).toBe(OUTLINE_COLOR)
+    expect(shine.getAttribute('fill')).toBe('url(#note-puff)')
+    // ハイライトは当たり判定を持たない（掴む的は変えない）
+    expect(shine.getAttribute('pointer-events')).toBe('none')
+  })
+})
