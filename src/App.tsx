@@ -454,6 +454,7 @@ export default function App() {
       {/* 子どもの面（#102）: 大きな丸ボタンだけ。消す・音部・モードは ⚙ 長押しのおとなメニューへ。
           ボタンは縮ませない。幅が足りなければ行を折り返す＝はみ出して切れることはない。 */}
       <header
+        inert={showTitle}
         className={`relative flex shrink-0 flex-wrap items-center ${compact ? 'gap-2 p-2' : 'gap-3 p-3'}`}
       >
         {/* 再生中は ⏹。曲を消さずに止める（これまで止める手段はクリア＝曲ごと消す だけだった） */}
@@ -562,7 +563,8 @@ export default function App() {
           onClose={() => setAdultOpen(false)}
         />
       )}
-      <main className="relative min-h-0 flex-1">
+      {/* タイトル中は裏のヘッダー・盤面に触れない（キーボードやフォーカスも届かない） */}
+      <main className="relative min-h-0 flex-1" inert={showTitle}>
         <Board
           notes={notes}
           onPlace={handlePlace}

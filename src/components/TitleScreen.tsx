@@ -7,6 +7,7 @@ import Mascot from './Mascot'
  * はじめて開いたときのタイトル（#112）。「▶ はじめる」のタップが音の解錠を兼ねるので、
  * 最初の音から確実に鳴る。ページ背景（空・丘）の上に重ねる。
  * ロゴの「ど・れ・み」は、その音の色（音の名前そのものなので、7色を使ってよい）。
+ * 「はじめる」は白い文字を読ませるので、ファの緑より濃い緑（白との比 5:1）にする。
  */
 export default function TitleScreen({ onStart }: { onStart: () => void }) {
   const startRef = useRef<HTMLButtonElement>(null)
@@ -49,7 +50,7 @@ export default function TitleScreen({ onStart }: { onStart: () => void }) {
           type="button"
           onClick={onStart}
           aria-label="はじめる"
-          className="flex items-center gap-3 rounded-full bg-[#22c55e] px-10 py-4 text-3xl font-bold text-white shadow-lg transition-transform active:scale-95 motion-reduce:transition-none"
+          className="flex items-center gap-3 rounded-full bg-[#15803d] px-10 py-4 text-3xl font-bold text-white shadow-lg transition-transform active:scale-95 motion-reduce:transition-none"
         >
           <PlayIcon /> はじめる
         </button>
