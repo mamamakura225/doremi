@@ -435,3 +435,74 @@ test('お祝いの途中で次の音符を置くと、お祝いが終わって�
   expect(screen.getByLabelText('さいせい')).toBeTruthy() // ⏹ ではなく ▶ に戻っている
   expect(document.querySelectorAll('[data-testid^="note-"]').length).toBe(2)
 })
+
+/** jsdom には SVG の座標変換が無いので、client 座標＝viewBox 座標にする（Board.test と同じ） */
+function stubSvgGeometry() {
+  const proto = SVGSVGElement.prototype as unknown as Record<string, unknown>
+  const identity = { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }
+  proto.getScreenCTM = () => ({ inverse: () => identity })
+  ;(SVGElement.prototype as unknown as Record<string, unknown>).setPointerCapture = () => {}
+}
+
+/** お道具箱から (400, y) へ音符を1つ置く */
+function placeNote(y: number) {
+  const toolbox = screen.getByTestId('toolbox-normal')
+  fireEvent.pointerDown(toolbox, { pointerId: 1, clientX: 1000, clientY: 165 })
+  fireEvent.pointerMove(toolbox, { pointerId: 1, clientX: 400, clientY: y })
+  fireEvent.pointerUp(toolbox, { pointerId: 1, clientX: 400, clientY: y })
+}
+
+test('はじめて音符を置くとシールがもらえ、シール帳に入る（#105）', () => {
+  stubSvgGeometry()
+  vi.useFakeTimers()
+  render(<App />)
+  placeNote(390)
+  const toast = screen.getByRole('status')
+  expect(toast.textContent).toContain('はじめての おんぷ')
+  expect(JSON.parse(localStorage.getItem('doremi.stickers.v1') ?? '[]')).toEqual(['first-note'])
+
+  // 2つ目では同じシールは出ない
+  act(() => {
+    vi.advanceTimersByTime(3000)
+  })
+  placeNote(290)
+  expect(screen.queryByRole('status')).toBeNull()
+
+  fireEvent.click(screen.getByLabelText('シールちょう'))
+  const book = screen.getByRole('dialog', { name: 'シールちょう' })
+  expect(book.textContent).toContain('1 / 10')
+})
+
+test('localStorage が使えなくても、シールで白画面にならない（#105・#57 と同じ方針）', () => {
+  stubSvgGeometry()
+  vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+    throw new DOMException('blocked', 'SecurityError')
+  })
+  vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    throw new DOMException('blocked', 'SecurityError')
+  })
+  vi.useFakeTimers()
+  render(<App />)
+  placeNote(390)
+  expect(screen.getByRole('status').textContent).toContain('はじめての おんぷ') // このセッション中はもらえる
+  vi.restoreAllMocks()
+})
+
+test('一度に何枚かもらったら、お知らせは1枚ずつ順番に出る（#105）', () => {
+  stubSvgGeometry()
+  vi.useFakeTimers()
+  render(<App />)
+  openAdultMenu()
+  fireEvent.click(screen.getByLabelText('おとの たかさ')) // くま（ヘ音）
+  placeNote(290) // はじめての おんぷ ＋ くまさんの ひくい おと
+  const first = screen.getByRole('status')
+  expect(first.textContent).toContain('はじめての おんぷ')
+  act(() => {
+    vi.advanceTimersByTime(2300)
+  })
+  expect(screen.getByRole('status').textContent).toContain('くまさんの ひくい おと')
+  act(() => {
+    vi.advanceTimersByTime(2300)
+  })
+  expect(screen.queryByRole('status')).toBeNull()
+})

@@ -50,6 +50,8 @@ interface Props {
   notes: PlacedNote[]
   onPlace: (pitch: Pitch, long: boolean) => void
   onRemove: (id: string) => void
+  /** 置いた音符をタップして鳴らしたとき（#108）。シール帳が使う（#105） */
+  onTapNote?: () => void
   playingIndex: number | null
   /** 鳴っている音のページ（ページが変わったら渡り歩くぴぴを作り直す） */
   playingPage?: number
@@ -119,6 +121,7 @@ export default function Board({
   notes,
   onPlace,
   onRemove,
+  onTapNote,
   playingIndex,
   playingPage,
   celebrating,
@@ -290,6 +293,7 @@ export default function Board({
         setLanding(null) // 置いた直後の着地より、いまのタップの揺れを見せる
         window.clearTimeout(wiggleTimer.current)
         wiggleTimer.current = window.setTimeout(() => setWiggle(null), WIGGLE_MS)
+        onTapNote?.()
         ensureAudio()
           .then(() => previewNote(pitch.note, long))
           .catch(() => {}) // 鳴らなくても揺れは見せる（#116）
