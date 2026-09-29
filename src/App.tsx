@@ -361,7 +361,7 @@ export default function App() {
       askEar(null, earFound, next)
       return
     }
-    // 地の音色（制作中の音＝playNote 系）を切り替えて、そのまま試聴する。
+    // 地の音色（制作中の音＝playNote 系・ピアノの録音が読めていれば高さだけ）を切り替えて、そのまま試聴する。
     // playMelodyNote は再生音色（べる等）なので使わない（#60-3）。
     void ensureAudio()
       .then(() => playNote(next === 'bass' ? 'C3' : 'C5'))
