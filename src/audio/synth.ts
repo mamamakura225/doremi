@@ -28,19 +28,23 @@ function strike(synth: Mono, note: string, duration: Tone.Unit.Time, at: number 
 // 読み込み前（初回・オフラインの初回）は下のシンセで鳴らす。出どころは docs/requirements.md
 const PIANO_NOTES = ['D#2', 'F#2', 'A2', 'C3', 'D#3', 'F#3', 'A3', 'C4', 'D#4', 'F#4', 'A4', 'C5', 'D#5']
 let piano: Tone.Sampler | null = null
+// 読み込みに失敗した時刻。すぐには読み直さない（オフラインの間、タップのたびに13音を取りに行かない）
+let pianoFailedAt = -Infinity
+const PIANO_RETRY_MS = 10_000
 
 function loadPiano(): void {
-  if (piano) return
+  if (piano || Date.now() - pianoFailedAt < PIANO_RETRY_MS) return
   const sampler: Tone.Sampler = new Tone.Sampler({
     // URL に # を入れない（D#2 → Ds2.mp3）
     urls: Object.fromEntries(PIANO_NOTES.map((n) => [n, `${n.replace('#', 's')}.mp3`])),
     baseUrl: `${import.meta.env.BASE_URL}piano/`,
     release: 0.6,
     volume: -4, // 録音はピークを 0dB にそろえてあるので、重なっても割れないよう少し下げる
-    // 1つでも読めないと loaded にならない。捨てて、次のタップ（ensureAudio）で読み直す
+    // 1つでも読めないと loaded にならない。捨てて、少し待ってから次のタップ（ensureAudio）で読み直す
     onerror: () => {
       if (piano !== sampler) return
       piano = null
+      pianoFailedAt = Date.now()
       sampler.dispose()
     },
   }).toDestination()
@@ -183,8 +187,8 @@ export function playMelodyNote(note: string, duration: Tone.Unit.Time = '8n'): v
   strike(synth, note, duration)
 }
 
-// 再生の録音の「離す」予約。停止（stopMelody）で消してから releaseAll する
-const pianoReleases = new Set<number>()
+// 再生の録音の「離す」予約（音の高さごと）。停止（stopMelody）で消してから releaseAll する
+const pianoReleases = new Map<string, number>()
 
 /**
  * 再生の「ぴあの」で1音（録音が読めていれば録音、まだならシンセ）。録音は「鳴らす」と「離す」を
@@ -195,12 +199,22 @@ function ringPiano(note: string, duration: Tone.Unit.Time): void {
   const p = readyPiano()
   if (p) {
     ringing = p
-    p.triggerAttack(note)
-    const t = window.setTimeout(() => {
-      pianoReleases.delete(t)
+    // Tone の triggerRelease(note) はその高さの音をすべて離す。前の同じ高さの「離す」予約が遅れて
+    // 届くと、いま鳴らす音まで離してしまう（のばす音は次の拍まで 100ms しか余裕がない）。
+    // 残っていたら先に離しておく——もう離す時刻を過ぎている音なので鳴り方は変わらない
+    const pending = pianoReleases.get(note)
+    if (pending !== undefined) {
+      window.clearTimeout(pending)
       p.triggerRelease(note)
-    }, p.toSeconds(duration) * 1000)
-    pianoReleases.add(t)
+    }
+    p.triggerAttack(note)
+    pianoReleases.set(
+      note,
+      window.setTimeout(() => {
+        pianoReleases.delete(note)
+        p.triggerRelease(note)
+      }, p.toSeconds(duration) * 1000),
+    )
     return
   }
   const synth = getVoice('piano')

@@ -295,13 +295,18 @@ describe('ぴあのは本物のピアノの録音（#137）', () => {
     expect(h.stopped).toContain('C4')
   })
 
-  it('止めなければ長さのとおりに離す（鳴りっぱなしにしない）', async () => {
+  it('長さのとおりに離す（手前では鳴っている・過ぎたら鳴りっぱなしにしない）', async () => {
     installSpeech()
     await ensureAudio()
     h.loaded = true
     vi.useFakeTimers()
     try {
       playMelodyNote('D4', 1.1)
+      vi.advanceTimersByTime(1099)
+      stopMelody()
+      expect(h.stopped).toContain('D4') // まだ鳴っていた
+      h.stopped = []
+      playMelodyNote('E4', 1.1)
       vi.advanceTimersByTime(1100)
       stopMelody()
       expect(h.stopped).toEqual([]) // もう離してある
@@ -310,11 +315,36 @@ describe('ぴあのは本物のピアノの録音（#137）', () => {
     }
   })
 
-  it('読み込みに失敗したら、次のタップで読み直す（オフラインの初回など）', async () => {
+  it('同じ高さが続くとき、前の音の「離す」が遅れて届いても次の音を離さない', async () => {
+    installSpeech()
     await ensureAudio()
-    const before = h.samplers
-    h.samplerOpts!.onerror!(new Error('offline'))
-    await ensureAudio()
-    expect(h.samplers).toBe(before + 1)
+    h.loaded = true
+    vi.useFakeTimers()
+    try {
+      playMelodyNote('G4', 1.1) // ソー
+      vi.advanceTimersByTime(1000) // 前の音の「離す」が遅れているうちに
+      playMelodyNote('G4') // ソ
+      vi.advanceTimersByTime(200) // 前の予約の時刻（1.1 秒）を過ぎる
+      stopMelody()
+      expect(h.stopped).toContain('G4') // 2つめの ソ はまだ鳴っている
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('読み込みに失敗したら、少し待ってから次のタップで読み直す（オフラインの初回など）', async () => {
+    vi.useFakeTimers()
+    try {
+      await ensureAudio()
+      const before = h.samplers
+      h.samplerOpts!.onerror!(new Error('offline'))
+      await ensureAudio()
+      expect(h.samplers).toBe(before) // すぐにはタップのたびに取りに行かない
+      vi.advanceTimersByTime(10_000)
+      await ensureAudio()
+      expect(h.samplers).toBe(before + 1)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
