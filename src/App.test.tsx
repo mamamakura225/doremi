@@ -347,20 +347,42 @@ test('おてほんどおりに置いて聞くと「特別」のお祝い（#103�
   openAdultMenu()
   fireEvent.click(screen.getByLabelText('じゆう')) // → おてほん
 
-  // きらきらぼし: ド ド ソ ソ ラ ラ ソ（ト音の y: ド=390・ソ=290・ラ=265）
-  const toolbox = screen.getByTestId('toolbox-normal')
-  for (const y of [390, 390, 290, 290, 265, 265, 290]) {
-    fireEvent.pointerDown(toolbox, { pointerId: 1, clientX: 1000, clientY: 165 })
-    fireEvent.pointerMove(toolbox, { pointerId: 1, clientX: 400, clientY: y })
-    fireEvent.pointerUp(toolbox, { pointerId: 1, clientX: 400, clientY: y })
-  }
+  fireEvent.click(screen.getByLabelText('きらきらぼし'))
+
+  // きらきらぼしは2ページ（#128）。ト音の y: ド390・レ365・ミ340・ファ315・ソ290・ラ265
+  for (const y of [390, 390, 290, 290, 265, 265]) placeNote(y)
+  placeLongNote(290)
+  // 8列（10列に満たない）でも、お手本を置き終えたら次のページへ進める
+  fireEvent.click(screen.getByText('つぎのうた'))
+  expect(document.querySelectorAll('[data-testid="guide-ghost"]').length).toBe(7)
+  for (const y of [315, 315, 340, 340, 365, 365]) placeNote(y)
+  placeLongNote(390)
 
   fireEvent.click(screen.getByLabelText('さいせい'))
   await act(async () => {
     h.resolveAudio?.()
-    await vi.advanceTimersByTimeAsync(600 * 8)
+    await vi.advanceTimersByTimeAsync(600 * 18)
   })
   expect(screen.getByTestId('celebration').getAttribute('data-level')).toBe('special')
+})
+
+test('ページをまたぐお手本は、1ページめだけでは「特別」にならない（#128）', async () => {
+  stubSvgGeometry()
+  vi.useFakeTimers()
+  render(<App />)
+  openAdultMenu()
+  fireEvent.click(screen.getByLabelText('じゆう'))
+  fireEvent.click(screen.getByLabelText('きらきらぼし'))
+  for (const y of [390, 390, 290, 290, 265, 265]) placeNote(y)
+  expect(screen.queryByText('つぎのうた')).toBeNull() // お手本の途中では進めない
+  placeLongNote(290)
+
+  fireEvent.click(screen.getByLabelText('さいせい'))
+  await act(async () => {
+    h.resolveAudio?.()
+    await vi.advanceTimersByTimeAsync(600 * 9)
+  })
+  expect(screen.getByTestId('celebration').getAttribute('data-level')).toBe('small')
 })
 
 test('おてほんモード中に本棚の曲を聞いても、おてほん完成とは数えない（#103）', async () => {
@@ -459,6 +481,13 @@ function placeNote(y: number) {
   fireEvent.pointerDown(toolbox, { pointerId: 1, clientX: 1000, clientY: 165 })
   fireEvent.pointerMove(toolbox, { pointerId: 1, clientX: 400, clientY: y })
   fireEvent.pointerUp(toolbox, { pointerId: 1, clientX: 400, clientY: y })
+}
+
+function placeLongNote(y: number) {
+  const long = screen.getByTestId('toolbox-long')
+  fireEvent.pointerDown(long, { pointerId: 1, clientX: 1000, clientY: 335 })
+  fireEvent.pointerMove(long, { pointerId: 1, clientX: 400, clientY: y })
+  fireEvent.pointerUp(long, { pointerId: 1, clientX: 400, clientY: y })
 }
 
 test('はじめて音符を置くとシールがもらえ、シール帳に入る（#105）', () => {
@@ -570,17 +599,42 @@ test('かえるのうたをお手本どおり（のばす音も）置いて聞�
   fireEvent.click(screen.getByLabelText('じゆう'))
   fireEvent.click(screen.getByLabelText('かえるのうた'))
 
-  // ド レ ミ ファ ミ レ（ふつう）→ ド（のばす）。ト音の y: ド390・レ365・ミ340・ファ315
+  // ド レ ミ ファ ミ レ（ふつう）→ ド（のばす）｜ミ ファ ソ ラ ソ ファ → ミ（のばす）
+  // ト音の y: ド390・レ365・ミ340・ファ315・ソ290・ラ265
   for (const y of [390, 365, 340, 315, 340, 365]) placeNote(y)
-  const long = screen.getByTestId('toolbox-long')
-  fireEvent.pointerDown(long, { pointerId: 1, clientX: 1000, clientY: 335 })
-  fireEvent.pointerMove(long, { pointerId: 1, clientX: 400, clientY: 390 })
-  fireEvent.pointerUp(long, { pointerId: 1, clientX: 400, clientY: 390 })
+  placeLongNote(390)
+  fireEvent.click(screen.getByText('つぎのうた'))
+  for (const y of [340, 315, 290, 265, 290, 315]) placeNote(y)
+  placeLongNote(340)
 
   fireEvent.click(screen.getByLabelText('さいせい'))
   await act(async () => {
     h.resolveAudio?.()
-    await vi.advanceTimersByTimeAsync(600 * 10)
+    await vi.advanceTimersByTimeAsync(600 * 18)
+  })
+  expect(screen.getByTestId('celebration').getAttribute('data-level')).toBe('special')
+})
+
+test('のばす音で列が押し出され、残りを次のページに置いても「特別」（長さは採点しない・#128）', async () => {
+  stubSvgGeometry()
+  vi.useFakeTimers()
+  render(<App />)
+  openAdultMenu()
+  fireEvent.click(screen.getByLabelText('じゆう'))
+  fireEvent.click(screen.getByLabelText('ぶんぶんぶん'))
+  // ソ ファ ミ レ ミ ファ レ ド（ちょうど10列）のはじめ2音を のばす音 にすると ド が入らない
+  // ト音の y: ド390・レ365・ミ340・ファ315・ソ290
+  placeLongNote(290)
+  placeLongNote(315)
+  placeLongNote(340)
+  for (const y of [365, 340, 315, 365]) placeNote(y)
+  fireEvent.click(screen.getByText('つぎのうた')) // 10列で満杯
+  placeNote(390)
+
+  fireEvent.click(screen.getByLabelText('さいせい'))
+  await act(async () => {
+    h.resolveAudio?.()
+    await vi.advanceTimersByTimeAsync(600 * 14)
   })
   expect(screen.getByTestId('celebration').getAttribute('data-level')).toBe('special')
 })

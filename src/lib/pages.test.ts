@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { NOTE_MAX } from './layout'
-import { canAddPage, collapseEmptyPages, parseNoteName, toNoteNames } from './pages'
+import { canAddGuidePage, canAddPage, collapseEmptyPages, parseNoteName, toNoteNames } from './pages'
+import { songOf } from './songs'
 import type { PlacedNote } from './notes'
 
 function page(notes: string[]): PlacedNote[] {
@@ -99,5 +100,27 @@ describe('collapseEmptyPages（#60-6）', () => {
     const r = collapseEmptyPages([page(['C4']), [], []], 1)
     expect(r.pages.map((p) => p.length)).toEqual([1, 0])
     expect(r.currentPage).toBe(1)
+  })
+})
+
+describe('canAddGuidePage（おてほんのページ送り・#128）', () => {
+  const twinkle = songOf('twinkle', 'treble').pages // 8列＋8列
+
+  it('そのページのお手本の列数ぶん置けたら、10列に満たなくても次のページを作れる', () => {
+    const seven = page(['C4', 'C4', 'G4', 'G4', 'A4', 'A4'])
+    expect(canAddGuidePage([seven], 0, twinkle)).toBe(false) // 6列
+    const done: PlacedNote[] = [...seven, { id: 'L', pitch: { note: 'G4' } as PlacedNote['pitch'], long: true }]
+    expect(canAddGuidePage([done], 0, twinkle)).toBe(true) // 8列
+  })
+
+  it('違う音でも列数が届けば進める（×にしない）', () => {
+    expect(canAddGuidePage([page(Array.from({ length: 8 }, () => 'E4'))], 0, twinkle)).toBe(true)
+  })
+
+  it('お手本の最後のページ・末尾でないページでは作らない', () => {
+    const eight = page(Array.from({ length: 8 }, () => 'E4'))
+    expect(canAddGuidePage([eight, eight], 1, twinkle)).toBe(false) // お手本はもう無い
+    expect(canAddGuidePage([eight, []], 0, twinkle)).toBe(false) // 次のページはもうある
+    expect(canAddGuidePage([eight], 0, songOf('bee', 'treble').pages)).toBe(false) // 1ページの曲
   })
 })

@@ -1,6 +1,7 @@
 // 複数ページ（フレーズ）の純ロジック（Vitest対象）。
 import { NOTE_MAX } from './layout'
 import { usedColumns, type PlacedNote } from './notes'
+import { songColumns, type GuideNote } from './songs'
 
 /** のばす音を表す接尾辞（保存形式）。例 'C4~' */
 const LONG_SUFFIX = '~'
@@ -8,6 +9,22 @@ const LONG_SUFFIX = '~'
 /** 末尾ページに列が残っていないとき、新しいページを追加できる（つぎのうた）。 */
 export function canAddPage(pages: PlacedNote[][], current: number): boolean {
   return current === pages.length - 1 && usedColumns(pages[current]) >= NOTE_MAX
+}
+
+/**
+ * おてほん中は、末尾ページにそのページのお手本の列数ぶん置けたら次のページを作れる（#128）。
+ * 10列に満たないフレーズで止まらないように。音が違っても列数で進める（×にしない）
+ */
+export function canAddGuidePage(
+  pages: PlacedNote[][],
+  current: number,
+  guide: readonly (readonly GuideNote[])[],
+): boolean {
+  return (
+    current === pages.length - 1 &&
+    current < guide.length - 1 &&
+    usedColumns(pages[current]) >= songColumns(guide[current])
+  )
 }
 
 /** 保存・連結再生用に、各ページを音名の並びへ変換し空ページを除く（のばす音は 'C4~'）。 */
