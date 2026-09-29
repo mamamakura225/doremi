@@ -13,7 +13,13 @@ const h = vi.hoisted(() => ({
   // ピアノの録音（#137）。loaded は読み込み済みかどうか（テストごとに切り替える）
   sample: vi.fn(),
   releaseAll: vi.fn(),
-  samplerOpts: null as null | { urls: Record<string, string>; baseUrl: string },
+  samplerOpts: null as null | {
+    urls: Record<string, string>
+    baseUrl: string
+    onerror?: (e: Error) => void
+  },
+  samplers: 0,
+  stopped: [] as string[],
   loaded: false,
 }))
 
@@ -39,8 +45,10 @@ vi.mock('tone', () => {
     triggerRelease = () => h.release(this.opts)
   }
   class FakeSampler {
-    constructor(opts: { urls: Record<string, string>; baseUrl: string }) {
+    active = new Set<string>()
+    constructor(opts: NonNullable<typeof h.samplerOpts>) {
       h.samplerOpts = opts
+      h.samplers += 1
     }
     get loaded() {
       return h.loaded
@@ -48,8 +56,23 @@ vi.mock('tone', () => {
     toDestination() {
       return this
     }
+    toSeconds = (d: unknown) => (typeof d === 'number' ? d : 0.25)
+    // 本物と同じく、triggerAttackRelease は離す予約をその場で済ませ、鳴っている音の一覧に残さない
+    // （あとで releaseAll しても止まらない）
     triggerAttackRelease = (note: string, duration: unknown) => h.sample(note, duration)
-    releaseAll = h.releaseAll
+    triggerAttack = (note: string) => {
+      this.active.add(note)
+      h.sample(note, 'attack')
+    }
+    triggerRelease = (note: string) => {
+      this.active.delete(note)
+    }
+    releaseAll = () => {
+      h.releaseAll()
+      h.stopped.push(...this.active)
+      this.active.clear()
+    }
+    dispose = vi.fn()
   }
   class FakePoly {
     toDestination() {
@@ -105,6 +128,7 @@ beforeEach(() => {
   h.release.mockClear()
   h.sample.mockClear()
   h.releaseAll.mockClear()
+  h.stopped = []
   h.loaded = false
   // モジュール可変状態を既定へ戻す。
   setClef('treble')
@@ -262,12 +286,35 @@ describe('ぴあのは本物のピアノの録音（#137）', () => {
     expect(h.sample).not.toHaveBeenCalled()
   })
 
-  it('停止すると録音の音も止める', async () => {
+  it('停止すると、鳴っている途中の録音の音も止める', async () => {
     installSpeech()
     await ensureAudio()
     h.loaded = true
-    playMelodyNote('C4', 1.1)
+    playMelodyNote('C4', 1.1) // のばす音
     stopMelody()
-    expect(h.releaseAll).toHaveBeenCalled()
+    expect(h.stopped).toContain('C4')
+  })
+
+  it('止めなければ長さのとおりに離す（鳴りっぱなしにしない）', async () => {
+    installSpeech()
+    await ensureAudio()
+    h.loaded = true
+    vi.useFakeTimers()
+    try {
+      playMelodyNote('D4', 1.1)
+      vi.advanceTimersByTime(1100)
+      stopMelody()
+      expect(h.stopped).toEqual([]) // もう離してある
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('読み込みに失敗したら、次のタップで読み直す（オフラインの初回など）', async () => {
+    await ensureAudio()
+    const before = h.samplers
+    h.samplerOpts!.onerror!(new Error('offline'))
+    await ensureAudio()
+    expect(h.samplers).toBe(before + 1)
   })
 })

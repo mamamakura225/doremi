@@ -30,13 +30,21 @@ const PIANO_NOTES = ['D#2', 'F#2', 'A2', 'C3', 'D#3', 'F#3', 'A3', 'C4', 'D#4', 
 let piano: Tone.Sampler | null = null
 
 function loadPiano(): void {
-  piano ??= new Tone.Sampler({
+  if (piano) return
+  const sampler: Tone.Sampler = new Tone.Sampler({
     // URL に # を入れない（D#2 → Ds2.mp3）
     urls: Object.fromEntries(PIANO_NOTES.map((n) => [n, `${n.replace('#', 's')}.mp3`])),
     baseUrl: `${import.meta.env.BASE_URL}piano/`,
     release: 0.6,
     volume: -4, // 録音はピークを 0dB にそろえてあるので、重なっても割れないよう少し下げる
+    // 1つでも読めないと loaded にならない。捨てて、次のタップ（ensureAudio）で読み直す
+    onerror: () => {
+      if (piano !== sampler) return
+      piano = null
+      sampler.dispose()
+    },
   }).toDestination()
+  piano = sampler
 }
 
 /** 読み込めていればピアノの録音、まだなら null（呼び出し側はシンセで鳴らす） */
@@ -44,8 +52,8 @@ function readyPiano(): Tone.Sampler | null {
   return piano?.loaded ? piano : null
 }
 
-// 音部記号で地の音色が変わる（ヘ音＝低くて温かい音＝クマ・ゾウ）。ピアノの録音が読めたら
-// どちらの音部記号でも録音を使い、下のシンセは読み込み前の代わりになる（#137）。
+// 録音の読み込み前は、音部記号で地の音色が変わる（ヘ音＝低くて温かい音＝クマ・ゾウ）。
+// 読めたらどちらの音部記号でも録音のピアノで、変わるのは音の高さだけ（#137）。
 // うたモードの音名解決（pitchByNote）もこの値を見る。切替は必ず
 // 盤面リセット＋タイマー破棄とセットで（App.toggleClef / handleSelectSong）。
 let clefMode: Clef = 'treble'
@@ -69,17 +77,18 @@ function getSynth(): Tone.Synth {
   return (makingSynths[clefMode] ??= makeMakingSynth(clefMode))
 }
 
-/** 音部記号を切り替える（地の音色が変わる）。 */
+/** 音部記号を切り替える（録音の読み込み前は地の音色も変わる）。 */
 export function setClef(clef: Clef): void {
   clefMode = clef
 }
 
 /** iOS等のためAudioContextをユーザー操作で起動（初回のみ実効）。 */
 export async function ensureAudio(): Promise<void> {
-  if (started) return
-  await Tone.start()
-  started = true
-  loadPiano()
+  if (!started) {
+    await Tone.start()
+    started = true
+  }
+  loadPiano() // 読み込み済み・読み込み中なら何もしない。失敗していたら読み直す
 }
 
 /** 1音鳴らす（科学的音名 例 'C4'）。制作（配置・スクラブ）中はこの通常音で固定。 */
@@ -101,7 +110,7 @@ export const VOICES: { id: Voice; name: string }[] = [
 ]
 
 type VoiceSynth = Tone.Synth | Tone.FMSynth
-// ヘ音の「ぴあの」は温かい低音に差し替えるため、鍵に音部記号を含める。
+// 録音の読み込み前、ヘ音の「ぴあの」は温かい低音に差し替えるため、鍵に音部記号を含める。
 type VoiceKey = Voice | 'piano-bass'
 const voiceCache: Partial<Record<VoiceKey, VoiceSynth>> = {}
 let playbackVoice: Voice = 'piano'
@@ -174,12 +183,24 @@ export function playMelodyNote(note: string, duration: Tone.Unit.Time = '8n'): v
   strike(synth, note, duration)
 }
 
-/** 再生の「ぴあの」で1音（録音が読めていれば録音、まだならシンセ） */
+// 再生の録音の「離す」予約。停止（stopMelody）で消してから releaseAll する
+const pianoReleases = new Set<number>()
+
+/**
+ * 再生の「ぴあの」で1音（録音が読めていれば録音、まだならシンセ）。録音は「鳴らす」と「離す」を
+ * 分ける——triggerAttackRelease は離す予約をその場で済ませて鳴っている音の一覧から外すので、
+ * 停止の releaseAll が効かず、のばす音が最後まで鳴り続ける
+ */
 function ringPiano(note: string, duration: Tone.Unit.Time): void {
   const p = readyPiano()
   if (p) {
     ringing = p
-    p.triggerAttackRelease(note, duration)
+    p.triggerAttack(note)
+    const t = window.setTimeout(() => {
+      pianoReleases.delete(t)
+      p.triggerRelease(note)
+    }, p.toSeconds(duration) * 1000)
+    pianoReleases.add(t)
     return
   }
   const synth = getVoice('piano')
@@ -194,9 +215,11 @@ function ringPiano(note: string, duration: Tone.Unit.Time): void {
  */
 export function stopMelody(): void {
   stopSpeech()
-  // 録音は鳴っている音を名指しで止める作りなので、まとめて止める
-  if (ringing instanceof Tone.Sampler) ringing.releaseAll()
-  else ringing?.triggerRelease?.()
+  if (ringing instanceof Tone.Sampler) {
+    pianoReleases.forEach((t) => window.clearTimeout(t))
+    pianoReleases.clear()
+    ringing.releaseAll()
+  } else ringing?.triggerRelease?.()
   ringing = null
 }
 
