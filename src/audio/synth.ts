@@ -5,10 +5,11 @@ import { primeSpeech, speakSolfa, stopSpeech } from './speech'
 
 let started = false
 
-// モノフォニックの synth は、鳴っている最中に「前回と同じか前の時刻」で発音すると
+// モノフォニックの synth は、鳴っている最中に「直前の発音と同じ時刻」で発音すると
 // Tone が例外を投げる（Start time must be strictly greater…・#116）。同じ tick の
-// 2回目（スクラブで2ゾーン跨ぎ・連打・シールの音の重なり）で起きるので、synth ごとに
-// 直前の発音時刻を覚え、それ以下なら少しだけ後ろへずらす。聞き分けられない幅にする。
+// 2回目（スクラブで2ゾーン跨ぎ・連打）で起きるので、synth ごとに直前の発音時刻を覚え、
+// それ以下なら少しだけ後ろへずらす（前の時刻も後ろへ回すのは、前へ差し込むと Tone が
+// 後ろに積んだ発音を取り消すため）。聞き分けられない幅にする。
 const MIN_GAP = 0.005
 const lastStart = new WeakMap<object, number>()
 

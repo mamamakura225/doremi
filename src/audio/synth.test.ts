@@ -10,7 +10,8 @@ const h = vi.hoisted(() => ({
 }))
 
 // Tone.js は AudioContext を要求するので最小のフェイクに差し替える。
-// モノフォニックの synth は本物と同じく、前回以下の時刻での発音に例外を投げる（#116）。
+// モノフォニックの synth は、前回以下の時刻での発音に例外を投げる（#116）。本物は「直前と
+// 同じ時刻」だけで投げるので、それより厳しい（同じ tick の2回目はどちらでも投げる）。
 vi.mock('tone', () => {
   class FakeSynth {
     opts: unknown
@@ -178,7 +179,7 @@ describe('同じ時刻に2回鳴らしても例外にしない（#116）', () =>
   it('シールの音を続けて鳴らしても、2回目の2音とも鳴る', () => {
     expect(() => {
       playChime()
-      playChime() // 1回目の2音め（120ms 後）より前の時刻から始まる
+      playChime() // 1回目の1音めと同じ時刻（同じ tick）から始まる
     }).not.toThrow()
     expect(h.attack).toHaveBeenCalledTimes(4)
   })

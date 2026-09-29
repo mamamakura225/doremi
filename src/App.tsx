@@ -348,7 +348,7 @@ export default function App() {
     setClefMode(next)
     setClef(next)
     // ききとり中なら、新しい音部記号でお題を出し直す（お題が新しい音色の試聴を兼ねる。
-    // 試聴音も鳴らすと同じ synth で重なり、お題が試聴音を 5ms で切って聞き分けられない・#116）
+    // 試聴音も鳴らすと同じ synth で重なり、後から鳴った方が先の音を 5ms で切る・#116）
     if (ear) {
       clearEarTimers()
       askEar(null, earFound, next)
