@@ -22,7 +22,30 @@ function strike(synth: Mono, note: string, duration: Tone.Unit.Time, at: number 
   lastStart.set(synth, time)
   synth.triggerAttackRelease(note, duration, time)
 }
-// 音部記号で地の音色が変わる（ヘ音＝低くて温かい音＝クマ・ゾウ）。
+
+// 本物のピアノの録音（#137）。FreePats Upright Piano KW（CC0・カワイのアップライト）の
+// 弱く弾いた音を、3半音おきに13音だけ持ち、間の音は Tone.Sampler が高さをずらして作る。
+// 読み込み前（初回・オフラインの初回）は下のシンセで鳴らす。出どころは docs/requirements.md
+const PIANO_NOTES = ['D#2', 'F#2', 'A2', 'C3', 'D#3', 'F#3', 'A3', 'C4', 'D#4', 'F#4', 'A4', 'C5', 'D#5']
+let piano: Tone.Sampler | null = null
+
+function loadPiano(): void {
+  piano ??= new Tone.Sampler({
+    // URL に # を入れない（D#2 → Ds2.mp3）
+    urls: Object.fromEntries(PIANO_NOTES.map((n) => [n, `${n.replace('#', 's')}.mp3`])),
+    baseUrl: `${import.meta.env.BASE_URL}piano/`,
+    release: 0.6,
+    volume: -4, // 録音はピークを 0dB にそろえてあるので、重なっても割れないよう少し下げる
+  }).toDestination()
+}
+
+/** 読み込めていればピアノの録音、まだなら null（呼び出し側はシンセで鳴らす） */
+function readyPiano(): Tone.Sampler | null {
+  return piano?.loaded ? piano : null
+}
+
+// 音部記号で地の音色が変わる（ヘ音＝低くて温かい音＝クマ・ゾウ）。ピアノの録音が読めたら
+// どちらの音部記号でも録音を使い、下のシンセは読み込み前の代わりになる（#137）。
 // うたモードの音名解決（pitchByNote）もこの値を見る。切替は必ず
 // 盤面リセット＋タイマー破棄とセットで（App.toggleClef / handleSelectSong）。
 let clefMode: Clef = 'treble'
@@ -56,11 +79,15 @@ export async function ensureAudio(): Promise<void> {
   if (started) return
   await Tone.start()
   started = true
+  loadPiano()
 }
 
 /** 1音鳴らす（科学的音名 例 'C4'）。制作（配置・スクラブ）中はこの通常音で固定。 */
 export function playNote(note: string, duration: Tone.Unit.Time = '8n'): void {
-  strike(getSynth(), note, duration)
+  // 録音は1音ごとに音源を作るので、同じ時刻に重ねても例外にならない（strike は要らない）
+  const p = readyPiano()
+  if (p) p.triggerAttackRelease(note, duration)
+  else strike(getSynth(), note, duration)
 }
 
 // 再生時のみ切り替えられる音色（制作中の音は通常音のまま＝学習を妨げない）。
@@ -73,13 +100,13 @@ export const VOICES: { id: Voice; name: string }[] = [
   { id: 'sing', name: 'うた（ドレミ）' },
 ]
 
-type AnySynth = Tone.Synth | Tone.FMSynth
+type VoiceSynth = Tone.Synth | Tone.FMSynth
 // ヘ音の「ぴあの」は温かい低音に差し替えるため、鍵に音部記号を含める。
 type VoiceKey = Voice | 'piano-bass'
-const voiceCache: Partial<Record<VoiceKey, AnySynth>> = {}
+const voiceCache: Partial<Record<VoiceKey, VoiceSynth>> = {}
 let playbackVoice: Voice = 'piano'
 
-function makeVoice(v: VoiceKey): AnySynth {
+function makeVoice(v: VoiceKey): VoiceSynth {
   switch (v) {
     case 'piano-bass':
       // 制作中と同じ丸い低音。ヘ音の地の音（クマ・ゾウ）。
@@ -108,7 +135,7 @@ function makeVoice(v: VoiceKey): AnySynth {
   }
 }
 
-function getVoice(v: Voice): AnySynth {
+function getVoice(v: Voice): VoiceSynth {
   // べる・ぴこぴこは子どもが自分で選んだ音なので音部記号では変えない。
   const key: VoiceKey = v === 'piano' && clefMode === 'bass' ? 'piano-bass' : v
   return (voiceCache[key] ??= makeVoice(key))
@@ -124,7 +151,7 @@ export function setPlaybackVoice(v: Voice): void {
 
 // 直近に playMelodyNote で鳴らした synth。中断時にこれだけを release する
 // （音色や音部の写像を推測しない・鳴らしていない synth を新規生成しない・#60）。
-let ringing: AnySynth | null = null
+let ringing: VoiceSynth | Tone.Sampler | null = null
 
 /**
  * 再生用に1音鳴らす（選択中の音色を使用）。
@@ -133,14 +160,31 @@ let ringing: AnySynth | null = null
  */
 export function playMelodyNote(note: string, duration: Tone.Unit.Time = '8n'): void {
   if (playbackVoice === 'sing') {
-    ringing = getVoice('piano')
-    strike(ringing, note, duration)
+    ringPiano(note, duration)
     const solfa = pitchByNote(note, clefMode)?.solfa
     if (solfa) speakSolfa(solfa)
     return
   }
-  ringing = getVoice(playbackVoice)
-  strike(ringing, note, duration)
+  if (playbackVoice === 'piano') {
+    ringPiano(note, duration)
+    return
+  }
+  const synth = getVoice(playbackVoice)
+  ringing = synth
+  strike(synth, note, duration)
+}
+
+/** 再生の「ぴあの」で1音（録音が読めていれば録音、まだならシンセ） */
+function ringPiano(note: string, duration: Tone.Unit.Time): void {
+  const p = readyPiano()
+  if (p) {
+    ringing = p
+    p.triggerAttackRelease(note, duration)
+    return
+  }
+  const synth = getVoice('piano')
+  ringing = synth
+  strike(synth, note, duration)
 }
 
 /**
@@ -150,7 +194,9 @@ export function playMelodyNote(note: string, duration: Tone.Unit.Time = '8n'): v
  */
 export function stopMelody(): void {
   stopSpeech()
-  ringing?.triggerRelease?.()
+  // 録音は鳴っている音を名指しで止める作りなので、まとめて止める
+  if (ringing instanceof Tone.Sampler) ringing.releaseAll()
+  else ringing?.triggerRelease?.()
   ringing = null
 }
 

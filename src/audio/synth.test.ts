@@ -1,4 +1,7 @@
+/// <reference types="node" />
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { existsSync } from 'node:fs'
+import { join } from 'node:path'
 
 // うたモードでも楽器音を重ねていること（attack）・停止で「その音色」を release
 // すること（#60-4）をテストから確認できるようにする。release は synth の生成時
@@ -7,6 +10,11 @@ const h = vi.hoisted(() => ({
   attack: vi.fn(),
   release: vi.fn<(opts?: unknown) => void>(),
   now: 0,
+  // ピアノの録音（#137）。loaded は読み込み済みかどうか（テストごとに切り替える）
+  sample: vi.fn(),
+  releaseAll: vi.fn(),
+  samplerOpts: null as null | { urls: Record<string, string>; baseUrl: string },
+  loaded: false,
 }))
 
 // Tone.js は AudioContext を要求するので最小のフェイクに差し替える。
@@ -30,6 +38,19 @@ vi.mock('tone', () => {
     }
     triggerRelease = () => h.release(this.opts)
   }
+  class FakeSampler {
+    constructor(opts: { urls: Record<string, string>; baseUrl: string }) {
+      h.samplerOpts = opts
+    }
+    get loaded() {
+      return h.loaded
+    }
+    toDestination() {
+      return this
+    }
+    triggerAttackRelease = (note: string, duration: unknown) => h.sample(note, duration)
+    releaseAll = h.releaseAll
+  }
   class FakePoly {
     toDestination() {
       return this
@@ -42,6 +63,7 @@ vi.mock('tone', () => {
     Synth: FakeSynth,
     FMSynth: FakeSynth,
     MembraneSynth: FakeSynth,
+    Sampler: FakeSampler,
     PolySynth: FakePoly,
   }
 })
@@ -81,6 +103,9 @@ beforeEach(() => {
   h.now += 10 // テストごとに時計を進める（synth はモジュール内で使い回される）
   h.attack.mockClear()
   h.release.mockClear()
+  h.sample.mockClear()
+  h.releaseAll.mockClear()
+  h.loaded = false
   // モジュール可変状態を既定へ戻す。
   setClef('treble')
   setPlaybackVoice('piano')
@@ -182,5 +207,67 @@ describe('同じ時刻に2回鳴らしても例外にしない（#116）', () =>
       playChime() // 1回目の1音めと同じ時刻（同じ tick）から始まる
     }).not.toThrow()
     expect(h.attack).toHaveBeenCalledTimes(4)
+  })
+})
+
+describe('ぴあのは本物のピアノの録音（#137）', () => {
+  it('音が解錠されたら録音を読み込みはじめる。音域 F2〜E5 を3半音おきの録音でおおう', async () => {
+    await ensureAudio()
+    expect(h.samplerOpts).not.toBeNull()
+    const { urls, baseUrl } = h.samplerOpts!
+    expect(baseUrl.endsWith('piano/')).toBe(true)
+    expect(Object.keys(urls)).toEqual([
+      'D#2', 'F#2', 'A2', 'C3', 'D#3', 'F#3', 'A3', 'C4', 'D#4', 'F#4', 'A4', 'C5', 'D#5',
+    ])
+    // 置いてあるファイルと食い違わない（読み込みに失敗するとシンセのまま鳴り続けて気づけない）
+    for (const file of Object.values(urls)) {
+      expect(existsSync(join(process.cwd(), 'public', 'piano', file))).toBe(true)
+    }
+  })
+
+  it('読み込み前はシンセで鳴らす（無音にしない）', async () => {
+    await ensureAudio()
+    playNote('C4')
+    expect(h.attack).toHaveBeenCalledWith('C4', '8n')
+    expect(h.sample).not.toHaveBeenCalled()
+  })
+
+  it('読み込み後は、置くときの音も再生の「ぴあの」「うた」も録音で鳴らす', async () => {
+    installSpeech()
+    await ensureAudio()
+    h.loaded = true
+    playNote('C4')
+    setPlaybackVoice('piano')
+    playMelodyNote('E4')
+    setPlaybackVoice('sing')
+    playMelodyNote('G4')
+    expect(h.sample.mock.calls.map((c) => c[0])).toEqual(['C4', 'E4', 'G4'])
+    expect(h.attack).not.toHaveBeenCalled()
+  })
+
+  it('ヘ音でも録音のピアノ（低い音も本物のピアノの音）', async () => {
+    await ensureAudio()
+    h.loaded = true
+    setClef('bass')
+    playNote('C3')
+    expect(h.sample).toHaveBeenCalledWith('C3', '8n')
+  })
+
+  it('べる・ぴこぴこは録音にしない', async () => {
+    installSpeech()
+    await ensureAudio()
+    h.loaded = true
+    setPlaybackVoice('bell')
+    playMelodyNote('C4')
+    expect(h.sample).not.toHaveBeenCalled()
+  })
+
+  it('停止すると録音の音も止める', async () => {
+    installSpeech()
+    await ensureAudio()
+    h.loaded = true
+    playMelodyNote('C4', 1.1)
+    stopMelody()
+    expect(h.releaseAll).toHaveBeenCalled()
   })
 })

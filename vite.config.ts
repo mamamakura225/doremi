@@ -33,9 +33,9 @@ export default defineConfig({
         ],
       },
       // 既定の globPatterns は js/css/html だけ。svg/png を足さないとアイコンと
-      // favicon がオフライン時に 404 する（#67）。
+      // favicon がオフライン時に 404 する（#67）。mp3 はピアノの録音（#137・約400KB）
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,webmanifest}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,webmanifest,mp3}'],
       },
     }),
   ],
