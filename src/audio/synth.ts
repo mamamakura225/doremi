@@ -4,6 +4,24 @@ import { pitchByNote, type Clef } from '../lib/pitch'
 import { primeSpeech, speakSolfa, stopSpeech } from './speech'
 
 let started = false
+
+// モノフォニックの synth は、鳴っている最中に「直前の発音と同じ時刻」で発音すると
+// Tone が例外を投げる（Start time must be strictly greater…・#116）。同じ tick の
+// 2回目（スクラブで2ゾーン跨ぎ・連打）で起きるので、synth ごとに直前の発音時刻を覚え、
+// それ以下なら少しだけ後ろへずらす（前の時刻も後ろへ回すのは、前へ差し込むと Tone が
+// 後ろに積んだ発音を取り消すため）。聞き分けられない幅にする。
+const MIN_GAP = 0.005
+const lastStart = new WeakMap<object, number>()
+
+type Mono = Tone.Synth | Tone.FMSynth | Tone.MembraneSynth
+
+/** モノフォニックの synth で鳴らす唯一の入口。時刻は synth ごとに必ず前回より後になる */
+function strike(synth: Mono, note: string, duration: Tone.Unit.Time, at: number = Tone.now()): void {
+  const prev = lastStart.get(synth) ?? -Infinity
+  const time = at > prev ? at : prev + MIN_GAP
+  lastStart.set(synth, time)
+  synth.triggerAttackRelease(note, duration, time)
+}
 // 音部記号で地の音色が変わる（ヘ音＝低くて温かい音＝クマ・ゾウ）。
 // うたモードの音名解決（pitchByNote）もこの値を見る。切替は必ず
 // 盤面リセット＋タイマー破棄とセットで（App.toggleClef / handleSelectSong）。
@@ -42,7 +60,7 @@ export async function ensureAudio(): Promise<void> {
 
 /** 1音鳴らす（科学的音名 例 'C4'）。制作（配置・スクラブ）中はこの通常音で固定。 */
 export function playNote(note: string, duration: Tone.Unit.Time = '8n'): void {
-  getSynth().triggerAttackRelease(note, duration)
+  strike(getSynth(), note, duration)
 }
 
 // 再生時のみ切り替えられる音色（制作中の音は通常音のまま＝学習を妨げない）。
@@ -116,13 +134,13 @@ let ringing: AnySynth | null = null
 export function playMelodyNote(note: string, duration: Tone.Unit.Time = '8n'): void {
   if (playbackVoice === 'sing') {
     ringing = getVoice('piano')
-    ringing.triggerAttackRelease(note, duration)
+    strike(ringing, note, duration)
     const solfa = pitchByNote(note, clefMode)?.solfa
     if (solfa) speakSolfa(solfa)
     return
   }
   ringing = getVoice(playbackVoice)
-  ringing.triggerAttackRelease(note, duration)
+  strike(ringing, note, duration)
 }
 
 /**
@@ -162,7 +180,7 @@ export function playPop(): void {
     envelope: { attack: 0.001, decay: 0.12, sustain: 0, release: 0.05 },
     volume: -16,
   }).toDestination()
-  pop.triggerAttackRelease('G2', '32n')
+  strike(pop, 'G2', '32n')
 }
 
 // 最後まで聞いたときのファンファーレ（#103）。段階が上がるほど音が増える。
@@ -193,8 +211,8 @@ export function playChime(): void {
     volume: -14,
   }).toDestination()
   const now = Tone.now()
-  chime.triggerAttackRelease('E6', '16n', now)
-  chime.triggerAttackRelease('A6', '16n', now + 0.12)
+  strike(chime, 'E6', '16n', now)
+  strike(chime, 'A6', '16n', now + 0.12)
 }
 
 /** お手本と一致した時の控えめなキラキラ音。 */
