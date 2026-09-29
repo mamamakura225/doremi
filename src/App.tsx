@@ -38,7 +38,14 @@ import RotateOverlay from './components/RotateOverlay'
 import { usePortrait } from './hooks/usePortrait'
 import { useShortScreen } from './hooks/useShortScreen'
 import { type PlacedNote, addNote, noteWidth, removeById, removeLast } from './lib/notes'
-import { canAddPage, collapseEmptyPages, parseNoteName, toNoteNames } from './lib/pages'
+import {
+  canAddGuidePage,
+  canAddPage,
+  collapseEmptyPages,
+  guideTargetsFor,
+  parseNoteName,
+  toNoteNames,
+} from './lib/pages'
 import { type Clef, type Pitch, pitchByNote } from './lib/pitch'
 import { STEP_MS, noteDuration, playbackSchedule } from './lib/playback'
 import {
@@ -166,9 +173,9 @@ export default function App() {
   // 保険: 世代トークンをすり抜けた tick が古いページ番号を指しても落ちない。
   const notes = pages[currentPage] ?? []
   const busy = playing !== null || celebrating
-  // おてほんは1フレーズ＝1ページめのみを対象にする。
-  const guideNotes = songOf(guideSong, clef).notes
-  const targets = guide && currentPage === 0 ? guideNotes : undefined
+  // おてほんは1フレーズ＝1ページ。いまのページに、そのフレーズの続きを出す（#128）
+  const guidePages = songOf(guideSong, clef).pages
+  const targets = guide ? guideTargetsFor(pages, currentPage, guidePages) : undefined
 
   function updateCurrentPage(fn: (page: PlacedNote[]) => PlacedNote[]) {
     setPages((prev) => prev.map((pg, i) => (i === currentPage ? fn(pg) : pg)))
@@ -374,7 +381,13 @@ export default function App() {
 
   // ページ移動。つぎは「次ページへ」または末尾満杯時の「新ページ追加」を兼ねる。
   const hasNextPage = currentPage < pages.length - 1
-  const canCreatePage = canAddPage(pages, currentPage)
+  // おてほん中は、そのページのお手本を置き終えたら10列に満たなくても進める（#128）
+  const canCreate = (pgs: PlacedNote[][], at: number) =>
+    canAddPage(pgs, at) || (guide && canAddGuidePage(pgs, at, guidePages))
+  const canCreatePage = canCreate(pages, currentPage)
+  // おてほんの曲の途中で進むときは「つづき」（同じ曲の続き。つぎのうた＝別の曲に聞こえる）。
+  // 満杯で押し出して進むときも、次のページには同じ曲の続きのゴーストが出る
+  const continuesGuide = guide && pages.flat().length < guidePages.flat().length
   const showPrev = currentPage > 0 && !busy
   const showNext = (hasNextPage || canCreatePage) && !busy
 
@@ -393,7 +406,7 @@ export default function App() {
     if (c.currentPage < c.pages.length - 1) {
       setPages(c.pages)
       setCurrentPage(c.currentPage + 1)
-    } else if (canAddPage(c.pages, c.currentPage)) {
+    } else if (canCreate(c.pages, c.currentPage)) {
       setPages([...c.pages, []])
       setCurrentPage(c.currentPage + 1)
     } else if (c.pages.length !== pages.length) {
@@ -444,7 +457,7 @@ export default function App() {
    * @param guideTargets おてほんの完成を判定するお手本。呼び出し側が渡す——本棚から選んだときは
    *   同じハンドラでおてほんを切るので、描画時点の `targets` を閉包で読むと古い値になる（#103）
    */
-  async function playSequence(pgs: PlacedNote[][], guideTargets?: GuideNote[]) {
+  async function playSequence(pgs: PlacedNote[][], guideTargets?: GuideNote[][]) {
     // 中断（世代繰り上げ）は常に成立させる。空スケジュールでの early return を
     // clearTimers より前に置くと、進行中の別の playSequence が生き残る。
     clearTimers()
@@ -456,9 +469,11 @@ export default function App() {
       pages: pgs.filter((p) => p.length > 0).length,
       guideComplete:
         guideTargets !== undefined &&
+        // ページをまたいで連結した並びで見る。ページの割り付けは問わない——のばす音で
+        // 列が押し出されても完成できるように（長さは採点しない・#128）
         isGuideComplete(
-          (pgs[0] ?? []).map((n) => n.pitch.note),
-          guideTargets.map((t) => t.pitch.note),
+          pgs.flat().map((n) => n.pitch.note),
+          guideTargets.flat().map((t) => t.pitch.note),
         ),
     })
     await ensureAudio()
@@ -505,8 +520,8 @@ export default function App() {
     setBookOpen(false)
     setPickerOpen(false)
     if (busy || empty) return
-    // おてほんの完成は、いま表示しているページに関係なく1ページ目で判定する
-    void playSequence(pages, guide ? guideNotes : undefined)
+    // おてほんの完成は、いま表示しているページに関係なく全ページの並びで判定する（#128）
+    void playSequence(pages, guide ? guidePages : undefined)
   }
 
   /**
@@ -742,7 +757,7 @@ export default function App() {
                 onClick={handleNext}
                 className="pointer-events-auto flex items-center gap-2 rounded-2xl bg-[#dff3ea] px-7 py-4 text-2xl font-bold text-[#5b524b] shadow-lg active:scale-95"
               >
-                {canCreatePage && !hasNextPage ? 'つぎのうた' : 'つぎ'} <ArrowRightIcon />
+                {hasNextPage ? 'つぎ' : continuesGuide ? 'つづき' : 'つぎのうた'} <ArrowRightIcon />
               </button>
             ) : (
               <span />

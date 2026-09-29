@@ -16,19 +16,22 @@ export interface GuideNote {
 export interface Song {
   id: SongId
   name: string
-  notes: GuideNote[]
+  /** 1フレーズ＝1ページ（#128）。どのページも10列に収まる */
+  pages: GuideNote[][]
 }
 
 /**
- * ト音での並び（'~' はのばす音）。ヘ音では1オクターブ下の同じドレミにする。
+ * ト音での並び（'~' はのばす音・' | ' はページの区切り＝フレーズの切れ目）。
+ * ヘ音では1オクターブ下の同じドレミにする。
  * どの曲も ド〜ラ の中に収める——ヘ音の音域（F2〜A3）で ド(C3) より上は ラ(A3) までしか無いため。
- * どの曲も1ページ（10列）に収める——ページをまたぐお手本は別 issue（docs/architecture.md）。
+ * どのページも10列に収める。区切りはフレーズで決める（機械的に10列で割ると、
+ * フレーズの途中でページが変わり、のばす音が境界をまたぎうる・#128）。
  */
 const DEFS: { id: SongId; name: string; notes: string }[] = [
-  // きらきらぼし（フランス民謡）第1フレーズ。最後の ソ は二分音符
-  { id: 'twinkle', name: 'きらきらぼし', notes: 'C4 C4 G4 G4 A4 A4 G4~' },
-  // かえるのうた（ドイツ民謡とされる）第1フレーズ
-  { id: 'frog', name: 'かえるのうた', notes: 'C4 D4 E4 F4 E4 D4 C4~' },
+  // きらきらぼし（フランス民謡）第1・第2フレーズ。フレーズの最後は二分音符
+  { id: 'twinkle', name: 'きらきらぼし', notes: 'C4 C4 G4 G4 A4 A4 G4~ | F4 F4 E4 E4 D4 D4 C4~' },
+  // かえるのうた（ドイツ民謡とされる）第1・第2フレーズ
+  { id: 'frog', name: 'かえるのうた', notes: 'C4 D4 E4 F4 E4 D4 C4~ | E4 F4 G4 A4 G4 F4 E4~' },
   // メリーさんのひつじ（19世紀アメリカの童謡）第1フレーズ
   { id: 'lamb', name: 'メリーさんのひつじ', notes: 'E4 D4 C4 D4 E4 E4 E4~' },
   // ぶんぶんぶん（ボヘミア民謡）第1フレーズ
@@ -52,10 +55,12 @@ export function songOf(id: SongId, clef: Clef): Song {
   return {
     id: def.id,
     name: def.name,
-    notes: def.notes.split(' ').map((token) => ({
-      pitch: resolve(token.replace('~', ''), clef),
-      long: token.endsWith('~'),
-    })),
+    pages: def.notes.split(' | ').map((phrase) =>
+      phrase.split(' ').map((token) => ({
+        pitch: resolve(token.replace('~', ''), clef),
+        long: token.endsWith('~'),
+      })),
+    ),
   }
 }
 
@@ -64,7 +69,7 @@ export function songColumns(notes: readonly GuideNote[]): number {
   return notes.reduce((sum, n) => sum + (n.long ? 2 : 1), 0)
 }
 
-/** お手本が1ページに収まるか */
+/** お手本の1ページが10列に収まるか */
 export function fitsOnePage(notes: readonly GuideNote[]): boolean {
   return songColumns(notes) <= NOTE_MAX
 }

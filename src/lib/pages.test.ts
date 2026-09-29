@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { NOTE_MAX } from './layout'
-import { canAddPage, collapseEmptyPages, parseNoteName, toNoteNames } from './pages'
+import {
+  canAddGuidePage,
+  canAddPage,
+  collapseEmptyPages,
+  guideTargetsFor,
+  parseNoteName,
+  toNoteNames,
+} from './pages'
+import { songOf } from './songs'
 import type { PlacedNote } from './notes'
 
 function page(notes: string[]): PlacedNote[] {
@@ -99,5 +107,65 @@ describe('collapseEmptyPages（#60-6）', () => {
     const r = collapseEmptyPages([page(['C4']), [], []], 1)
     expect(r.pages.map((p) => p.length)).toEqual([1, 0])
     expect(r.currentPage).toBe(1)
+  })
+})
+
+describe('canAddGuidePage（おてほんのページ送り・#128）', () => {
+  const twinkle = songOf('twinkle', 'treble').pages // 7音（8列）＋7音（8列）
+  const n = (count: number, note = 'E4') => page(Array.from({ length: count }, () => note))
+
+  it('フレーズの音の数ぶん置けたら、10列に満たなくても次のページを作れる', () => {
+    expect(canAddGuidePage([n(6)], 0, twinkle)).toBe(false)
+    expect(canAddGuidePage([[...n(6), ...longPage(1)]], 0, twinkle)).toBe(true) // お手本どおり8列
+  })
+
+  it('数えるのは列でなく音の数（のばす音をふつうに置いても進める・のばしすぎても途中では出ない）', () => {
+    expect(canAddGuidePage([n(7)], 0, twinkle)).toBe(true) // 7列でも7音
+    expect(canAddGuidePage([longPage(4)], 0, twinkle)).toBe(false) // 8列でも4音
+  })
+
+  it('違う音でも数が届けば進める（×にしない）', () => {
+    expect(canAddGuidePage([n(7, 'C4')], 0, twinkle)).toBe(true)
+  })
+
+  it('お手本の最後のページ・末尾でないページ・1ページの曲では作らない', () => {
+    expect(canAddGuidePage([n(7), n(7)], 1, twinkle)).toBe(false) // お手本はもう無い
+    expect(canAddGuidePage([n(7), []], 0, twinkle)).toBe(false) // 次のページはもうある
+    expect(canAddGuidePage([n(8)], 0, songOf('bee', 'treble').pages)).toBe(false)
+  })
+})
+
+describe('guideTargetsFor（ページに出すお手本・#128）', () => {
+  const twinkle = songOf('twinkle', 'treble').pages
+  const solfa = (g: { pitch: { solfa: string } }[]) => g.map((x) => x.pitch.solfa)
+  const n = (count: number) => page(Array.from({ length: count }, () => 'E4'))
+
+  it('ふつうはページ＝フレーズ', () => {
+    expect(solfa(guideTargetsFor([[]], 0, twinkle))).toEqual(solfa(twinkle[0]))
+    expect(solfa(guideTargetsFor([n(7), []], 1, twinkle))).toEqual(solfa(twinkle[1]))
+  })
+
+  it('前のページに多く置いたら、その続きから（押し出された音の案内）', () => {
+    // 1ページめに9音 → 2ページめは2フレーズめの3音めから
+    expect(solfa(guideTargetsFor([n(9), []], 1, twinkle))).toEqual(solfa(twinkle[1].slice(2)))
+    // 1ページの曲（ぶんぶんぶん 8音）で、7音で満杯（3音のばして10列）になったら次のページに残りの ド
+    const bee = songOf('bee', 'treble').pages
+    expect(solfa(guideTargetsFor([[...longPage(3), ...n(4)], []], 1, bee))).toEqual(['ド'])
+  })
+
+  it('前のページを ↩ で減らしても、後ろのページのお手本はずれない（欠けた音は前のページで案内）', () => {
+    const p2 = twinkle[1].map((g, i) => ({ id: `b${i}`, pitch: g.pitch }))
+    expect(solfa(guideTargetsFor([n(5), p2], 1, twinkle))).toEqual(solfa(twinkle[1]))
+    expect(solfa(guideTargetsFor([[], p2], 1, twinkle))).toEqual(solfa(twinkle[1])) // 畳まれる前
+    expect(guideTargetsFor([n(5), p2], 0, twinkle)).toHaveLength(7) // 1ページめは1フレーズめのまま（欠けた ラ ソ をゴーストで出す）
+  })
+
+  it('満杯で押し出したときは続きから（6音のうち4音をのばして10列）', () => {
+    const full: PlacedNote[] = [...longPage(4), ...n(2)]
+    expect(solfa(guideTargetsFor([full, []], 1, twinkle))).toEqual(solfa([twinkle[0][6], ...twinkle[1]]))
+  })
+
+  it('1ページめでは2フレーズめを案内しない', () => {
+    expect(guideTargetsFor([n(7)], 0, twinkle)).toHaveLength(7)
   })
 })

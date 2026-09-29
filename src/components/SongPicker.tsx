@@ -44,7 +44,7 @@ export default function SongPicker({
         <div className="grid min-h-0 flex-1 grid-cols-2 content-start gap-3 overflow-y-auto sm:grid-cols-4">
           {SONGS.map((s) => {
             const Icon = SONG_ICON[s.id]
-            const notes = songOf(s.id, 'treble').notes
+            const { pages } = songOf(s.id, 'treble')
             return (
               <button
                 key={s.id}
@@ -58,14 +58,18 @@ export default function SongPicker({
               >
                 <Icon width="56%" height="56%" />
                 <span className="text-lg font-bold text-[#6b6375]">{s.name}</span>
-                {/* 音の色の並び（のばす音は横長） */}
-                <span className="flex flex-wrap justify-center gap-1" aria-hidden="true">
-                  {notes.map((n, i) => (
-                    <span
-                      key={i}
-                      className={`inline-block h-3.5 rounded-full border border-[#5b524b] ${n.long ? 'w-7' : 'w-3.5'}`}
-                      style={{ background: colorOf(n.pitch) }}
-                    />
+                {/* 音の色の並び（のばす音は横長）。1ページ＝1行（#128） */}
+                <span className="flex flex-col items-center gap-1" aria-hidden="true">
+                  {pages.map((pg, p) => (
+                    <span key={p} className="flex flex-wrap justify-center gap-1">
+                      {pg.map((n, i) => (
+                        <span
+                          key={i}
+                          className={`inline-block h-3.5 rounded-full border border-[#5b524b] ${n.long ? 'w-7' : 'w-3.5'}`}
+                          style={{ background: colorOf(n.pitch) }}
+                        />
+                      ))}
+                    </span>
                   ))}
                 </span>
               </button>

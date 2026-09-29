@@ -506,7 +506,7 @@ describe('再生中にぴぴが音符の上を渡り歩く（#104）', () => {
 describe('おてほんのゴースト（#106）', () => {
   it('のばす音は2列ぶんとって、続くお手本を右へずらす（ぶんぶんぶん: ソ ファ ミー レ…）', async () => {
     const { songOf } = await import('../lib/songs')
-    const view = render(<Board {...boardProps({ targets: songOf('bee', 'treble').notes })} />)
+    const view = render(<Board {...boardProps({ targets: songOf('bee', 'treble').pages[0] })} />)
     const cols = [...view.container.querySelectorAll('[data-testid="guide-ghost"]')].map((g) =>
       g.getAttribute('data-col'),
     )
@@ -518,7 +518,7 @@ describe('おてほんのゴースト（#106）', () => {
     // ぶんぶんぶんの先頭 ソ を「のばす」で置いた（お手本はふつう）
     const placed: PlacedNote[] = [{ id: 'g', pitch: pitchByNote('G4', 'treble')!, long: true }]
     const view = render(
-      <Board {...boardProps({ notes: placed, targets: songOf('bee', 'treble').notes })} />,
+      <Board {...boardProps({ notes: placed, targets: songOf('bee', 'treble').pages[0] })} />,
     )
     const cols = [...view.container.querySelectorAll('[data-testid="guide-ghost"]')].map((g) =>
       g.getAttribute('data-col'),
