@@ -13,23 +13,28 @@ export function canAddPage(pages: PlacedNote[][], current: number): boolean {
 
 type GuidePages = readonly (readonly GuideNote[])[]
 
-/** ページ p までに置いた音の数 */
-function placedThrough(pages: PlacedNote[][], p: number): number {
-  return pages.slice(0, p + 1).reduce((n, pg) => n + pg.length, 0)
-}
-
 /** お手本のページ p（フレーズ）の終わりが、つないだ並びの何音めか。お手本より後ろのページは曲の終わり */
 function guideEnd(guide: GuidePages, p: number): number {
   return guide.slice(0, p + 1).reduce((n, g) => n + g.length, 0)
 }
 
 /**
- * そのページに出すお手本（#128）。全ページをつないだお手本の「前のページまでに置いた音の続き」から、
- * そのページのフレーズの終わりまで。完成判定（つないだ並び）と同じ数え方にして、
- * のばす音で押し出された音も次のページで案内する
+ * ページ p のお手本が、つないだ並びの何音めから始まるか。前のページが満杯（のばす音で押し出した）
+ * ときだけ、置いた音の続きから始める。満杯でないのに足りない（↩ で消した）ときは、そのページの
+ * フレーズの終わりから——欠けた音は前のページで案内し、後ろのページへずらさない
+ */
+function guideStart(pages: PlacedNote[][], p: number, guide: GuidePages): number {
+  if (p === 0) return 0
+  const placed = guideStart(pages, p - 1, guide) + pages[p - 1].length
+  return usedColumns(pages[p - 1]) >= NOTE_MAX ? placed : Math.max(placed, guideEnd(guide, p - 1))
+}
+
+/**
+ * そのページに出すお手本（#128）。そのページの始まり（`guideStart`）から、そのページのフレーズの
+ * 終わりまで。完成判定（つないだ並び）と同じ数え方にして、のばす音で押し出された音も次のページで案内する
  */
 export function guideTargetsFor(pages: PlacedNote[][], current: number, guide: GuidePages): GuideNote[] {
-  return guide.flat().slice(placedThrough(pages, current - 1), guideEnd(guide, current))
+  return guide.flat().slice(guideStart(pages, current, guide), guideEnd(guide, current))
 }
 
 /**
@@ -41,7 +46,7 @@ export function canAddGuidePage(pages: PlacedNote[][], current: number, guide: G
   return (
     current === pages.length - 1 &&
     current < guide.length - 1 &&
-    placedThrough(pages, current) >= guideEnd(guide, current)
+    guideStart(pages, current, guide) + pages[current].length >= guideEnd(guide, current)
   )
 }
 

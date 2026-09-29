@@ -148,9 +148,21 @@ describe('guideTargetsFor（ページに出すお手本・#128）', () => {
   it('前のページに多く置いたら、その続きから（押し出された音の案内）', () => {
     // 1ページめに9音 → 2ページめは2フレーズめの3音めから
     expect(solfa(guideTargetsFor([n(9), []], 1, twinkle))).toEqual(solfa(twinkle[1].slice(2)))
-    // 1ページの曲（ぶんぶんぶん 8音）で、7音で満杯になったら次のページに残りの ド
+    // 1ページの曲（ぶんぶんぶん 8音）で、7音で満杯（3音のばして10列）になったら次のページに残りの ド
     const bee = songOf('bee', 'treble').pages
-    expect(solfa(guideTargetsFor([n(7), []], 1, bee))).toEqual(['ド'])
+    expect(solfa(guideTargetsFor([[...longPage(3), ...n(4)], []], 1, bee))).toEqual(['ド'])
+  })
+
+  it('前のページを ↩ で減らしても、後ろのページのお手本はずれない（欠けた音は前のページで案内）', () => {
+    const p2 = twinkle[1].map((g, i) => ({ id: `b${i}`, pitch: g.pitch }))
+    expect(solfa(guideTargetsFor([n(5), p2], 1, twinkle))).toEqual(solfa(twinkle[1]))
+    expect(solfa(guideTargetsFor([[], p2], 1, twinkle))).toEqual(solfa(twinkle[1])) // 畳まれる前
+    expect(guideTargetsFor([n(5), p2], 0, twinkle)).toHaveLength(7) // 1ページめは1フレーズめのまま（欠けた ラ ソ をゴーストで出す）
+  })
+
+  it('満杯で押し出したときは続きから（6音のうち4音をのばして10列）', () => {
+    const full: PlacedNote[] = [...longPage(4), ...n(2)]
+    expect(solfa(guideTargetsFor([full, []], 1, twinkle))).toEqual(solfa([twinkle[0][6], ...twinkle[1]]))
   })
 
   it('1ページめでは2フレーズめを案内しない', () => {

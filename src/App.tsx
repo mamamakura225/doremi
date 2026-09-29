@@ -385,8 +385,9 @@ export default function App() {
   const canCreate = (pgs: PlacedNote[][], at: number) =>
     canAddPage(pgs, at) || (guide && canAddGuidePage(pgs, at, guidePages))
   const canCreatePage = canCreate(pages, currentPage)
-  // おてほんのフレーズの続きへ進むときは「つづき」（同じ曲の続き。つぎのうた＝別の曲に聞こえる）
-  const continuesGuide = guide && canAddGuidePage(pages, currentPage, guidePages)
+  // おてほんの曲の途中で進むときは「つづき」（同じ曲の続き。つぎのうた＝別の曲に聞こえる）。
+  // 満杯で押し出して進むときも、次のページには同じ曲の続きのゴーストが出る
+  const continuesGuide = guide && pages.flat().length < guidePages.flat().length
   const showPrev = currentPage > 0 && !busy
   const showNext = (hasNextPage || canCreatePage) && !busy
 

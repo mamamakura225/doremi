@@ -644,7 +644,7 @@ test('のばす音で列が押し出され、残りを次のページに置い�
   placeLongNote(315)
   placeLongNote(340)
   for (const y of [365, 340, 315, 365]) placeNote(y)
-  fireEvent.click(screen.getByText('つぎのうた')) // 10列で満杯
+  fireEvent.click(screen.getByText('つづき')) // 10列で満杯。曲はまだ続く
   // 押し出された ド を次のページで案内する
   expect(document.querySelectorAll('[data-testid="guide-ghost"]').length).toBe(1)
   placeNote(390)
