@@ -1,7 +1,7 @@
 // 複数ページ（フレーズ）の純ロジック（Vitest対象）。
 import { NOTE_MAX } from './layout'
 import { usedColumns, type PlacedNote } from './notes'
-import { songColumns, type GuideNote } from './songs'
+import type { GuideNote } from './songs'
 
 /** のばす音を表す接尾辞（保存形式）。例 'C4~' */
 const LONG_SUFFIX = '~'
@@ -11,19 +11,37 @@ export function canAddPage(pages: PlacedNote[][], current: number): boolean {
   return current === pages.length - 1 && usedColumns(pages[current]) >= NOTE_MAX
 }
 
+type GuidePages = readonly (readonly GuideNote[])[]
+
+/** ページ p までに置いた音の数 */
+function placedThrough(pages: PlacedNote[][], p: number): number {
+  return pages.slice(0, p + 1).reduce((n, pg) => n + pg.length, 0)
+}
+
+/** お手本のページ p（フレーズ）の終わりが、つないだ並びの何音めか。お手本より後ろのページは曲の終わり */
+function guideEnd(guide: GuidePages, p: number): number {
+  return guide.slice(0, p + 1).reduce((n, g) => n + g.length, 0)
+}
+
 /**
- * おてほん中は、末尾ページにそのページのお手本の列数ぶん置けたら次のページを作れる（#128）。
- * 10列に満たないフレーズで止まらないように。音が違っても列数で進める（×にしない）
+ * そのページに出すお手本（#128）。全ページをつないだお手本の「前のページまでに置いた音の続き」から、
+ * そのページのフレーズの終わりまで。完成判定（つないだ並び）と同じ数え方にして、
+ * のばす音で押し出された音も次のページで案内する
  */
-export function canAddGuidePage(
-  pages: PlacedNote[][],
-  current: number,
-  guide: readonly (readonly GuideNote[])[],
-): boolean {
+export function guideTargetsFor(pages: PlacedNote[][], current: number, guide: GuidePages): GuideNote[] {
+  return guide.flat().slice(placedThrough(pages, current - 1), guideEnd(guide, current))
+}
+
+/**
+ * おてほん中は、末尾ページでそのフレーズの終わりまで音を置けたら次のページを作れる（#128）。
+ * 10列に満たないフレーズで止まらないように。数えるのは列でなく音の数——のばす音をふつうに置いても、
+ * ふつうの音をのばしても進める（長さは採点しない）。音が違っても進める（×にしない）
+ */
+export function canAddGuidePage(pages: PlacedNote[][], current: number, guide: GuidePages): boolean {
   return (
     current === pages.length - 1 &&
     current < guide.length - 1 &&
-    usedColumns(pages[current]) >= songColumns(guide[current])
+    placedThrough(pages, current) >= guideEnd(guide, current)
   )
 }
 

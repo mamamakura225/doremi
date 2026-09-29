@@ -42,6 +42,7 @@ import {
   canAddGuidePage,
   canAddPage,
   collapseEmptyPages,
+  guideTargetsFor,
   parseNoteName,
   toNoteNames,
 } from './lib/pages'
@@ -172,9 +173,9 @@ export default function App() {
   // 保険: 世代トークンをすり抜けた tick が古いページ番号を指しても落ちない。
   const notes = pages[currentPage] ?? []
   const busy = playing !== null || celebrating
-  // おてほんは1フレーズ＝1ページ。いまのページのお手本だけを出す（#128）
+  // おてほんは1フレーズ＝1ページ。いまのページに、そのフレーズの続きを出す（#128）
   const guidePages = songOf(guideSong, clef).pages
-  const targets = guide ? guidePages[currentPage] : undefined
+  const targets = guide ? guideTargetsFor(pages, currentPage, guidePages) : undefined
 
   function updateCurrentPage(fn: (page: PlacedNote[]) => PlacedNote[]) {
     setPages((prev) => prev.map((pg, i) => (i === currentPage ? fn(pg) : pg)))
@@ -384,6 +385,8 @@ export default function App() {
   const canCreate = (pgs: PlacedNote[][], at: number) =>
     canAddPage(pgs, at) || (guide && canAddGuidePage(pgs, at, guidePages))
   const canCreatePage = canCreate(pages, currentPage)
+  // おてほんのフレーズの続きへ進むときは「つづき」（同じ曲の続き。つぎのうた＝別の曲に聞こえる）
+  const continuesGuide = guide && canAddGuidePage(pages, currentPage, guidePages)
   const showPrev = currentPage > 0 && !busy
   const showNext = (hasNextPage || canCreatePage) && !busy
 
@@ -753,7 +756,7 @@ export default function App() {
                 onClick={handleNext}
                 className="pointer-events-auto flex items-center gap-2 rounded-2xl bg-[#dff3ea] px-7 py-4 text-2xl font-bold text-[#5b524b] shadow-lg active:scale-95"
               >
-                {canCreatePage && !hasNextPage ? 'つぎのうた' : 'つぎ'} <ArrowRightIcon />
+                {hasNextPage ? 'つぎ' : continuesGuide ? 'つづき' : 'つぎのうた'} <ArrowRightIcon />
               </button>
             ) : (
               <span />

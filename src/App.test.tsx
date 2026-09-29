@@ -353,7 +353,7 @@ test('おてほんどおりに置いて聞くと「特別」のお祝い（#103�
   for (const y of [390, 390, 290, 290, 265, 265]) placeNote(y)
   placeLongNote(290)
   // 8列（10列に満たない）でも、お手本を置き終えたら次のページへ進める
-  fireEvent.click(screen.getByText('つぎのうた'))
+  fireEvent.click(screen.getByText('つづき'))
   expect(document.querySelectorAll('[data-testid="guide-ghost"]').length).toBe(7)
   for (const y of [315, 315, 340, 340, 365, 365]) placeNote(y)
   placeLongNote(390)
@@ -374,7 +374,7 @@ test('ページをまたぐお手本は、1ページめだけでは「特別」�
   fireEvent.click(screen.getByLabelText('じゆう'))
   fireEvent.click(screen.getByLabelText('きらきらぼし'))
   for (const y of [390, 390, 290, 290, 265, 265]) placeNote(y)
-  expect(screen.queryByText('つぎのうた')).toBeNull() // お手本の途中では進めない
+  expect(screen.queryByText('つづき')).toBeNull() // お手本の途中では進めない
   placeLongNote(290)
 
   fireEvent.click(screen.getByLabelText('さいせい'))
@@ -386,10 +386,14 @@ test('ページをまたぐお手本は、1ページめだけでは「特別」�
 })
 
 test('おてほんモード中に本棚の曲を聞いても、おてほん完成とは数えない（#103）', async () => {
-  const twinkle = ['C4', 'C4', 'G4', 'G4', 'A4', 'A4', 'G4']
+  // おてほんのきらきらぼし（2フレーズ）と同じ並びの保存曲
+  const twinkle = [
+    ['C4', 'C4', 'G4', 'G4', 'A4', 'A4', 'G4~'],
+    ['F4', 'F4', 'E4', 'E4', 'D4', 'D4', 'C4~'],
+  ]
   localStorage.setItem(
     'doremi.songs.v1',
-    JSON.stringify([{ id: 't', createdAt: 1, clef: 'treble', pages: [twinkle] }]),
+    JSON.stringify([{ id: 't', createdAt: 1, clef: 'treble', pages: twinkle }]),
   )
   vi.useFakeTimers()
   render(<App />)
@@ -400,9 +404,21 @@ test('おてほんモード中に本棚の曲を聞いても、おてほん完�
 
   await act(async () => {
     h.resolveAudio?.()
-    await vi.advanceTimersByTimeAsync(600 * 9)
+    await vi.advanceTimersByTimeAsync(600 * 18)
   })
-  expect(screen.getByTestId('celebration').getAttribute('data-level')).toBe('small')
+  expect(screen.getByTestId('celebration').getAttribute('data-level')).toBe('big') // 2ページの曲
+})
+
+test('じゆうモードでは10列が埋まるまで次のページを作らない（おてほんのページ送りは効かない・#128）', () => {
+  stubSvgGeometry()
+  vi.useFakeTimers()
+  render(<App />)
+  for (let i = 0; i < 8; i++) placeNote(390)
+  expect(screen.queryByText('つぎのうた')).toBeNull()
+  expect(screen.queryByText('つづき')).toBeNull()
+  placeNote(390)
+  placeNote(390)
+  expect(screen.getByText('つぎのうた')).toBeTruthy()
 })
 
 test('1ページの曲は「小」のお祝いで、1.4秒で消える（#103）', async () => {
@@ -603,7 +619,7 @@ test('かえるのうたをお手本どおり（のばす音も）置いて聞�
   // ト音の y: ド390・レ365・ミ340・ファ315・ソ290・ラ265
   for (const y of [390, 365, 340, 315, 340, 365]) placeNote(y)
   placeLongNote(390)
-  fireEvent.click(screen.getByText('つぎのうた'))
+  fireEvent.click(screen.getByText('つづき'))
   for (const y of [340, 315, 290, 265, 290, 315]) placeNote(y)
   placeLongNote(340)
 
@@ -629,6 +645,8 @@ test('のばす音で列が押し出され、残りを次のページに置い�
   placeLongNote(340)
   for (const y of [365, 340, 315, 365]) placeNote(y)
   fireEvent.click(screen.getByText('つぎのうた')) // 10列で満杯
+  // 押し出された ド を次のページで案内する
+  expect(document.querySelectorAll('[data-testid="guide-ghost"]').length).toBe(1)
   placeNote(390)
 
   fireEvent.click(screen.getByLabelText('さいせい'))
