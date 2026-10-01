@@ -1,17 +1,13 @@
-import { type ReactElement, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import AdultMenu, { AdultMenuButton } from './components/AdultMenu'
 import Background from './components/Background'
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
-  BellIcon,
-  PianoIcon,
-  PicoIcon,
   PlayIcon,
   SavedIcon,
   SaveIcon,
   ShelfIcon,
-  SingIcon,
   StickerBookIcon,
   StopIcon,
   UndoIcon,
@@ -60,7 +56,6 @@ import { SONG_ICON } from './components/songIcons'
 import { type SavedSong, loadSongs, saveSong } from './lib/storage'
 import {
   type Voice,
-  VOICES,
   ensureAudio,
   playMelodyNote,
   playFanfare,
@@ -72,14 +67,6 @@ import {
   setPlaybackVoice,
   stopMelody,
 } from './audio/synth'
-
-/** おといろのアイコン（絵文字は OS ごとに絵柄が変わるので自前の SVG・#101） */
-const VOICE_ICON: Record<Voice, (p: { width?: string; height?: string }) => ReactElement> = {
-  piano: PianoIcon,
-  bell: BellIcon,
-  pico: PicoIcon,
-  sing: SingIcon,
-}
 
 /** 子どもの面の丸ボタン（押すと沈む） */
 const KID_BTN =
@@ -549,13 +536,6 @@ export default function App() {
     }
   }
 
-  const currentVoice = VOICES.find((v) => v.id === voice) ?? VOICES[0]
-  const VoiceIcon = VOICE_ICON[currentVoice.id]
-  function handleNextVoice() {
-    const i = VOICES.findIndex((v) => v.id === voice)
-    handleSelectVoice(VOICES[(i + 1) % VOICES.length].id)
-  }
-
   // 再生音色を選ぶ。選んだ瞬間にその音色で試聴（タップ＝AudioContext起動も兼ねる）。
   function handleSelectVoice(v: Voice) {
     if (busy) return
@@ -596,17 +576,6 @@ export default function App() {
             <PlayIcon width="62%" height="62%" />
           </button>
         )}
-        {/* 音色は1つのボタンで順に巡る（4つ並べると、子どもには何のボタンか分からない） */}
-        <button
-          type="button"
-          onClick={handleNextVoice}
-          disabled={busy}
-          aria-label="おといろ"
-          title={currentVoice.name}
-          className={`${KID_BTN} ${size} bg-white`}
-        >
-          <VoiceIcon width="62%" height="62%" />
-        </button>
         <button
           type="button"
           onClick={withPop(handleUndo)}
@@ -676,6 +645,8 @@ export default function App() {
           ear={ear}
           busy={busy}
           empty={empty}
+          voice={voice}
+          onSelectVoice={handleSelectVoice}
           onClear={handleClear}
           onToggleClef={toggleClef}
           onToggleGuide={toggleGuide}

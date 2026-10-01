@@ -1,6 +1,27 @@
-import { useEffect, useRef, useState } from 'react'
+import { type ReactElement, useEffect, useRef, useState } from 'react'
+import { type Voice, VOICES } from '../audio/synth'
 import type { Clef } from '../lib/pitch'
-import { BearIcon, BellIcon, BirdIcon, ClearIcon, CloseIcon, FreeIcon, GearIcon, GuideIcon } from './Icons'
+import {
+  BearIcon,
+  BellIcon,
+  BirdIcon,
+  ClearIcon,
+  CloseIcon,
+  FreeIcon,
+  GearIcon,
+  GuideIcon,
+  PianoIcon,
+  PicoIcon,
+  SingIcon,
+} from './Icons'
+
+/** おといろのアイコン（絵文字は OS ごとに絵柄が変わるので自前の SVG・#101） */
+const VOICE_ICON: Record<Voice, (p: { width?: string; height?: string }) => ReactElement> = {
+  piano: PianoIcon,
+  bell: BellIcon,
+  pico: PicoIcon,
+  sing: SingIcon,
+}
 
 /** ⚙ を押し続けてメニューが開くまでの時間（短いタップでは開かない＝子どもの誤操作よけ） */
 export const HOLD_MS = 1500
@@ -99,6 +120,10 @@ interface MenuProps {
   ear: boolean
   busy: boolean
   empty: boolean
+  /** いまの再生の音色（#141） */
+  voice: Voice
+  /** 音色を選ぶ（その音色で試聴する）。メニューは閉じない——続けて聴き比べられるように */
+  onSelectVoice: (v: Voice) => void
   onClear: () => void
   onToggleClef: () => void
   onToggleGuide: () => void
@@ -107,7 +132,7 @@ interface MenuProps {
 }
 
 const ROW =
-  'flex w-full items-center gap-3 rounded-2xl bg-white px-5 py-3 text-left text-xl font-bold text-[#6b6375] shadow disabled:opacity-40'
+  'flex w-full items-center gap-3 rounded-2xl bg-white px-4 py-2.5 text-left text-lg font-bold text-[#6b6375] shadow disabled:opacity-40'
 
 /** 子どもに触らせたくない操作をまとめたパネル（#102）。選ぶと閉じる。 */
 export default function AdultMenu({
@@ -116,6 +141,8 @@ export default function AdultMenu({
   ear,
   busy,
   empty,
+  voice,
+  onSelectVoice,
   onClear,
   onToggleClef,
   onToggleGuide,
@@ -140,7 +167,7 @@ export default function AdultMenu({
         role="dialog"
         aria-modal="true"
         aria-label="おとなの メニュー"
-        className="flex max-h-full w-full max-w-md flex-col gap-3 overflow-y-auto rounded-3xl bg-[#fdf6e3] p-5 shadow-xl"
+        className="flex max-h-full w-full max-w-2xl flex-col gap-3 overflow-y-auto rounded-3xl bg-[#fdf6e3] p-5 shadow-xl"
       >
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold text-[#6b6375]">おとなの メニュー</h2>
@@ -154,30 +181,59 @@ export default function AdultMenu({
             <CloseIcon /> とじる
           </button>
         </div>
-        {/* ↺ は再生中も押せる（非常停止を兼ねて曲ごと消す）。止めるだけなら ⏹ */}
-        <button type="button" aria-label="ぜんぶけす" disabled={empty} onClick={act(onClear)} className={ROW}>
-          <ClearIcon className="shrink-0 text-3xl" /> ぜんぶ けす
-        </button>
-        {/* 「ト音／ヘ音」は子どもに通じないので、ことり＝高い／くま＝低い で見せる */}
-        <button type="button" aria-label="おとの たかさ" disabled={busy} onClick={act(onToggleClef)} className={ROW}>
-          {clef === 'bass' ? <BearIcon className="shrink-0 text-3xl" /> : <BirdIcon className="shrink-0 text-3xl" />}
-          {clef === 'bass' ? 'くま（ヘ音）→ ことりに する' : 'ことり（ト音）→ くまに する'}
-        </button>
-        <button
-          type="button"
-          aria-label={guide ? 'おてほん' : 'じゆう'}
-          disabled={busy}
-          onClick={act(onToggleGuide)}
-          className={ROW}
-        >
-          {guide ? <GuideIcon className="shrink-0 text-3xl" /> : <FreeIcon className="shrink-0 text-3xl" />}
-          {guide ? 'おてほん → じゆうに する' : 'じゆう → おてほんに する'}
-        </button>
-        {/* ききとりあそび（#110）: 鳴った音を五線で探す。採点しない */}
-        <button type="button" aria-label="ききとり" disabled={busy} onClick={act(onToggleEar)} className={ROW}>
-          <BellIcon className="shrink-0 text-3xl" />
-          {ear ? 'ききとり → じゆうに する' : 'ききとり あそび（なった おとを さがす）'}
-        </button>
+        {/* 横向きスマホ（高さ ~390px）で縦に溢れないよう、切り替えの行は2列に並べる（#141） */}
+        <div className="grid gap-3 sm:grid-cols-2">
+          {/* ↺ は再生中も押せる（非常停止を兼ねて曲ごと消す）。止めるだけなら ⏹ */}
+          <button type="button" aria-label="ぜんぶけす" disabled={empty} onClick={act(onClear)} className={ROW}>
+            <ClearIcon className="shrink-0 text-3xl" /> ぜんぶ けす
+          </button>
+          {/* 「ト音／ヘ音」は子どもに通じないので、ことり＝高い／くま＝低い で見せる */}
+          <button type="button" aria-label="おとの たかさ" disabled={busy} onClick={act(onToggleClef)} className={ROW}>
+            {clef === 'bass' ? <BearIcon className="shrink-0 text-3xl" /> : <BirdIcon className="shrink-0 text-3xl" />}
+            {clef === 'bass' ? 'くま（ヘ音）→ ことりに する' : 'ことり（ト音）→ くまに する'}
+          </button>
+          <button
+            type="button"
+            aria-label={guide ? 'おてほん' : 'じゆう'}
+            disabled={busy}
+            onClick={act(onToggleGuide)}
+            className={ROW}
+          >
+            {guide ? <GuideIcon className="shrink-0 text-3xl" /> : <FreeIcon className="shrink-0 text-3xl" />}
+            {guide ? 'おてほん → じゆうに する' : 'じゆう → おてほんに する'}
+          </button>
+          {/* ききとりあそび（#110）: 鳴った音を五線で探す。採点しない */}
+          <button type="button" aria-label="ききとり" disabled={busy} onClick={act(onToggleEar)} className={ROW}>
+            <BellIcon className="shrink-0 text-3xl" />
+            {ear ? 'ききとり → じゆうに する' : 'ききとり あそび（なった おとを さがす）'}
+          </button>
+        </div>
+        {/* おといろ（#141）: 子どもの面では何のボタンか伝わらなかったので、ここで4つから選ぶ */}
+        <div role="group" aria-label="おといろ" className="rounded-2xl bg-white px-4 py-2.5 shadow">
+          <p className="mb-2 text-lg font-bold text-[#6b6375]">おといろ（さいせいの おと）</p>
+          <div className="grid grid-cols-4 gap-2">
+            {VOICES.map((v) => {
+              const Icon = VOICE_ICON[v.id]
+              const on = v.id === voice
+              return (
+                <button
+                  key={v.id}
+                  type="button"
+                  aria-label={v.name}
+                  aria-pressed={on}
+                  disabled={busy}
+                  onClick={() => onSelectVoice(v.id)}
+                  className={`flex items-center justify-center gap-1 rounded-xl px-2 py-1.5 text-sm font-bold text-[#6b6375] disabled:opacity-40 ${
+                    on ? 'bg-[#dff3ea] ring-2 ring-[#5b524b]' : 'bg-[#fdf6e3]'
+                  }`}
+                >
+                  <Icon width="2em" height="2em" />
+                  {v.name}
+                </button>
+              )
+            })}
+          </div>
+        </div>
       </div>
     </div>
   )
