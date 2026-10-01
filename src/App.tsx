@@ -565,7 +565,7 @@ export default function App() {
   }
 
   return (
-    <div className="relative flex h-full w-full flex-col bg-[#fdf6e3]">
+    <div className="relative flex h-full w-full flex-col bg-[#fdf6e3] pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)]">
       {/* ページ背景（空・丘）。盤面 SVG の紙の外とヘッダーの後ろに見える（#99） */}
       <Background themeId={themeId} />
       {portrait && <RotateOverlay />}
@@ -573,7 +573,7 @@ export default function App() {
           ボタンは縮ませない。幅が足りなければ行を折り返す＝はみ出して切れることはない。 */}
       <header
         inert={showTitle}
-        className={`relative flex shrink-0 flex-wrap items-center ${compact ? 'gap-2 p-2' : 'gap-3 p-3'}`}
+        className={`relative flex shrink-0 flex-wrap items-center ${compact ? 'gap-2 p-2 pt-[max(0.5rem,env(safe-area-inset-top))]' : 'gap-3 p-3 pt-[max(0.75rem,env(safe-area-inset-top))]'}`}
       >
         {/* 再生中は ⏹。曲を消さずに止める（これまで止める手段はクリア＝曲ごと消す だけだった） */}
         {busy ? (
@@ -724,7 +724,7 @@ export default function App() {
           </div>
         )}
         {!shelfOpen && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-3 flex items-center justify-between px-6">
+          <div className="pointer-events-none absolute inset-x-0 bottom-[max(0.75rem,env(safe-area-inset-bottom))] flex items-center justify-between px-6">
             {showPrev ? (
               <button
                 type="button"
