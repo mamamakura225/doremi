@@ -631,7 +631,8 @@ export default function Board({
             x={TOOLBOX_CX}
             y={TOOLBOX_NORMAL_CY + 96}
             textAnchor="middle"
-            fontSize={26}
+            // かごの幅（TOOLBOX_W 120）に5文字を収める（26 では 130 ではみ出していた・#140）
+            fontSize={21}
             fontWeight="bold"
             fill="#6b6375"
           >
