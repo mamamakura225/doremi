@@ -1,77 +1,68 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 250" width="880" height="250">
-  <!-- マスコット「ぴぴ」（ひよこ）。表情4種: ふつう／にっこり／びっくり／ばんざい。
-       線・塗りのルールは docs/art-direction.md。1体ぶんは 200×200 の座標で描く。 -->
-  <defs>
-    <radialGradient id="pp-body" cx="0.38" cy="0.32" r="0.75">
-      <stop offset="0" stop-color="#fff6cf"/>
-      <stop offset="0.65" stop-color="#ffe38f"/>
-      <stop offset="1" stop-color="#ffd166"/>
-    </radialGradient>
-    <g id="pp-base">
-      <ellipse cx="100" cy="190" rx="50" ry="7" fill="#5b524b" opacity="0.12"/>
-      <!-- あし -->
-      <ellipse cx="84" cy="180" rx="11" ry="6" fill="#ffa94d" stroke="#5b524b" stroke-width="4"/>
-      <ellipse cx="116" cy="180" rx="11" ry="6" fill="#ffa94d" stroke="#5b524b" stroke-width="4"/>
-      <!-- からだ -->
-      <ellipse cx="100" cy="113" rx="66" ry="64" fill="url(#pp-body)" stroke="#5b524b" stroke-width="5"/>
-      <ellipse cx="100" cy="140" rx="36" ry="26" fill="#fffbee" opacity="0.75"/>
-      <ellipse cx="72" cy="76" rx="15" ry="9" fill="#fff" opacity="0.7" transform="rotate(-30 72 76)"/>
-      <!-- とさか -->
-      <path d="M90 52 C84 34 98 28 101 42 C104 28 120 32 110 52" fill="#ffe38f" stroke="#5b524b" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
-      <!-- リボン（淡い桃。シの #f472b6 そのものは使わない） -->
-      <g transform="translate(133 58) rotate(18)">
-        <path d="M0 0 L-17 -11 Q-22 0 -17 11 Z" fill="#ffc9dc" stroke="#5b524b" stroke-width="4" stroke-linejoin="round"/>
-        <path d="M0 0 L17 -11 Q22 0 17 11 Z" fill="#ffc9dc" stroke="#5b524b" stroke-width="4" stroke-linejoin="round"/>
-        <circle r="5" fill="#fff0f6" stroke="#5b524b" stroke-width="4"/>
-      </g>
-      <!-- ほっぺ -->
-      <ellipse cx="62" cy="130" rx="12" ry="7.5" fill="#ff8fab" opacity="0.6"/>
-      <ellipse cx="138" cy="130" rx="12" ry="7.5" fill="#ff8fab" opacity="0.6"/>
+  <!-- マスコット「ぴぴ」（ひよこ・もちもち #143）。表情4種: ふつう／にっこり／びっくり／ばんざい。
+       形は src/components/Mascot.tsx と同じ。線・塗りのルールは docs/art-direction.md。1体ぶんは 200×200 の座標。 -->
+  <svg viewBox="0 0 200 200" x="20" y="10" width="200" height="200">
+    <defs><radialGradient id="pp-body-0" cx="0.38" cy="0.3" r="0.8"><stop offset="0" stop-color="#fffbe6"/><stop offset="0.6" stop-color="#ffeaa0"/><stop offset="1" stop-color="#ffd77a"/></radialGradient></defs>
+    <ellipse cx="100" cy="190" rx="52" ry="6" fill="#5b524b" opacity="0.13"/>
+    <g stroke="#5b524b" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
+      <ellipse cx="80" cy="182" rx="10" ry="6" fill="#ffa94d"/><ellipse cx="120" cy="182" rx="10" ry="6" fill="#ffa94d"/>
+      <path d="M100 40 C150 40 178 84 178 128 C178 166 146 184 100 184 C54 184 22 166 22 128 C22 84 50 40 100 40 Z" fill="url(#pp-body-0)"/>
+      <path d="M96 42 C88 26 96 18 103 26 C106 16 118 20 110 40" fill="#ffeaa0"/>
+      <g fill="#ffd77a"><path d="M28 128 Q12 140 22 156 Q36 154 36 138 Z"/><path d="M172 128 Q188 140 178 156 Q164 154 164 138 Z"/></g>
     </g>
-    <path id="pp-wing-l" d="M40 118 Q22 132 36 150 Q52 146 50 126 Z" fill="#ffd166" stroke="#5b524b" stroke-width="4" stroke-linejoin="round"/>
-    <path id="pp-wing-r" d="M160 118 Q178 132 164 150 Q148 146 150 126 Z" fill="#ffd166" stroke="#5b524b" stroke-width="4" stroke-linejoin="round"/>
-    <g id="pp-wings-down"><use href="#pp-wing-l"/><use href="#pp-wing-r"/></g>
-    <g id="pp-wings-up" fill="#ffd166" stroke="#5b524b" stroke-width="4"><ellipse cx="30" cy="94" rx="23" ry="12" transform="rotate(55 30 94)"/><ellipse cx="170" cy="94" rx="23" ry="12" transform="rotate(-55 170 94)"/></g>
-    <g id="pp-eyes-open">
-      <ellipse cx="78" cy="108" rx="9.5" ry="11.5" fill="#3d3530"/>
-      <ellipse cx="122" cy="108" rx="9.5" ry="11.5" fill="#3d3530"/>
-      <circle cx="81" cy="103" r="3.6" fill="#fff"/>
-      <circle cx="125" cy="103" r="3.6" fill="#fff"/>
-      <circle cx="75.5" cy="112.5" r="1.7" fill="#fff"/>
-      <circle cx="119.5" cy="112.5" r="1.7" fill="#fff"/>
+    <ellipse cx="78" cy="70" rx="16" ry="9" fill="#fff" opacity="0.75" transform="rotate(-28 78 70)"/>
+    <ellipse cx="52" cy="140" rx="14" ry="8.5" fill="#ff8fab" opacity="0.6"/><ellipse cx="148" cy="140" rx="14" ry="8.5" fill="#ff8fab" opacity="0.6"/>
+    <g><ellipse cx="70" cy="122" rx="11" ry="12.6" fill="#3d3530"/><ellipse cx="130" cy="122" rx="11" ry="12.6" fill="#3d3530"/><circle cx="73.9" cy="117" r="4.6" fill="#fff"/><circle cx="133.9" cy="117" r="4.6" fill="#fff"/><circle cx="65.6" cy="127.5" r="2" fill="#fff"/><circle cx="125.6" cy="127.5" r="2" fill="#fff"/></g>
+    <g stroke="#5b524b" stroke-width="3.5" stroke-linejoin="round"><path d="M93.7 136 Q100 129.7 106.3 136 Q100 144.1 93.7 136 Z" fill="#ffa94d"/></g>
+    <g transform="translate(140 58) rotate(20) scale(0.85)" stroke="#5b524b" stroke-width="3.5" stroke-linejoin="round"><path d="M0 0 L-16 -11 Q-21 0 -16 11 Z" fill="#ffc9dc"/><path d="M0 0 L16 -11 Q21 0 16 11 Z" fill="#ffc9dc"/><circle r="5" fill="#fff0f6"/></g>
+  </svg>
+  <text x="120" y="238" text-anchor="middle" font-size="18" font-family="sans-serif" fill="#6b6375">ふつう</text>
+  <svg viewBox="0 0 200 200" x="235" y="10" width="200" height="200">
+    <defs><radialGradient id="pp-body-1" cx="0.38" cy="0.3" r="0.8"><stop offset="0" stop-color="#fffbe6"/><stop offset="0.6" stop-color="#ffeaa0"/><stop offset="1" stop-color="#ffd77a"/></radialGradient></defs>
+    <ellipse cx="100" cy="190" rx="52" ry="6" fill="#5b524b" opacity="0.13"/>
+    <g stroke="#5b524b" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
+      <ellipse cx="80" cy="182" rx="10" ry="6" fill="#ffa94d"/><ellipse cx="120" cy="182" rx="10" ry="6" fill="#ffa94d"/>
+      <path d="M100 40 C150 40 178 84 178 128 C178 166 146 184 100 184 C54 184 22 166 22 128 C22 84 50 40 100 40 Z" fill="url(#pp-body-1)"/>
+      <path d="M96 42 C88 26 96 18 103 26 C106 16 118 20 110 40" fill="#ffeaa0"/>
+      <g fill="#ffd77a"><path d="M28 128 Q12 140 22 156 Q36 154 36 138 Z"/><path d="M172 128 Q188 140 178 156 Q164 154 164 138 Z"/></g>
     </g>
-    <g id="pp-eyes-happy" fill="none" stroke="#3d3530" stroke-width="5" stroke-linecap="round">
-      <path d="M68 111 Q78 98 88 111"/>
-      <path d="M112 111 Q122 98 132 111"/>
+    <ellipse cx="78" cy="70" rx="16" ry="9" fill="#fff" opacity="0.75" transform="rotate(-28 78 70)"/>
+    <ellipse cx="52" cy="140" rx="14" ry="8.5" fill="#ff8fab" opacity="0.6"/><ellipse cx="148" cy="140" rx="14" ry="8.5" fill="#ff8fab" opacity="0.6"/>
+    <g fill="none" stroke="#3d3530" stroke-width="5" stroke-linecap="round"><path d="M59 124 Q70 109 81 124"/><path d="M119 124 Q130 109 141 124"/></g>
+    <g stroke="#5b524b" stroke-width="3.5" stroke-linejoin="round"><path d="M93 136 Q100 130 107 136 Q100 139 93 136 Z" fill="#ffa94d"/><path d="M95.5 137.8 Q100 147 104.5 137.8 Z" fill="#ff7a59"/></g>
+    <g transform="translate(140 58) rotate(20) scale(0.85)" stroke="#5b524b" stroke-width="3.5" stroke-linejoin="round"><path d="M0 0 L-16 -11 Q-21 0 -16 11 Z" fill="#ffc9dc"/><path d="M0 0 L16 -11 Q21 0 16 11 Z" fill="#ffc9dc"/><circle r="5" fill="#fff0f6"/></g>
+  </svg>
+  <text x="335" y="238" text-anchor="middle" font-size="18" font-family="sans-serif" fill="#6b6375">にっこり</text>
+  <svg viewBox="0 0 200 200" x="450" y="10" width="200" height="200">
+    <defs><radialGradient id="pp-body-2" cx="0.38" cy="0.3" r="0.8"><stop offset="0" stop-color="#fffbe6"/><stop offset="0.6" stop-color="#ffeaa0"/><stop offset="1" stop-color="#ffd77a"/></radialGradient></defs>
+    <ellipse cx="100" cy="190" rx="52" ry="6" fill="#5b524b" opacity="0.13"/>
+    <g stroke="#5b524b" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
+      <ellipse cx="80" cy="182" rx="10" ry="6" fill="#ffa94d"/><ellipse cx="120" cy="182" rx="10" ry="6" fill="#ffa94d"/>
+      <path d="M100 40 C150 40 178 84 178 128 C178 166 146 184 100 184 C54 184 22 166 22 128 C22 84 50 40 100 40 Z" fill="url(#pp-body-2)"/>
+      <path d="M96 42 C88 26 96 18 103 26 C106 16 118 20 110 40" fill="#ffeaa0"/>
+      <g fill="#ffd77a"><path d="M28 128 Q12 140 22 156 Q36 154 36 138 Z"/><path d="M172 128 Q188 140 178 156 Q164 154 164 138 Z"/></g>
     </g>
-    <path id="pp-beak" d="M92 123 Q100 116 108 123 Q100 133 92 123 Z" fill="#ffa94d" stroke="#5b524b" stroke-width="4" stroke-linejoin="round"/>
-    <g id="pp-beak-open">
-      <path d="M88 121 Q100 110 112 121 Q100 126 88 121 Z" fill="#ffa94d" stroke="#5b524b" stroke-width="4" stroke-linejoin="round"/>
-      <path d="M93 125 Q100 138 107 125 Q100 127 93 125 Z" fill="#ff7a59" stroke="#5b524b" stroke-width="4" stroke-linejoin="round"/>
+    <ellipse cx="78" cy="70" rx="16" ry="9" fill="#fff" opacity="0.75" transform="rotate(-28 78 70)"/>
+    <ellipse cx="52" cy="140" rx="14" ry="8.5" fill="#ff8fab" opacity="0.6"/><ellipse cx="148" cy="140" rx="14" ry="8.5" fill="#ff8fab" opacity="0.6"/>
+    <g stroke="#3d3530" stroke-width="4"><circle cx="70" cy="122" r="13" fill="#fff"/><circle cx="130" cy="122" r="13" fill="#fff"/><circle cx="70" cy="123" r="6" fill="#3d3530" stroke="none"/><circle cx="130" cy="123" r="6" fill="#3d3530" stroke="none"/></g>
+    <g stroke="#5b524b" stroke-width="3.5" stroke-linejoin="round"><ellipse cx="100" cy="142" rx="6" ry="7" fill="#ff7a59"/></g>
+    <g transform="translate(140 58) rotate(20) scale(0.85)" stroke="#5b524b" stroke-width="3.5" stroke-linejoin="round"><path d="M0 0 L-16 -11 Q-21 0 -16 11 Z" fill="#ffc9dc"/><path d="M0 0 L16 -11 Q21 0 16 11 Z" fill="#ffc9dc"/><circle r="5" fill="#fff0f6"/></g>
+  </svg>
+  <text x="550" y="238" text-anchor="middle" font-size="18" font-family="sans-serif" fill="#6b6375">びっくり</text>
+  <svg viewBox="0 0 200 200" x="665" y="10" width="200" height="200">
+    <defs><radialGradient id="pp-body-3" cx="0.38" cy="0.3" r="0.8"><stop offset="0" stop-color="#fffbe6"/><stop offset="0.6" stop-color="#ffeaa0"/><stop offset="1" stop-color="#ffd77a"/></radialGradient></defs>
+    <ellipse cx="100" cy="190" rx="52" ry="6" fill="#5b524b" opacity="0.13"/>
+    <g stroke="#5b524b" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
+      <ellipse cx="80" cy="182" rx="10" ry="6" fill="#ffa94d"/><ellipse cx="120" cy="182" rx="10" ry="6" fill="#ffa94d"/>
+      <path d="M100 40 C150 40 178 84 178 128 C178 166 146 184 100 184 C54 184 22 166 22 128 C22 84 50 40 100 40 Z" fill="url(#pp-body-3)"/>
+      <path d="M96 42 C88 26 96 18 103 26 C106 16 118 20 110 40" fill="#ffeaa0"/>
+      <g fill="#ffd77a"><ellipse cx="26" cy="100" rx="22" ry="11" transform="rotate(55 26 100)"/><ellipse cx="174" cy="100" rx="22" ry="11" transform="rotate(-55 174 100)"/></g>
     </g>
-  </defs>
-
-  <!-- ふつう -->
-  <g transform="translate(10 20)">
-    <use href="#pp-base"/><use href="#pp-wings-down"/><use href="#pp-eyes-open"/><use href="#pp-beak"/>
-  </g>
-  <!-- にっこり -->
-  <g transform="translate(230 20)">
-    <use href="#pp-base"/><use href="#pp-wings-down"/><use href="#pp-eyes-happy"/><use href="#pp-beak-open"/>
-  </g>
-  <!-- びっくり -->
-  <g transform="translate(450 20)">
-    <use href="#pp-base"/><use href="#pp-wings-down"/>
-    <circle cx="78" cy="107" r="12" fill="#fff" stroke="#3d3530" stroke-width="4"/>
-    <circle cx="122" cy="107" r="12" fill="#fff" stroke="#3d3530" stroke-width="4"/>
-    <circle cx="78" cy="108" r="5.5" fill="#3d3530"/>
-    <circle cx="122" cy="108" r="5.5" fill="#3d3530"/>
-    <ellipse cx="100" cy="129" rx="7" ry="8" fill="#ff7a59" stroke="#5b524b" stroke-width="4"/>
-  </g>
-  <!-- ばんざい -->
-  <g transform="translate(670 20)">
-    <use href="#pp-base"/>
-    <use href="#pp-wings-up"/>
-    <use href="#pp-eyes-happy"/><use href="#pp-beak-open"/>
-  </g>
+    <ellipse cx="78" cy="70" rx="16" ry="9" fill="#fff" opacity="0.75" transform="rotate(-28 78 70)"/>
+    <ellipse cx="52" cy="140" rx="14" ry="8.5" fill="#ff8fab" opacity="0.6"/><ellipse cx="148" cy="140" rx="14" ry="8.5" fill="#ff8fab" opacity="0.6"/>
+    <g fill="none" stroke="#3d3530" stroke-width="5" stroke-linecap="round"><path d="M59 124 Q70 109 81 124"/><path d="M119 124 Q130 109 141 124"/></g>
+    <g stroke="#5b524b" stroke-width="3.5" stroke-linejoin="round"><path d="M93 136 Q100 130 107 136 Q100 139 93 136 Z" fill="#ffa94d"/><path d="M95.5 137.8 Q100 147 104.5 137.8 Z" fill="#ff7a59"/></g>
+    <g transform="translate(140 58) rotate(20) scale(0.85)" stroke="#5b524b" stroke-width="3.5" stroke-linejoin="round"><path d="M0 0 L-16 -11 Q-21 0 -16 11 Z" fill="#ffc9dc"/><path d="M0 0 L16 -11 Q21 0 16 11 Z" fill="#ffc9dc"/><circle r="5" fill="#fff0f6"/></g>
+  </svg>
+  <text x="765" y="238" text-anchor="middle" font-size="18" font-family="sans-serif" fill="#6b6375">ばんざい</text>
 </svg>
