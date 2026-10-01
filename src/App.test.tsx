@@ -2,7 +2,15 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import App from './App'
 import RotateOverlay from './components/RotateOverlay'
-import { ensureAudio, playFanfare, playMelodyNote, playNote, playPop, playSparkle } from './audio/synth'
+import {
+  ensureAudio,
+  playFanfare,
+  playMelodyNote,
+  playNote,
+  playPop,
+  playSparkle,
+  setPlaybackVoice,
+} from './audio/synth'
 
 const SONG_2P = JSON.stringify([
   { id: 'x', createdAt: 1, clef: 'treble', pages: [['C4', 'D4'], ['E4']] },
@@ -198,7 +206,25 @@ test('再生中は音色ボタンが disabled（#60-2）', async () => {
     await vi.advanceTimersByTimeAsync(1)
   })
 
-  expect((screen.getByLabelText('おといろ') as HTMLButtonElement).disabled).toBe(true)
+  openAdultMenu()
+  expect((screen.getByLabelText('ベル') as HTMLButtonElement).disabled).toBe(true)
+})
+
+test('おといろは子どもの面に無く、おとなメニューで選ぶ（#141）', () => {
+  vi.useFakeTimers()
+  render(<App />)
+  // 子どもの面（ヘッダー）には音色のボタンが無い
+  expect(screen.queryByLabelText('おといろ')).toBeNull()
+  expect(screen.queryByLabelText('ベル')).toBeNull()
+
+  openAdultMenu()
+  const bell = screen.getByLabelText('ベル')
+  expect(screen.getByLabelText('ピアノ').getAttribute('aria-pressed')).toBe('true')
+  fireEvent.click(bell)
+  expect(setPlaybackVoice).toHaveBeenCalledWith('bell')
+  expect(bell.getAttribute('aria-pressed')).toBe('true')
+  // 聴き比べられるよう、選んでもメニューは閉じない
+  expect(screen.getByRole('dialog', { name: 'おとなの メニュー' })).toBeTruthy()
 })
 
 test('盤面の外にページ背景（おんぷのもり）を敷き、操作の邪魔をしない（#99）', () => {
