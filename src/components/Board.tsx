@@ -627,6 +627,8 @@ export default function Board({
           <g className="finger-poke">
             <HandIcon x={TOOLBOX_CX - 26} y={TOOLBOX_NORMAL_CY + 6} width={52} height={52} />
           </g>
+          {/* 木目の線（y250）が字の真ん中を横切って取り消し線に見えるので、かごの地の色で隠す。下端は のばす音の符幹の先（y265）に掛けない（#140） */}
+          <rect x={TOOLBOX_CX - 50} y={TOOLBOX_NORMAL_CY + 72} width={100} height={28} fill={WOOD} />
           <text
             x={TOOLBOX_CX}
             y={TOOLBOX_NORMAL_CY + 96}
