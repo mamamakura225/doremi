@@ -94,3 +94,22 @@ export function saveSong(pages: string[][], clef: Clef): SavedSong[] {
   }
   return next
 }
+
+/** id の曲を一覧から除く（純ロジック）。無ければそのまま。 */
+export function removeSong(songs: SavedSong[], id: string): SavedSong[] {
+  return songs.filter((s) => s.id !== id)
+}
+
+/**
+ * 保存済みの曲を1曲消して、更新後の一覧を返す（おとなメニューの「ほんだなを せいり」・#142）。
+ * 書き込みに失敗しても例外は投げない——saveSong と同じく、このセッション中の一覧には反映する。
+ */
+export function deleteSong(id: string): SavedSong[] {
+  const next = removeSong(loadSongs(), id)
+  try {
+    localStorage.setItem(KEY, JSON.stringify(next))
+  } catch {
+    // 黙って諦める（saveSong と同じ）
+  }
+  return next
+}

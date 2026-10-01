@@ -11,6 +11,7 @@ import {
   GearIcon,
   GuideIcon,
   PianoIcon,
+  ShelfIcon,
   PicoIcon,
   SingIcon,
 } from './Icons'
@@ -128,6 +129,8 @@ interface MenuProps {
   onToggleClef: () => void
   onToggleGuide: () => void
   onToggleEar: () => void
+  /** 本棚を「せいり」で開く（曲を消せる・#142） */
+  onTidyShelf: () => void
   onClose: () => void
 }
 
@@ -147,6 +150,7 @@ export default function AdultMenu({
   onToggleClef,
   onToggleGuide,
   onToggleEar,
+  onTidyShelf,
   onClose,
 }: MenuProps) {
   const act = (fn: () => void) => () => {
@@ -205,13 +209,17 @@ export default function AdultMenu({
           {/* ききとりあそび（#110）: 鳴った音を五線で探す。採点しない */}
           <button type="button" aria-label="ききとり" disabled={busy} onClick={act(onToggleEar)} className={ROW}>
             <BellIcon className="shrink-0 text-3xl" />
-            {ear ? 'ききとり → じゆうに する' : 'ききとり あそび（なった おとを さがす）'}
+            {ear ? 'ききとり → じゆうに する' : 'ききとり あそび'}
+          </button>
+          {/* 曲を消すのは大人だけ（子どもの 📚 には消す手段を出さない・#142） */}
+          <button type="button" aria-label="ほんだなを せいり" disabled={busy} onClick={act(onTidyShelf)} className={ROW}>
+            <ShelfIcon className="shrink-0 text-3xl" /> ほんだなを せいり
           </button>
         </div>
         {/* おといろ（#141）: 子どもの面では何のボタンか伝わらなかったので、ここで4つから選ぶ */}
-        <div role="group" aria-label="おといろ" className="rounded-2xl bg-white px-4 py-2.5 shadow">
-          <p className="mb-2 text-lg font-bold text-[#6b6375]">おといろ（さいせいの おと）</p>
-          <div className="grid grid-cols-4 gap-2">
+        <div role="group" aria-label="おといろ" className="items-center gap-3 rounded-2xl bg-white px-4 py-2.5 shadow sm:flex">
+          <p className="mb-2 shrink-0 text-lg font-bold text-[#6b6375] sm:mb-0">おといろ</p>
+          <div className="grid flex-1 grid-cols-4 gap-2">
             {VOICES.map((v) => {
               const Icon = VOICE_ICON[v.id]
               const on = v.id === voice

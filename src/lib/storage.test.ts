@@ -1,5 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { SHELF_MAX, addSong, loadSongs, parseSongs, saveSong, type SavedSong } from './storage'
+import {
+  SHELF_MAX,
+  addSong,
+  deleteSong,
+  loadSongs,
+  parseSongs,
+  removeSong,
+  saveSong,
+  type SavedSong,
+} from './storage'
 
 function song(over: Partial<SavedSong> = {}): SavedSong {
   return { id: 'a', createdAt: 1, pages: [['C4']], clef: 'treble', ...over }
@@ -119,5 +128,22 @@ describe('loadSongs / saveSong の I/O', () => {
     } finally {
       vi.unstubAllGlobals()
     }
+  })
+})
+
+describe('removeSong / deleteSong（#142）', () => {
+  afterEach(() => localStorage.clear())
+
+  it('removeSong は指定の id だけを除き、無い id ならそのまま', () => {
+    const songs = [song({ id: 'a' }), song({ id: 'b' })]
+    expect(removeSong(songs, 'a').map((s) => s.id)).toEqual(['b'])
+    expect(removeSong(songs, 'z').map((s) => s.id)).toEqual(['a', 'b'])
+  })
+
+  it('deleteSong は保存先からも消す（読み直しても戻らない）', () => {
+    const [kept] = saveSong([['C4']], 'treble')
+    const [gone] = saveSong([['E4']], 'treble')
+    expect(deleteSong(gone.id).map((s) => s.id)).toEqual([kept.id])
+    expect(loadSongs().map((s) => s.id)).toEqual([kept.id])
   })
 })

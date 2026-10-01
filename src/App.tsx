@@ -53,7 +53,7 @@ import {
 import { type GuideNote, type SongId, songOf } from './lib/songs'
 import SongPicker from './components/SongPicker'
 import { SONG_ICON } from './components/songIcons'
-import { type SavedSong, loadSongs, saveSong } from './lib/storage'
+import { type SavedSong, deleteSong, loadSongs, saveSong } from './lib/storage'
 import {
   type Voice,
   ensureAudio,
@@ -107,6 +107,8 @@ export default function App() {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [savedSongs, setSavedSongs] = useState<SavedSong[]>(() => loadSongs())
   const [shelfOpen, setShelfOpen] = useState(false)
+  // おとなメニューから開いた「せいり」の本棚か（#142）。子どもの 📚 から開くときは常に false
+  const [shelfTidy, setShelfTidy] = useState(false)
   const [justSaved, setJustSaved] = useState(false)
   const [voice, setVoice] = useState<Voice>('piano')
   const [clef, setClefMode] = useState<Clef>('treble')
@@ -599,6 +601,7 @@ export default function App() {
           onClick={withPop(() => {
             setBookOpen(false)
             setPickerOpen(false)
+            setShelfTidy(false)
             setShelfOpen(true)
           })}
           disabled={busy}
@@ -651,6 +654,12 @@ export default function App() {
           onToggleClef={toggleClef}
           onToggleGuide={toggleGuide}
           onToggleEar={toggleEar}
+          onTidyShelf={() => {
+            setBookOpen(false)
+            setPickerOpen(false)
+            setShelfTidy(true)
+            setShelfOpen(true)
+          }}
           onClose={() => setAdultOpen(false)}
         />
       )}
@@ -763,7 +772,12 @@ export default function App() {
           <Bookshelf
             songs={savedSongs}
             onSelect={handleSelectSong}
-            onClose={() => setShelfOpen(false)}
+            onClose={() => {
+              setShelfOpen(false)
+              setShelfTidy(false)
+            }}
+            tidy={shelfTidy}
+            onDelete={(song) => setSavedSongs(deleteSong(song.id))}
           />
         )}
       </main>

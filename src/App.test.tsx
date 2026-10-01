@@ -866,3 +866,41 @@ test('⚙ を短く押して離すと「ながおし してね」を出し、し
   fireEvent.pointerUp(gear, { pointerId: 1 })
   expect(screen.queryByText('ながおし してね')).toBeNull()
 })
+
+test('ほんだなの曲はおとなメニューの「せいり」からだけ消せる（#142）', () => {
+  localStorage.setItem(
+    'doremi.songs.v1',
+    JSON.stringify([
+      { id: 'a', createdAt: 2, clef: 'treble', pages: [['C4']] },
+      { id: 'b', createdAt: 1, clef: 'treble', pages: [['E4']] },
+    ]),
+  )
+  vi.useFakeTimers()
+  render(<App />)
+
+  // 子どもの 📚 から開いた本棚には消す手段が無い
+  fireEvent.click(screen.getByLabelText('ほんだな'))
+  expect(screen.queryAllByLabelText('この きょくを けす')).toHaveLength(0)
+  fireEvent.click(screen.getByLabelText('とじる'))
+
+  openAdultMenu()
+  fireEvent.click(screen.getByLabelText('ほんだなを せいり'))
+  expect(screen.getByRole('dialog', { name: 'ほんだなを せいり' })).toBeTruthy()
+
+  // やめる なら消えない
+  fireEvent.click(screen.getAllByLabelText('この きょくを けす')[0])
+  fireEvent.click(screen.getByText('やめる'))
+  expect(screen.getAllByLabelText('この きょくを けす')).toHaveLength(2)
+
+  // けす で1冊消え、保存先からも消える
+  fireEvent.click(screen.getAllByLabelText('この きょくを けす')[0])
+  fireEvent.click(screen.getByText('けす', { selector: '[role="alertdialog"] button' }))
+  expect(screen.getAllByLabelText('この きょくを けす')).toHaveLength(1)
+  expect(JSON.parse(localStorage.getItem('doremi.songs.v1')!).map((s: { id: string }) => s.id)).toEqual(['b'])
+
+  // 閉じて 📚 から開き直すと、ふつうの本棚に戻っている
+  fireEvent.click(screen.getByLabelText('とじる'))
+  fireEvent.click(screen.getByLabelText('ほんだな'))
+  expect(screen.queryAllByLabelText('この きょくを けす')).toHaveLength(0)
+  expect(screen.getAllByText('きく')).toHaveLength(1)
+})
