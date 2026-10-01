@@ -822,3 +822,21 @@ test('iPhone 横向きのノッチ・ホームインジケータを避ける（#
   expect(root.className).toContain('pr-[env(safe-area-inset-right)]')
   expect(container.querySelector('header')!.className).toContain('env(safe-area-inset-top)')
 })
+
+test('⚙ を短く押して離すと「ながおし してね」を出し、しばらくで消える（#139）', () => {
+  vi.useFakeTimers()
+  render(<App />)
+  const gear = screen.getByLabelText('おとなの メニュー（ながおし）')
+  fireEvent.pointerDown(gear, { pointerId: 1 })
+  fireEvent.pointerUp(gear, { pointerId: 1 })
+  expect(screen.getByText('ながおし してね')).toBeTruthy()
+  act(() => {
+    vi.advanceTimersByTime(2000)
+  })
+  expect(screen.queryByText('ながおし してね')).toBeNull()
+
+  // 長押しで開いたあとに離しても出さない
+  openAdultMenu()
+  fireEvent.pointerUp(gear, { pointerId: 1 })
+  expect(screen.queryByText('ながおし してね')).toBeNull()
+})

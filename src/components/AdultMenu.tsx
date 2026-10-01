@@ -5,6 +5,9 @@ import { BearIcon, BellIcon, BirdIcon, ClearIcon, CloseIcon, FreeIcon, GearIcon,
 /** ⚙ を押し続けてメニューが開くまでの時間（短いタップでは開かない＝子どもの誤操作よけ） */
 export const HOLD_MS = 1500
 
+/** 短く押して離したときに「ながおし してね」を出しておく時間（ms・#139） */
+export const HOLD_HINT_MS = 2000
+
 interface ButtonProps {
   onOpen: () => void
   /** 丸ボタンの大きさ（ヘッダーと揃える） */
@@ -19,20 +22,42 @@ interface ButtonProps {
  */
 export function AdultMenuButton({ onOpen, sizeClass }: ButtonProps) {
   const [holding, setHolding] = useState(false)
+  // 短く押して離したら、長押しで開くことを教える（大人が「押せない」と受け取った・#139）
+  const [hint, setHint] = useState(false)
   const timer = useRef(0)
-  useEffect(() => () => window.clearTimeout(timer.current), [])
+  const hintTimer = useRef(0)
+  useEffect(
+    () => () => {
+      window.clearTimeout(timer.current)
+      window.clearTimeout(hintTimer.current)
+    },
+    [],
+  )
 
   function start() {
     window.clearTimeout(timer.current)
+    window.clearTimeout(hintTimer.current)
+    setHint(false)
     setHolding(true)
     timer.current = window.setTimeout(() => {
+      timer.current = 0
       setHolding(false)
       onOpen()
     }, HOLD_MS)
   }
   function cancel() {
     window.clearTimeout(timer.current)
+    timer.current = 0
     setHolding(false)
+  }
+  function release() {
+    // まだ開いていない（長押しの途中で離した）ときだけ教える。指が外れた取り消しでは出さない
+    if (timer.current !== 0) {
+      setHint(true)
+      window.clearTimeout(hintTimer.current)
+      hintTimer.current = window.setTimeout(() => setHint(false), HOLD_HINT_MS)
+    }
+    cancel()
   }
 
   return (
@@ -40,7 +65,7 @@ export function AdultMenuButton({ onOpen, sizeClass }: ButtonProps) {
       type="button"
       aria-label="おとなの メニュー（ながおし）"
       onPointerDown={start}
-      onPointerUp={cancel}
+      onPointerUp={release}
       onPointerLeave={cancel}
       onPointerCancel={cancel}
       onContextMenu={(e) => e.preventDefault()}
@@ -54,6 +79,14 @@ export function AdultMenuButton({ onOpen, sizeClass }: ButtonProps) {
         <svg className="pointer-events-none absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 40 40" aria-hidden="true">
           <circle cx={20} cy={20} r={18} fill="none" stroke="#5b524b" strokeWidth={3} className="hold-ring" />
         </svg>
+      )}
+      {hint && (
+        <span
+          role="status"
+          className="pointer-events-none absolute top-full right-0 z-30 mt-2 rounded-xl bg-white px-3 py-1 text-base font-bold whitespace-nowrap text-[#6b6375] shadow"
+        >
+          ながおし してね
+        </span>
       )}
     </button>
   )
