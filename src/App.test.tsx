@@ -814,3 +814,11 @@ test('シールを集めると背景を着せ替えられ、選んだ背景を�
   render(<App />)
   expect(screen.getByTestId('page-background').getAttribute('data-theme')).toBe('sakura')
 })
+
+test('iPhone 横向きのノッチ・ホームインジケータを避ける（#66）', () => {
+  const { container } = render(<App />)
+  const root = container.firstElementChild as HTMLElement
+  expect(root.className).toContain('pl-[env(safe-area-inset-left)]')
+  expect(root.className).toContain('pr-[env(safe-area-inset-right)]')
+  expect(container.querySelector('header')!.className).toContain('env(safe-area-inset-top)')
+})
