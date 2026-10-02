@@ -904,3 +904,8 @@ test('ほんだなの曲はおとなメニューの「せいり」からだけ�
   expect(screen.queryAllByLabelText('この きょくを けす')).toHaveLength(0)
   expect(screen.getAllByText('きく')).toHaveLength(1)
 })
+
+test('⚙ は右端ぎりぎりに置かず、内側へ寄せる（#153）', () => {
+  render(<App />)
+  expect(screen.getByLabelText('おとなの メニュー（ながおし）').className).toMatch(/\bmr-8\b/)
+})
