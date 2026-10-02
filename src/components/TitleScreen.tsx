@@ -1,22 +1,17 @@
 import { useEffect, useRef } from 'react'
-import { OUTLINE_COLOR, SOLFA_COLOR } from '../lib/colors'
 import { PlayIcon } from './Icons'
 import Mascot from './Mascot'
+import TitleLogo from './TitleLogo'
 
 /**
  * はじめて開いたときのタイトル（#112）。「▶ はじめる」のタップが音の解錠を兼ねるので、
  * 最初の音から確実に鳴る。ページ背景（空・丘）の上に重ねる。
- * ロゴの「ど・れ・み」は、その音の色（音の名前そのものなので、7色を使ってよい）。
+ * ロゴの「ど・れ・み」は、その音の色（音の名前そのものなので、7色を使ってよい）。絵は TitleLogo（#144）。
  * 「はじめる」は白い文字を読ませるので、ファの緑より濃い緑（白との比 5:1）にする。
  */
 export default function TitleScreen({ onStart }: { onStart: () => void }) {
   const startRef = useRef<HTMLButtonElement>(null)
   useEffect(() => startRef.current?.focus(), [])
-  const letters: [string, string][] = [
-    ['ど', SOLFA_COLOR['ド']],
-    ['れ', SOLFA_COLOR['レ']],
-    ['み', SOLFA_COLOR['ミ']],
-  ]
   return (
     <div
       role="dialog"
@@ -28,22 +23,8 @@ export default function TitleScreen({ onStart }: { onStart: () => void }) {
         <Mascot mood="happy" width="100%" height="100%" />
       </div>
       <div className="flex flex-col items-center gap-4">
-        <h1 className="flex gap-1" aria-label="どれみ">
-          {letters.map(([ch, color], i) => (
-            <span
-              key={ch}
-              className="title-letter text-7xl font-black sm:text-8xl"
-              style={{
-                color,
-                WebkitTextStroke: `3px ${OUTLINE_COLOR}`,
-                paintOrder: 'stroke fill',
-                animationDelay: `${i * 0.12}s`,
-              }}
-              aria-hidden="true"
-            >
-              {ch}
-            </span>
-          ))}
+        <h1 className="w-[clamp(240px,40vw,440px)]" aria-label="どれみ">
+          <TitleLogo />
         </h1>
         <button
           ref={startRef}
