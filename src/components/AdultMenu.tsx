@@ -94,7 +94,8 @@ export function AdultMenuButton({ onOpen, sizeClass }: ButtonProps) {
       onClick={(e) => {
         if (e.detail === 0) onOpen()
       }}
-      className={`relative ml-auto grid shrink-0 place-items-center rounded-full bg-white/90 text-[#9a8f80] shadow ${sizeClass}`}
+      // 右端ぎりぎりは画面の角・端末の縁で押しにくい（オーナー実機）。右の余白で内側へ寄せる
+      className={`relative mr-8 ml-auto grid shrink-0 place-items-center rounded-full bg-white/90 text-[#9a8f80] shadow ${sizeClass}`}
     >
       <GearIcon width="62%" height="62%" />
       {holding && (
