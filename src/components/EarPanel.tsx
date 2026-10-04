@@ -1,11 +1,14 @@
+import type { SVGProps } from 'react'
 import { FOUND_PER_STAGE, type Judge } from '../lib/ear'
 import { OUTLINE_COLOR } from '../lib/colors'
 import Mascot from './Mascot'
 
-/** 耳（きく） */
-function EarIcon() {
+type SvgProps = Omit<SVGProps<SVGSVGElement>, 'children'>
+
+/** 耳（きく）。よみとりの盤面（#155）でも SVG の中に置いて使う */
+export function EarIcon(p: SvgProps) {
   return (
-    <svg viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true" fill="none" stroke={OUTLINE_COLOR} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <svg viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true" fill="none" stroke={OUTLINE_COLOR} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...p}>
       <path d="M7 9.5 A5.5 5.5 0 0 1 18 9.5 C18 13 15 13.8 14.6 16.4 A3.4 3.4 0 0 1 8.2 17.4" fill="#ffe8d6" />
       <path d="M10.4 10 A2.2 2.2 0 0 1 14.6 10.3 C14.6 11.6 13.2 12 12.6 13" />
       <path d="M20 5.5 Q22 9.5 20 13.5" strokeWidth={1.8} />
@@ -14,9 +17,9 @@ function EarIcon() {
 }
 
 /** 上・下の矢印（お題はもっと高い／低い） */
-function Arrow({ up }: { up: boolean }) {
+export function Arrow({ up, ...p }: { up: boolean } & SvgProps) {
   return (
-    <svg viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true" fill="none" stroke={OUTLINE_COLOR} strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round">
+    <svg viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true" fill="none" stroke={OUTLINE_COLOR} strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" {...p}>
       <path d={up ? 'M12 19 V5 M6.5 10.5 L12 5 L17.5 10.5' : 'M12 5 V19 M6.5 13.5 L12 19 L17.5 13.5'} />
     </svg>
   )

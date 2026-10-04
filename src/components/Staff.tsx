@@ -23,10 +23,17 @@ function labelSize(step: number, minStep: number, maxStep: number): number {
 
 interface Props {
   clef: Clef
+  /**
+   * 五線と音部記号だけを描く（ドレミラベル・ド足場ガイドを出さない）。よみとり（#155）は
+   * 位置から音を読む練習なので、答えになる手がかりを消す
+   */
+  bare?: boolean
+  /** 五線の右端（既定はお道具箱の手前） */
+  right?: number
 }
 
 /** 五線・音部記号・ド足場ガイド・ドレミラベルを描く（SVG内の <g>） */
-export default function Staff({ clef }: Props) {
+export default function Staff({ clef, bare = false, right = STAFF_RIGHT }: Props) {
   const lineYs = [0, 1, 2, 3, 4].map(
     (i) => STAFF_LAYOUT.topLineY + i * STAFF_LAYOUT.staffSpace,
   )
@@ -44,7 +51,7 @@ export default function Staff({ clef }: Props) {
           key={y}
           x1={STAFF_LEFT}
           y1={y}
-          x2={STAFF_RIGHT}
+          x2={right}
           y2={y}
           stroke="#5b524b"
           strokeWidth={3}
@@ -61,53 +68,57 @@ export default function Staff({ clef }: Props) {
 
       {/* 常時ドレミラベル: 各音の高さに音名を色付きで（置く前の手がかり）。
           紙の色の太い縁で五線を抜いてから、輪郭つきの色文字を重ねる */}
-      <g aria-hidden="true">
-        {pitches.map((p) => {
-          const props = {
-            x: p.step % 2 === 0 ? LABEL_X_LINE : LABEL_X_SPACE,
-            y: pitchToY(p, STAFF_LAYOUT),
-            textAnchor: 'middle',
-            dominantBaseline: 'middle',
-            fontSize: labelSize(p.step, minStep, maxStep),
-            fontWeight: 900,
-            // 2文字の「ファ」も1文字ぶんの幅に収める（隣の列・符頭にかからない）
-            ...(p.solfa.length > 1 ? { textLength: 30, lengthAdjust: 'spacingAndGlyphs' } : {}),
-          } as const
-          return (
-            <g key={p.note}>
-              <text {...props} fill={PAPER} stroke={PAPER} strokeWidth={7} strokeLinejoin="round">
-                {p.solfa}
-              </text>
-              <text {...props} fill={colorOf(p)} stroke={OUTLINE_COLOR} strokeWidth={1.4} paintOrder="stroke">
-                {p.solfa}
-              </text>
-            </g>
-          )
-        })}
-      </g>
+      {!bare && (
+        <g aria-hidden="true">
+          {pitches.map((p) => {
+            const props = {
+              x: p.step % 2 === 0 ? LABEL_X_LINE : LABEL_X_SPACE,
+              y: pitchToY(p, STAFF_LAYOUT),
+              textAnchor: 'middle',
+              dominantBaseline: 'middle',
+              fontSize: labelSize(p.step, minStep, maxStep),
+              fontWeight: 900,
+              // 2文字の「ファ」も1文字ぶんの幅に収める（隣の列・符頭にかからない）
+              ...(p.solfa.length > 1 ? { textLength: 30, lengthAdjust: 'spacingAndGlyphs' } : {}),
+            } as const
+            return (
+              <g key={p.note}>
+                <text {...props} fill={PAPER} stroke={PAPER} strokeWidth={7} strokeLinejoin="round">
+                  {p.solfa}
+                </text>
+                <text {...props} fill={colorOf(p)} stroke={OUTLINE_COLOR} strokeWidth={1.4} paintOrder="stroke">
+                  {p.solfa}
+                </text>
+              </g>
+            )
+          })}
+        </g>
+      )}
 
       {/* ド足場ガイド: ドの高さに半透明の足場（ここに置けるよ）。
           ト音では五線の外（下加線）、ヘ音では五線の中の間にあたる。 */}
-      <g aria-hidden="true">
-        <line
-          x1={PLACE_LEFT}
-          y1={cY}
-          x2={PLACE_RIGHT}
-          y2={cY}
-          stroke="#e23b3b"
-          strokeWidth={2}
-          strokeDasharray="6 10"
-          opacity={0.45}
-        />
-        <ellipse
-          cx={PLACE_LEFT + 24}
-          cy={cY}
-          rx={26}
-          ry={18}
-          fill="#e23b3b"
-          opacity={0.18}
-        />
-      </g>
+      {!bare && (
+        <g aria-hidden="true">
+          <line
+            x1={PLACE_LEFT}
+            y1={cY}
+            x2={PLACE_RIGHT}
+            y2={cY}
+            stroke="#e23b3b"
+            strokeWidth={2}
+            strokeDasharray="6 10"
+            opacity={0.45}
+          />
+          <ellipse
+            cx={PLACE_LEFT + 24}
+            cy={cY}
+            rx={26}
+            ry={18}
+            fill="#e23b3b"
+            opacity={0.18}
+          />
+        </g>
+      )}
     </g>
   )
 }

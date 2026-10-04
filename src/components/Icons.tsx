@@ -250,6 +250,16 @@ export const FreeIcon = (p: IconProps) => (
   </Icon>
 )
 
+/** よみとり（めがね・#155）。五線の音符を「見て」答える */
+export const ReadIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx={7} cy={14} r={3.8} fill={PEACH} />
+    <circle cx={17} cy={14} r={3.8} fill={PEACH} />
+    <path d="M10.8 13.4 Q12 12.4 13.2 13.4" strokeWidth={1.8} />
+    <path d="M3.3 13 L2 9 M20.7 13 L22 9" strokeWidth={1.8} />
+  </Icon>
+)
+
 /** シール帳（星の付いた本・#105）。曲の「きらきらぼし」の星と見分けられるよう、本の形にする */
 export const StickerBookIcon = (p: IconProps) => (
   <Icon {...p}>

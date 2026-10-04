@@ -550,7 +550,7 @@ test('はじめて音符を置くとシールがもらえ、シール帳に入�
 
   fireEvent.click(screen.getByLabelText('シールちょう'))
   const book = screen.getByRole('dialog', { name: 'シールちょう' })
-  expect(book.textContent).toContain('1 / 11')
+  expect(book.textContent).toContain('1 / 16')
 })
 
 test('localStorage が使えなくても、シールで白画面にならない（#105・#57 と同じ方針）', () => {
@@ -908,4 +908,276 @@ test('ほんだなの曲はおとなメニューの「せいり」からだけ�
 test('⚙ は右端ぎりぎりに置かず、内側へ寄せる（#153）', () => {
   render(<App />)
   expect(screen.getByLabelText('おとなの メニュー（ながおし）').className).toMatch(/\bmr-8\b/)
+})
+
+// ---- よみとりあそび（#155） ----
+
+/** おとなメニューから よみとり に入り、最初の問題の音（解錠待ち）を通す */
+async function enterReading() {
+  openAdultMenu()
+  fireEvent.click(screen.getByLabelText('よみとり'))
+  await act(async () => {
+    h.resolveAudio?.()
+  })
+}
+
+const key = (note: string) => screen.getByTestId(`key-${note}`)
+const press = (note: string) => fireEvent.pointerDown(key(note), { pointerId: 1 })
+const earnedStickers = () => JSON.parse(localStorage.getItem('doremi.stickers.v1') ?? '[]') as string[]
+
+/** いま出ている問題（最後に鳴った音）を正しい鍵で読み、次の問題まで進める */
+function readCurrent() {
+  const asked = vi.mocked(playNote).mock.calls.map((c) => c[0])
+  press(asked.at(-1)!)
+  vi.mocked(playNote).mockClear()
+  act(() => {
+    vi.advanceTimersByTime(1400)
+  })
+}
+
+test('よみとり: 色なしの音符と音で出題し、ラベル・足場は出さず、ドには加線を描く（#155）', async () => {
+  vi.spyOn(Math, 'random').mockReturnValue(0) // 段階1（ド・レ・ミ）の最初＝ド
+  vi.useFakeTimers()
+  render(<App />)
+  vi.mocked(playNote).mockClear()
+  await enterReading()
+  expect(playNote).toHaveBeenCalledWith('C4')
+  const note = screen.getByTestId('reading-note')
+  expect(note.querySelector('ellipse')?.getAttribute('fill')).toBe('#a07e62') // 答えるまで音の色を付けない
+  expect(screen.getByTestId('ledger')).toBeTruthy()
+  // 答えになる手がかり（五線の音名ラベル）が無い。鍵盤の音名（家のピアノへの橋渡し）は残す
+  const svg = screen.getByRole('application', { name: 'よみとりの がめん' })
+  const staffTexts = [...svg.querySelectorAll('text')].filter((t) => !t.closest('[data-testid^="key-"]'))
+  expect(staffTexts.map((t) => t.textContent)).not.toContain('ド')
+  expect(svg.querySelector('[stroke-dasharray]')).toBeNull() // ド足場ガイド（破線）も出さない
+  // 絵文字を出さない（#101）
+  expect(document.body.textContent ?? '').not.toMatch(/\p{Extended_Pictographic}/u)
+  // 子どもの面: ▶ ↩ ほぞん は使わない
+  expect((screen.getByLabelText('さいせい') as HTMLButtonElement).disabled).toBe(true)
+  expect((screen.getByLabelText('ほぞん') as HTMLButtonElement).disabled).toBe(true)
+})
+
+test('よみとり: 出題は楽器の音だけ（再生の音色＝うたの読み上げでは鳴らさない）（#155）', async () => {
+  vi.spyOn(Math, 'random').mockReturnValue(0)
+  vi.useFakeTimers()
+  render(<App />)
+  vi.mocked(playMelodyNote).mockClear()
+  vi.mocked(playNote).mockClear()
+  await enterReading()
+  press('E4') // ちがう鍵 → 正しい音を鳴らして比べる経路も通す
+  act(() => {
+    vi.advanceTimersByTime(1900)
+  })
+  expect(vi.mocked(playNote).mock.calls.map((c) => c[0])).toEqual(['C4', 'E4', 'C4'])
+  expect(playMelodyNote).not.toHaveBeenCalled()
+})
+
+test('よみとり: 正しい鍵で「よめた」・色と音名・シール、次の問題は別の音（#155）', async () => {
+  vi.spyOn(Math, 'random').mockReturnValue(0)
+  vi.useFakeTimers()
+  render(<App />)
+  await enterReading()
+  press('C4')
+  expect(screen.getByText('よめた！')).toBeTruthy()
+  const note = screen.getByTestId('reading-note')
+  expect(note.getAttribute('data-solved')).toBe('true')
+  expect(note.textContent).toContain('ド')
+  expect(earnedStickers()).toContain('read-found')
+  expect(screen.getByRole('img', { name: '1 こ よめた' })).toBeTruthy()
+  vi.mocked(playNote).mockClear()
+  act(() => {
+    vi.advanceTimersByTime(1400)
+  })
+  const asked = vi.mocked(playNote).mock.calls.map((c) => c[0])
+  expect(asked).toHaveLength(1)
+  expect(asked[0]).toBe('D4') // 直前と同じ音は出さない（ド を除いた レ・ミ の最初）
+  expect(screen.queryByText('よめた！')).toBeNull()
+  expect(screen.queryByTestId('ledger')).toBeNull() // 加線はドだけ（レは五線の下に接する）
+})
+
+test('よみとり: ちがう鍵は上下で教えて同じ問題に戻る。2回で正しい鍵が光り、そのあとの正解は数えない（#155）', async () => {
+  vi.spyOn(Math, 'random').mockReturnValue(0) // ド
+  vi.useFakeTimers()
+  render(<App />)
+  await enterReading()
+  press('E4') // ミ（お題のドはもっと低い）
+  expect(screen.getByText('もっと ひくい')).toBeTruthy()
+  // 答え合わせの間はほかの鍵を受け付けない（2本目の指・連打を1回の答えにする）。
+  // 同じ tick に来た2本目も止める（state の反映を待つロックだと通ってしまう）
+  act(() => {
+    press('D4')
+    press('C4')
+  })
+  expect(screen.queryByText('よめた！')).toBeNull()
+  vi.mocked(playNote).mockClear()
+  act(() => {
+    vi.advanceTimersByTime(700)
+  })
+  expect(playNote).toHaveBeenCalledWith('C4') // 比べるために正しい音を鳴らす
+  act(() => {
+    vi.advanceTimersByTime(1200)
+  })
+  expect(screen.queryByText('もっと ひくい')).toBeNull()
+  expect(key('C4').getAttribute('data-hint')).toBe('false') // 1回ではまだ光らせない
+  press('D4')
+  act(() => {
+    vi.advanceTimersByTime(1900)
+  })
+  expect(key('C4').getAttribute('data-hint')).toBe('true')
+  press('C4')
+  expect(screen.getByText('よめた！')).toBeTruthy() // 演出は出す（何も失わない）
+  expect(screen.getByRole('img', { name: '0 こ よめた' })).toBeTruthy() // 数えない
+  expect(earnedStickers()).not.toContain('read-found')
+  // 陽性対照: 次の問題を1回で読むと数える（問題ごとにミス数が 0 に戻っている）
+  act(() => {
+    vi.advanceTimersByTime(1400)
+  })
+  readCurrent()
+  expect(screen.getByRole('img', { name: '1 こ よめた' })).toBeTruthy()
+})
+
+// jsdom は pointer-events の当たり判定をしないので、黒鍵が押下を受け止めることは属性で固定する
+// （実際に下の白鍵へ素通しされないかは実機・preview で確認する）
+test('よみとり: 黒鍵を押しても答えにならない（#155）', async () => {
+  vi.spyOn(Math, 'random').mockReturnValue(0)
+  vi.useFakeTimers()
+  render(<App />)
+  await enterReading()
+  const blacks = document.querySelector('[aria-label="けんばん"] g[aria-hidden="true"]') as SVGGElement
+  expect(blacks.getAttribute('pointer-events')).toBe('auto')
+  fireEvent.pointerDown(blacks.querySelector('rect')!, { pointerId: 1 })
+  expect(screen.queryByText('よめた！')).toBeNull()
+  expect(screen.queryByText('もっと ひくい')).toBeNull()
+  expect(screen.queryByText('もっと たかい')).toBeNull()
+})
+
+test('よみとり: 5回よめたら次の段階へ・シール・段階は開き直しても残る（#155）', async () => {
+  const random = vi.spyOn(Math, 'random').mockReturnValue(0) // ド・レ が交互に出る
+  vi.useFakeTimers()
+  const view = render(<App />)
+  vi.mocked(playNote).mockClear()
+  await enterReading()
+  for (let i = 0; i < 4; i++) readCurrent()
+  expect(earnedStickers()).not.toContain('read-stage-1')
+  // 5回目（ド）。クリアした「よめた！」のあいだは点を5つ埋めて見せる
+  random.mockReturnValue(0.999)
+  press(vi.mocked(playNote).mock.calls.at(-1)![0])
+  expect(screen.getByRole('img', { name: '5 こ よめた' })).toBeTruthy()
+  expect(earnedStickers()).toContain('read-stage-1')
+  expect(JSON.parse(localStorage.getItem('doremi.reading.v1') ?? '{}')).toEqual({ stage: 1 })
+  vi.mocked(playNote).mockClear()
+  act(() => {
+    vi.advanceTimersByTime(1400)
+  })
+  // 次の問題は新しい段階（ド〜ソ）から。前の段階のままなら ミ までしか出ない
+  expect(vi.mocked(playNote).mock.calls.map((c) => c[0])).toEqual(['G4'])
+  expect(screen.getByRole('img', { name: '0 こ よめた' })).toBeTruthy()
+  // 開き直しても段階2から
+  view.unmount()
+  render(<App />)
+  await enterReading()
+  openAdultMenu()
+  expect(screen.getByLabelText('だんかい 2').getAttribute('aria-pressed')).toBe('true')
+})
+
+test('よみとり: おとなメニューで段階を選び直せる。飛ばした段階のシールは付かない（#155）', async () => {
+  vi.useFakeTimers()
+  render(<App />)
+  await enterReading()
+  openAdultMenu()
+  vi.mocked(playNote).mockClear()
+  fireEvent.click(screen.getByLabelText('だんかい 3'))
+  await act(async () => {
+    h.resolveAudio?.()
+  })
+  expect(vi.mocked(playNote).mock.calls).toHaveLength(1) // 新しい段階で出し直して鳴らす
+  for (let i = 0; i < 5; i++) readCurrent()
+  const got = earnedStickers()
+  expect(got).toContain('read-stage-3')
+  expect(got).not.toContain('read-stage-1')
+  expect(got).not.toContain('read-stage-2')
+})
+
+test('よみとり: じゆうから入って出ると、つくりかけの曲が残る。よみとり中はページ送りを出さない（#155）', async () => {
+  stubSvgGeometry()
+  vi.useFakeTimers()
+  render(<App />)
+  for (let i = 0; i < 10; i++) placeNote(390) // 満杯 → 「つぎのうた」が出る
+  expect(screen.getByText(/つぎのうた/)).toBeTruthy()
+  await enterReading()
+  expect(screen.queryByText(/つぎのうた/)).toBeNull() // 鍵盤に重ならない・見えない曲のページを動かさない
+  expect(screen.queryByTestId('toolbox-normal')).toBeNull()
+  openAdultMenu()
+  expect(screen.queryByLabelText('ぜんぶけす')).toBeNull() // 見えていない曲を消させない
+  expect(screen.queryByLabelText('おとの たかさ')).toBeNull()
+  // 「じゆう → おてほんに する」と出すと、じゆうに戻るつもりで押して曲を消してしまう
+  expect(screen.queryByText('じゆう → おてほんに する')).toBeNull()
+  expect(screen.getByText('おてほん あそび')).toBeTruthy()
+  fireEvent.click(screen.getByLabelText('よみとり')) // じゆうに戻る
+  expect(document.querySelectorAll('[data-testid^="note-"]').length).toBe(10)
+})
+
+test('よみとり: ききとりから入ると、答え合わせ中の仮の音を持ち帰らない（#155）', async () => {
+  stubSvgGeometry()
+  vi.spyOn(Math, 'random').mockReturnValue(0)
+  vi.useFakeTimers()
+  render(<App />)
+  openAdultMenu()
+  fireEvent.click(screen.getByLabelText('ききとり'))
+  await act(async () => {
+    h.resolveAudio?.()
+  })
+  placeNote(290) // 違う音（答え合わせ中は盤面に残っている）
+  expect(document.querySelectorAll('[data-testid^="note-"]').length).toBe(1)
+  await enterReading()
+  expect(screen.getByRole('application', { name: 'よみとりの がめん' })).toBeTruthy()
+  openAdultMenu()
+  fireEvent.click(screen.getByLabelText('よみとり'))
+  expect(document.querySelectorAll('[data-testid^="note-"]').length).toBe(0)
+})
+
+test('よみとり: ほんだなの曲を選ぶと、よみとりを終えて再生する（#155）', async () => {
+  localStorage.setItem('doremi.songs.v1', SONG_2P)
+  vi.useFakeTimers()
+  render(<App />)
+  await enterReading()
+  fireEvent.click(screen.getByLabelText('ほんだな'))
+  fireEvent.click(screen.getAllByText('きく')[0])
+  expect(screen.queryByRole('application', { name: 'よみとりの がめん' })).toBeNull()
+  expect(screen.getByRole('application', { name: '五線譜ボード' })).toBeTruthy()
+})
+
+test('よみとり: 段階を選び直すと、前の問題のタイマーは鳴らない（#155）', async () => {
+  vi.spyOn(Math, 'random').mockReturnValue(0) // ド
+  vi.useFakeTimers()
+  render(<App />)
+  await enterReading()
+  openAdultMenu() // メニューを開いたまま（長押しの時間ぶんタイマーが進むので、先に開く）
+  press('C4') // よめた → 1.4s 後に次の問題のタイマー
+  vi.mocked(playNote).mockClear()
+  fireEvent.click(screen.getByLabelText('だんかい 3'))
+  await act(async () => {
+    h.resolveAudio?.()
+  })
+  act(() => {
+    vi.advanceTimersByTime(2000)
+  })
+  expect(vi.mocked(playNote).mock.calls).toHaveLength(1) // 新しい段階の最初の問題だけ
+})
+
+test('よみとり: 音の解錠待ちの再生は、よみとりに入ったら鳴り出さない（#155）', async () => {
+  localStorage.setItem('doremi.songs.v1', SONG_2P)
+  vi.useFakeTimers()
+  render(<App />)
+  fireEvent.click(screen.getByLabelText('ほんだな'))
+  fireEvent.click(screen.getAllByText('きく')[0]) // 再生は ensureAudio を待っている
+  const resolvePlay = h.resolveAudio
+  await enterReading()
+  vi.mocked(playMelodyNote).mockClear()
+  await act(async () => {
+    resolvePlay?.()
+    await vi.runAllTimersAsync()
+  })
+  expect(playMelodyNote).not.toHaveBeenCalled()
+  expect(screen.getByRole('application', { name: 'よみとりの がめん' })).toBeTruthy()
 })

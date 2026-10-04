@@ -14,6 +14,11 @@ export type StickerId =
   | 'shelf-listen'
   | 'guide-complete'
   | 'ear-found'
+  | 'read-found'
+  | 'read-stage-1'
+  | 'read-stage-2'
+  | 'read-stage-3'
+  | 'read-stage-4'
 
 export interface Sticker {
   id: StickerId
@@ -34,6 +39,12 @@ export const STICKERS: Sticker[] = [
   { id: 'all-colors', name: 'にじいろ' },
   { id: 'guide-complete', name: 'おてほん できた' },
   { id: 'ear-found', name: 'ききとり みつけた' },
+  // よみとりあそび（#155）。段階のシールはその段階をクリアしたときだけ（おとなメニューで飛ばした段階には付かない）
+  { id: 'read-found', name: 'よみとり よめた' },
+  { id: 'read-stage-1', name: 'ドレミが よめた' },
+  { id: 'read-stage-2', name: 'ド〜ソが よめた' },
+  { id: 'read-stage-3', name: 'ド〜ドが よめた' },
+  { id: 'read-stage-4', name: 'ぜんぶ よめた' },
 ]
 
 const IDS = new Set<string>(STICKERS.map((s) => s.id))

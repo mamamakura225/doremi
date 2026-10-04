@@ -138,11 +138,31 @@ export function fitsKeyboard(width: number, height: number): boolean {
 }
 
 /** i番目（0始まり）の白鍵の左端X */
-export function whiteKeyX(index: number, count: number): number {
-  return KEY_LEFT + (index * (KEY_RIGHT - KEY_LEFT)) / count
+export function whiteKeyX(index: number, count: number, left = KEY_LEFT, right = KEY_RIGHT): number {
+  return left + (index * (right - left)) / count
 }
 
 /** 白鍵1つぶんの幅 */
-export function whiteKeyW(count: number): number {
-  return (KEY_RIGHT - KEY_LEFT) / count
+export function whiteKeyW(count: number, left = KEY_LEFT, right = KEY_RIGHT): number {
+  return (right - left) / count
 }
+
+// よみとりあそび（#155）の盤面。お道具箱・ゴミ箱帯・10列の配置領域が要らないので、
+// 上の余白を詰めて鍵盤を五線のすぐ下に置き、スマホ横でも鍵盤を出す（理由と実測は docs/architecture.md）。
+/** 表示範囲（viewBox の y と高さ）。上端はト音記号の頭（≈y120）の上 */
+export const READING_VIEW_Y = 100
+export const READING_VIEW_H = 440
+/** 五線は左に寄せ、右を案内パネルにする */
+export const READING_STAFF_RIGHT = 640
+/** 問題の音符の X（ト音記号の右・ラベルの無い五線の中ほど） */
+export const READING_NOTE_X = 420
+/** 案内パネル（もういちど きく・よめた数・よめた！／↑↓） */
+export const READING_PANEL_X = 680
+export const READING_PANEL_W = 380
+/** 紙（五線と案内パネル）。下端は真ん中のドの符頭の下・鍵盤の上 */
+export const READING_PAPER_TOP = 104
+export const READING_PAPER_BOTTOM = 414
+/** 鍵盤（ト音の10鍵）。上端は真ん中のドの符頭の下端（≈403.5）の下 */
+export const READING_KEY_TOP = 420
+export const READING_KEY_LEFT = 60
+export const READING_KEY_RIGHT = 1040

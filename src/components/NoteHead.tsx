@@ -84,7 +84,7 @@ export default function NoteHead({
         transform={`rotate(-${NOTE_HEAD_ROTATION_DEG})`}
       />
       {/* ぷっくり（#100）: 上からのハイライトと下の沈みを重ねる。輪郭に掛からないよう一回り小さく、
-          当たり判定は持たせない。グラデーションは Board の <defs> の #note-puff */}
+          当たり判定は持たせない。グラデーションは NoteDefs（Board・よみとりの SVG に置く）の #note-puff */}
       <ellipse
         cx={0}
         cy={0}
@@ -95,5 +95,35 @@ export default function NoteHead({
         transform={`rotate(-${NOTE_HEAD_ROTATION_DEG})`}
       />
     </g>
+  )
+}
+
+/**
+ * 符頭と紙が参照する <defs>（ぷっくりのグラデーション #note-puff・影のフィルタ）。
+ * 符頭を描く SVG ごとに1つ置く（盤面 Board と、よみとりの盤面 #155）
+ */
+export function NoteDefs() {
+  return (
+    <defs>
+      {/* 符頭のぷっくり（#100）: 左上のハイライト→下の沈み（docs/art-direction.md の線と塗り） */}
+      <radialGradient id="note-puff" cx="0.35" cy="0.3" r="0.8">
+        <stop offset="0" stopColor="#fff" stopOpacity="0.75" />
+        <stop offset="0.45" stopColor="#fff" stopOpacity="0" />
+        <stop offset="1" stopColor="#000" stopOpacity="0.12" />
+      </radialGradient>
+      {/* 置き物のやわらかい落ち影（輪郭色系の半透明・ぼかしのみ） */}
+      <filter id="note-shadow-soft" x="-20%" y="-10%" width="140%" height="130%">
+        <feDropShadow dx="0" dy="6" stdDeviation="7" floodColor="#8a7a5c" floodOpacity="0.18" />
+      </filter>
+      <filter id="note-shadow" x="-50%" y="-50%" width="200%" height="200%">
+        <feDropShadow
+          dx="0"
+          dy="6"
+          stdDeviation="5"
+          floodColor="#000"
+          floodOpacity="0.3"
+        />
+      </filter>
+    </defs>
   )
 }
