@@ -1,6 +1,7 @@
 import { type ReactElement, useEffect, useRef, useState } from 'react'
 import { type Voice, VOICES } from '../audio/synth'
 import type { Clef } from '../lib/pitch'
+import { STAGE_COUNT } from '../lib/reading'
 import {
   BearIcon,
   BellIcon,
@@ -13,6 +14,7 @@ import {
   PianoIcon,
   ShelfIcon,
   PicoIcon,
+  ReadIcon,
   SingIcon,
 } from './Icons'
 
@@ -120,6 +122,10 @@ interface MenuProps {
   guide: boolean
   /** ききとりあそび中か（#110） */
   ear: boolean
+  /** よみとりあそび中か（#155） */
+  reading: boolean
+  /** よみとりのいまの段階（0 始まり。画面には 1〜 で出す） */
+  readingStage: number
   busy: boolean
   empty: boolean
   /** いまの再生の音色（#141） */
@@ -130,10 +136,16 @@ interface MenuProps {
   onToggleClef: () => void
   onToggleGuide: () => void
   onToggleEar: () => void
+  onToggleReading: () => void
+  /** よみとりの段階を選び直す（0 始まり） */
+  onPickReadingStage: (stage: number) => void
   /** 本棚を「せいり」で開く（曲を消せる・#142） */
   onTidyShelf: () => void
   onClose: () => void
 }
+
+/** よみとりの段階の見出し（出る音の範囲）。reading.ts の段階と同じ順 */
+const STAGE_LABELS = ['ドレミ', 'ド〜ソ', 'ド〜ド', 'ぜんぶ']
 
 const ROW =
   'flex w-full items-center gap-3 rounded-2xl bg-white px-4 py-2.5 text-left text-lg font-bold text-[#6b6375] shadow disabled:opacity-40'
@@ -143,6 +155,8 @@ export default function AdultMenu({
   clef,
   guide,
   ear,
+  reading,
+  readingStage,
   busy,
   empty,
   voice,
@@ -151,6 +165,8 @@ export default function AdultMenu({
   onToggleClef,
   onToggleGuide,
   onToggleEar,
+  onToggleReading,
+  onPickReadingStage,
   onTidyShelf,
   onClose,
 }: MenuProps) {
@@ -188,15 +204,20 @@ export default function AdultMenu({
         </div>
         {/* 横向きスマホ（高さ ~390px）で縦に溢れないよう、切り替えの行は2列に並べる（#141） */}
         <div className="grid gap-3 sm:grid-cols-2">
-          {/* ↺ は再生中も押せる（非常停止を兼ねて曲ごと消す）。止めるだけなら ⏹ */}
-          <button type="button" aria-label="ぜんぶけす" disabled={empty} onClick={act(onClear)} className={ROW}>
-            <ClearIcon className="shrink-0 text-3xl" /> ぜんぶ けす
-          </button>
-          {/* 「ト音／ヘ音」は子どもに通じないので、ことり＝高い／くま＝低い で見せる */}
-          <button type="button" aria-label="おとの たかさ" disabled={busy} onClick={act(onToggleClef)} className={ROW}>
-            {clef === 'bass' ? <BearIcon className="shrink-0 text-3xl" /> : <BirdIcon className="shrink-0 text-3xl" />}
-            {clef === 'bass' ? 'くま（ヘ音）→ ことりに する' : 'ことり（ト音）→ くまに する'}
-          </button>
+          {/* よみとり中は出さない: 見えていない曲を消す・よみとりはト音だけ（#155） */}
+          {!reading && (
+            <>
+              {/* ↺ は再生中も押せる（非常停止を兼ねて曲ごと消す）。止めるだけなら ⏹ */}
+              <button type="button" aria-label="ぜんぶけす" disabled={empty} onClick={act(onClear)} className={ROW}>
+                <ClearIcon className="shrink-0 text-3xl" /> ぜんぶ けす
+              </button>
+              {/* 「ト音／ヘ音」は子どもに通じないので、ことり＝高い／くま＝低い で見せる */}
+              <button type="button" aria-label="おとの たかさ" disabled={busy} onClick={act(onToggleClef)} className={ROW}>
+                {clef === 'bass' ? <BearIcon className="shrink-0 text-3xl" /> : <BirdIcon className="shrink-0 text-3xl" />}
+                {clef === 'bass' ? 'くま（ヘ音）→ ことりに する' : 'ことり（ト音）→ くまに する'}
+              </button>
+            </>
+          )}
           <button
             type="button"
             aria-label={guide ? 'おてほん' : 'じゆう'}
@@ -204,19 +225,47 @@ export default function AdultMenu({
             onClick={act(onToggleGuide)}
             className={ROW}
           >
-            {guide ? <GuideIcon className="shrink-0 text-3xl" /> : <FreeIcon className="shrink-0 text-3xl" />}
-            {guide ? 'おてほん → じゆうに する' : 'じゆう → おてほんに する'}
+            {/* ききとり・よみとり中は「いまは じゆう」ではない（よみとりでは押すと曲が消えるので、モードの切替だと分かる文言に） */}
+            {guide || ear || reading ? <GuideIcon className="shrink-0 text-3xl" /> : <FreeIcon className="shrink-0 text-3xl" />}
+            {guide ? 'おてほん → じゆうに する' : ear || reading ? 'おてほん あそび' : 'じゆう → おてほんに する'}
           </button>
           {/* ききとりあそび（#110）: 鳴った音を五線で探す。採点しない */}
           <button type="button" aria-label="ききとり" disabled={busy} onClick={act(onToggleEar)} className={ROW}>
             <BellIcon className="shrink-0 text-3xl" />
             {ear ? 'ききとり → じゆうに する' : 'ききとり あそび'}
           </button>
+          {/* よみとりあそび（#155）: 五線の音符を見て鍵盤で答える。採点しない */}
+          <button type="button" aria-label="よみとり" disabled={busy} onClick={act(onToggleReading)} className={ROW}>
+            <ReadIcon className="shrink-0 text-3xl" />
+            {reading ? 'よみとり → じゆうに する' : 'よみとり あそび'}
+          </button>
           {/* 曲を消すのは大人だけ（子どもの 📚 には消す手段を出さない・#142） */}
           <button type="button" aria-label="ほんだなを せいり" disabled={busy} onClick={act(onTidyShelf)} className={ROW}>
             <ShelfIcon className="shrink-0 text-3xl" /> ほんだなを せいり
           </button>
         </div>
+        {/* よみとりの段階（#155）: 教室の進み具合に合わせて選び直す。よみとり中だけ（ことり／くまの行の代わり） */}
+        {reading && (
+          <div role="group" aria-label="よみとりの だんかい" className="items-center gap-3 rounded-2xl bg-white px-4 py-2.5 shadow sm:flex">
+            <p className="mb-2 shrink-0 text-lg font-bold text-[#6b6375] sm:mb-0">だんかい</p>
+            <div className="grid flex-1 grid-cols-4 gap-2">
+              {Array.from({ length: STAGE_COUNT }, (_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  aria-label={`だんかい ${i + 1}`}
+                  aria-pressed={i === readingStage}
+                  onClick={act(() => onPickReadingStage(i))}
+                  className={`rounded-xl px-2 py-1.5 text-sm font-bold text-[#6b6375] ${
+                    i === readingStage ? 'bg-[#dff3ea] ring-2 ring-[#5b524b]' : 'bg-[#fdf6e3]'
+                  }`}
+                >
+                  {STAGE_LABELS[i]}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         {/* おといろ（#141）: 子どもの面では何のボタンか伝わらなかったので、ここで4つから選ぶ */}
         <div role="group" aria-label="おといろ" className="items-center gap-3 rounded-2xl bg-white px-4 py-2.5 shadow sm:flex">
           <p className="mb-2 shrink-0 text-lg font-bold text-[#6b6375] sm:mb-0">おといろ</p>

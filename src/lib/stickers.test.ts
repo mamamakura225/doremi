@@ -14,9 +14,9 @@ describe('シール帳（#105）', () => {
     localStorage.clear()
   })
 
-  it('シールは 8〜12 枚で、id が重ならない', () => {
+  it('シールは 8〜16 枚で、id が重ならない（よみとり #155 で 11→16）', () => {
     expect(STICKERS.length).toBeGreaterThanOrEqual(8)
-    expect(STICKERS.length).toBeLessThanOrEqual(12)
+    expect(STICKERS.length).toBeLessThanOrEqual(16)
     expect(new Set(STICKERS.map((s) => s.id)).size).toBe(STICKERS.length)
   })
 

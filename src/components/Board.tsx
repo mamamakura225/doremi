@@ -43,7 +43,7 @@ import { useFitsKeyboard } from '../hooks/useFitsKeyboard'
 import Keyboard from './Keyboard'
 import { HandIcon, StarIcon, TrashIcon } from './Icons'
 import Mascot from './Mascot'
-import NoteHead from './NoteHead'
+import NoteHead, { NoteDefs } from './NoteHead'
 import Sparkles from './Sparkles'
 import Staff from './Staff'
 
@@ -348,27 +348,7 @@ export default function Board({
       onPointerUp={endTracking}
       onPointerCancel={endTracking}
     >
-      <defs>
-        {/* 符頭のぷっくり（#100）: 左上のハイライト→下の沈み（docs/art-direction.md の線と塗り） */}
-        <radialGradient id="note-puff" cx="0.35" cy="0.3" r="0.8">
-          <stop offset="0" stopColor="#fff" stopOpacity="0.75" />
-          <stop offset="0.45" stopColor="#fff" stopOpacity="0" />
-          <stop offset="1" stopColor="#000" stopOpacity="0.12" />
-        </radialGradient>
-        {/* 置き物のやわらかい落ち影（輪郭色系の半透明・ぼかしのみ） */}
-        <filter id="note-shadow-soft" x="-20%" y="-10%" width="140%" height="130%">
-          <feDropShadow dx="0" dy="6" stdDeviation="7" floodColor="#8a7a5c" floodOpacity="0.18" />
-        </filter>
-        <filter id="note-shadow" x="-50%" y="-50%" width="200%" height="200%">
-          <feDropShadow
-            dx="0"
-            dy="6"
-            stdDeviation="5"
-            floodColor="#000"
-            floodOpacity="0.3"
-          />
-        </filter>
-      </defs>
+      <NoteDefs />
 
       {/* 五線の紙（#99）: 五線・足場ガイド・ゴミ箱帯を載せる。紙の外は透明にしてページ背景を透かす */}
       <rect

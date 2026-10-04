@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { OUTLINE_COLOR } from '../lib/colors'
 import type { StickerId } from '../lib/stickers'
-import { BearIcon, BellIcon, SaveIcon, ShelfIcon, StarIcon } from './Icons'
+import { BearIcon, BellIcon, ReadIcon, SaveIcon, ShelfIcon, StarIcon } from './Icons'
 
 // シールの絵（#105）。白いふち＋淡色の地の丸いステッカー（48×48）。
 // 7色は使わない（docs/art-direction.md）。まだもらっていないシールは、灰色の地に「？」。
@@ -19,6 +19,11 @@ const BADGE: Record<StickerId, string> = {
   'all-colors': '#fffdf5',
   'guide-complete': '#fff3b0',
   'ear-found': '#d9ecff',
+  'read-found': '#ffe4cc',
+  'read-stage-1': '#dff3ea',
+  'read-stage-2': '#fff3b0',
+  'read-stage-3': '#ffc9dc',
+  'read-stage-4': '#d9ecff',
 }
 
 /** 符頭＋符幹（チョコ色の音符） */
@@ -28,6 +33,17 @@ function Note({ x, y, tail = 0 }: { x: number; y: number; tail?: number }) {
       {tail > 0 && <rect x={x} y={y - 2.5} width={tail} height={5} rx={2.5} fill="#a07e62" />}
       <line x1={x + 4.8} y1={y - 0.5} x2={x + 4.8} y2={y - 17} />
       <ellipse cx={x} cy={y} rx={5.4} ry={4.1} fill="#a07e62" transform={`rotate(-20 ${x} ${y})`} />
+    </g>
+  )
+}
+
+/** よみとりの段階（#155）: 4段の階段を、クリアした段階まで塗る（だんだん上へ広がる音域） */
+function Stairs({ n }: { n: number }) {
+  return (
+    <g stroke={O} strokeWidth={1.6} strokeLinejoin="round">
+      {[0, 1, 2, 3].map((i) => (
+        <rect key={i} x={10 + i * 7} y={34 - (i + 1) * 6} width={7} height={(i + 1) * 6} fill={i < n ? '#ffe38f' : '#fffdf5'} />
+      ))}
     </g>
   )
 }
@@ -62,6 +78,11 @@ const ART: Record<StickerId, ReactNode> = {
       <path d="M36 14 Q39 21 36 28" />
     </g>
   ),
+  'read-found': <ReadIcon x={10} y={10} width={28} height={28} />,
+  'read-stage-1': <Stairs n={1} />,
+  'read-stage-2': <Stairs n={2} />,
+  'read-stage-3': <Stairs n={3} />,
+  'read-stage-4': <Stairs n={4} />,
   'guide-complete': (
     <path
       d="M11 31 L13 17 L19 23 L24 14 L29 23 L35 17 L37 31 Z"

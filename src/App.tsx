@@ -25,8 +25,18 @@ import {
 } from './lib/stickers'
 import BookCover from './components/BookCover'
 import EarPanel from './components/EarPanel'
+import ReadingGame from './components/ReadingGame'
 import { type ThemeId, loadTheme, saveTheme } from './lib/themes'
 import { type Judge, judge, nextQuestion, stageOf } from './lib/ear'
+import {
+  type ReadingProgress,
+  STAGE_STICKERS,
+  type Weak,
+  afterRead,
+  loadReading,
+  nextReading,
+  saveReading,
+} from './lib/reading'
 import TitleScreen from './components/TitleScreen'
 import { hasSeenTitle, markTitleSeen } from './lib/firstRun'
 import Bookshelf from './components/Bookshelf'
@@ -102,6 +112,17 @@ export default function App() {
   const [earFound, setEarFound] = useState(0)
   const [earHint, setEarHint] = useState<Judge | null>(null)
   const earTimers = useRef<number[]>([])
+  // よみとりあそび（#155）: いまの段階（保存する）と、その段階でよめた数（開き直すと 0）。
+  // 問題そのものは ReadingGame が持つ。最初の問題だけはここで決めて、メニューのクリックの中で鳴らす
+  const [reading, setReading] = useState(false)
+  const [readingProgress, setReadingProgress] = useState<ReadingProgress>(() => ({
+    stage: loadReading(),
+    count: 0,
+  }))
+  const [readingFirst, setReadingFirst] = useState<Pitch | null>(null)
+  // 段階を選び直したら ReadingGame を作り直す（前の段階の問題・タイマー・ミス数を持ち越さない）
+  const [readingSession, setReadingSession] = useState(0)
+  const readingWeak = useRef<Weak>({})
   // おてほんの曲（#106）と、曲えらびを開いているか
   const [guideSong, setGuideSong] = useState<SongId>('twinkle')
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -150,6 +171,10 @@ export default function App() {
     timers.current = []
     stopMelody()
   }
+  // 地の音色の音部記号。よみとりはト音だけなので、くまのまま入ってもト音の地の音で鳴らす（出たら戻す）
+  useEffect(() => {
+    setClef(reading ? 'treble' : clef)
+  }, [reading, clef])
   useEffect(() => {
     return () => {
       clearTimers()
@@ -241,6 +266,7 @@ export default function App() {
   function toggleGuide() {
     resetBoard()
     leaveEar()
+    setReading(false)
     // おてほんに入ったら、まず曲をえらぶ（#106）。切るときは曲えらびも閉じる
     // （開いたまま曲を選ぶと、pickSong でおてほんに戻ってしまう）
     if (!guide) openPicker()
@@ -295,6 +321,7 @@ export default function App() {
     resetBoard()
     setGuide(false)
     setPickerOpen(false)
+    setReading(false)
     if (ear) {
       leaveEar()
       return
@@ -335,6 +362,61 @@ export default function App() {
         setEarHint(null)
       }, EAR_RETRY_MS),
     )
+  }
+
+  // ---- よみとりあそび（#155） ----
+  /**
+   * 最初の問題を決めて鳴らす。クリックの中で同期的に ensureAudio を呼ぶ（iOS の解錠はタップと同じ tick・
+   * docs/architecture.md オーディオ節）。ReadingGame のマウント時の effect で鳴らすと最初の音が出ない
+   */
+  function startReading(stage: number) {
+    const q = nextReading(stage, null, readingWeak.current, Math.random)
+    setReadingFirst(q)
+    setReadingSession((n) => n + 1)
+    void ensureAudio()
+      .then(() => playNote(q.note))
+      .catch(() => {})
+  }
+
+  /**
+   * よみとりに入る／出る。じゆうから入ったときは、つくりかけの曲（盤面）に触らない——出るとそのまま続きを
+   * つくれる。おてほん・ききとりから入るときは、ほかのモード同士の切替と同じく盤面を消す
+   * （ききとりの答え合わせ中の仮の音を、つくりかけの曲として持ち帰らない）
+   */
+  function toggleReading() {
+    if (reading) {
+      setReading(false)
+      return
+    }
+    // 解錠待ち（await 中）の再生も世代を繰り上げて捨てる。よみとり中に旋律が鳴り出さないように
+    clearTimers()
+    setPlaying(null)
+    setCelebrating(false)
+    if (ear || guide) resetBoard()
+    leaveEar()
+    setGuide(false)
+    setPickerOpen(false)
+    window.clearTimeout(openingTimer.current)
+    setOpening(null)
+    setReading(true)
+    startReading(readingProgress.stage)
+  }
+
+  /** おとなメニューで段階を選び直す（教室の進み具合に合わせる）。よめた数は 0 から、新しい段階で出し直す */
+  function pickReadingStage(stage: number) {
+    setReadingProgress({ stage, count: 0 })
+    saveReading(stage)
+    startReading(stage)
+  }
+
+  /** よめた。数えるのはヒント（正しい鍵が光る）の前の正解だけ。シールもそれに揃える */
+  function handleRead(counted: boolean) {
+    if (!counted) return
+    giveSticker('read-found')
+    const next = afterRead(readingProgress)
+    if (next.cleared !== null) giveSticker(STAGE_STICKERS[next.cleared])
+    if (next.stage !== readingProgress.stage) saveReading(next.stage)
+    setReadingProgress({ stage: next.stage, count: next.count })
   }
 
   function toggleClef() {
@@ -420,6 +502,7 @@ export default function App() {
   // 保存時の音部記号でしか音名を解決できないので、盤面もその音部記号へ切り替える。
   function handleSelectSong(song: SavedSong) {
     leaveEar()
+    setReading(false)
     // 選んだ本が開く演出（#109）。再生はすぐ始める（演出は触れない別の層）
     setOpening((o) => ({ song, n: (o?.n ?? 0) + 1 })) // n: 続けて選んでも演出をやり直す
     window.clearTimeout(openingTimer.current)
@@ -571,7 +654,7 @@ export default function App() {
           <button
             type="button"
             onClick={handlePlay}
-            disabled={empty || ear}
+            disabled={empty || ear || reading}
             aria-label="さいせい"
             className={`${KID_BTN} ${size} bg-[#22c55e] text-white`}
           >
@@ -581,7 +664,7 @@ export default function App() {
         <button
           type="button"
           onClick={withPop(handleUndo)}
-          disabled={busy || ear || notes.length === 0}
+          disabled={busy || ear || reading || notes.length === 0}
           aria-label="ひとつもどる"
           className={`${KID_BTN} ${size} bg-white text-[#6b6375]`}
         >
@@ -590,7 +673,7 @@ export default function App() {
         <button
           type="button"
           onClick={withPop(handleSave)}
-          disabled={busy || ear || empty}
+          disabled={busy || ear || reading || empty}
           aria-label={justSaved ? 'ほぞんした' : 'ほぞん'}
           className={`${KID_BTN} ${size} bg-white text-[#6b6375]`}
         >
@@ -646,6 +729,8 @@ export default function App() {
           clef={clef}
           guide={guide}
           ear={ear}
+          reading={reading}
+          readingStage={readingProgress.stage}
           busy={busy}
           empty={empty}
           voice={voice}
@@ -654,6 +739,8 @@ export default function App() {
           onToggleClef={toggleClef}
           onToggleGuide={toggleGuide}
           onToggleEar={toggleEar}
+          onToggleReading={toggleReading}
+          onPickReadingStage={pickReadingStage}
           onTidyShelf={() => {
             setBookOpen(false)
             setPickerOpen(false)
@@ -665,18 +752,29 @@ export default function App() {
       )}
       {/* タイトル中は裏のヘッダー・盤面に触れない（キーボードやフォーカスも届かない） */}
       <main className="relative min-h-0 flex-1" inert={showTitle}>
-        <Board
-          notes={notes}
-          onPlace={handlePlace}
-          onRemove={handleRemove}
-          onTapNote={() => giveSticker('tap-note')}
-          playingIndex={playing?.page === currentPage ? playing.index : null}
-          playingPage={playing?.page}
-          celebrating={celebrating}
-          paused={earHint !== null}
-          clef={clef}
-          targets={targets}
-        />
+        {reading && readingFirst ? (
+          <ReadingGame
+            key={readingSession}
+            first={readingFirst}
+            stage={readingProgress.stage}
+            count={readingProgress.count}
+            weak={readingWeak}
+            onRead={handleRead}
+          />
+        ) : (
+          <Board
+            notes={notes}
+            onPlace={handlePlace}
+            onRemove={handleRemove}
+            onTapNote={() => giveSticker('tap-note')}
+            playingIndex={playing?.page === currentPage ? playing.index : null}
+            playingPage={playing?.page}
+            celebrating={celebrating}
+            paused={earHint !== null}
+            clef={clef}
+            targets={targets}
+          />
+        )}
         {celebrating && <Celebration level={celebration} />}
         {ear && (
           <EarPanel
@@ -703,7 +801,8 @@ export default function App() {
             </div>
           </div>
         )}
-        {!shelfOpen && (
+        {/* よみとり中は出さない（鍵盤に重なる・見えていない曲のページが動く） */}
+        {!shelfOpen && !reading && (
           <div className="pointer-events-none absolute inset-x-0 bottom-[max(0.75rem,env(safe-area-inset-bottom))] flex items-center justify-between px-6">
             {showPrev ? (
               <button
